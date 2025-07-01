@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "./context/AuthContext";
 import {
   Mic,
   BarChart2,
@@ -24,10 +25,26 @@ import { useTheme, getThemeColors } from "./context/ThemeContext";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { user, loading } = useAuth();
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [isFirstTime, setIsFirstTime] = useState(true);
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <SafeAreaView
+        className="flex-1 justify-center items-center"
+        style={{ backgroundColor: colors.background }}
+      >
+        <Text style={{ color: colors.text }}>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // This screen should only be accessible to authenticated users
+  // The AuthContext will handle redirecting unauthenticated users
 
   const userLevel = {
     current: 7,
@@ -56,22 +73,22 @@ export default function HomeScreen() {
       onPress: () => router.push("/speaker-mode"),
     },
     {
-      id: "feedback-library",
-      title: "Speech Library",
-      description: "Review past speeches",
-      icon: BookOpen,
-      color: "#06b6d4",
-      bgColor: "#f0fdfa",
-      onPress: () => router.push("/feedback-library"),
-    },
-    {
       id: "evaluation-tools",
       title: "Evaluator Mode",
-      description: "Help others & earn XP",
+      description: "Test your evaluation skills",
       icon: Award,
       color: "#10b981",
       bgColor: "#f0fdf4",
       onPress: () => router.push("/evaluator-mode"),
+    },
+    {
+      id: "feedback-library",
+      title: "Library",
+      description: "Review past speeches and evaluations",
+      icon: BookOpen,
+      color: "#06b6d4",
+      bgColor: "#f0fdfa",
+      onPress: () => router.push("/feedback-library"),
     },
   ];
 

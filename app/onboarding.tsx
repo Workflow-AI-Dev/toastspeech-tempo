@@ -1,267 +1,241 @@
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  Animated,
+  ScrollView,
   Dimensions,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  Mic,
-  Sparkles,
-  TrendingUp,
-  Star,
-  Zap,
-  Award,
-} from "lucide-react-native";
+import { useTheme, getThemeColors } from "./context/ThemeContext";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
+
+const slides = [
+  {
+    title: "Welcome to ToastSpeech",
+    description: "AI-powered coaching to boost your public speaking game.",
+  },
+  {
+    title: "AI-Powered Analysis",
+    description: "Get instant feedback on pace, clarity, and confidence.",
+    image: require("../aimee.png"),
+    bgColor: "#caddfe",
+  },
+  {
+    title: "Track Your Progress",
+    description: "Monitor improvement with detailed analytics.",
+    image: require("../progress.gif"),
+    bgColor: "#f6d183",
+  },
+  {
+    title: "Level Up Skills",
+    description: "Structured practice with gamified achievements.",
+    image: require("../up.png"),
+    bgColor: "#ba303a",
+  },
+  {
+    title: "Start Free",
+    description: "To unlock your speech journey.",
+    image: require("../skillssss.gif"),
+  },
+];
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const [animatedValue] = useState(new Animated.Value(0));
-  const [floatingIcons] = useState([
-    new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0),
-  ]);
+  const { theme } = useTheme();
+  const colors = getThemeColors(theme);
+  const scrollRef = useRef(null);
+  const [activeIndex, setActiveIndex] = useState(0);
 
-  useEffect(() => {
-    // Main entrance animation
-    Animated.timing(animatedValue, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }).start();
+  const handleScroll = (event) => {
+    const index = Math.round(event.nativeEvent.contentOffset.x / width);
+    setActiveIndex(index);
+  };
 
-    // Floating icons animation
-    const animateIcons = () => {
-      floatingIcons.forEach((icon, index) => {
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(icon, {
-              toValue: 1,
-              duration: 2000 + index * 500,
-              useNativeDriver: true,
-            }),
-            Animated.timing(icon, {
-              toValue: 0,
-              duration: 2000 + index * 500,
-              useNativeDriver: true,
-            }),
-          ]),
-        ).start();
+  const handleNext = () => {
+    if (activeIndex < slides.length - 1) {
+      scrollRef.current?.scrollTo({
+        x: width * (activeIndex + 1),
+        animated: true,
       });
-    };
+    }
+  };
 
-    setTimeout(animateIcons, 500);
-  }, []);
-
-  const handleGetStarted = () => {
-    Animated.timing(animatedValue, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => {
-      router.push("/sign-up");
+  const handleSkip = () => {
+    scrollRef.current?.scrollTo({
+      x: width * (slides.length - 1),
+      animated: true,
     });
   };
 
-  const handleSignIn = () => {
-    router.push("/sign-in");
-  };
+  const handleGetStarted = () => router.push("/sign-up");
+  const handleSignIn = () => router.push("/sign-in");
 
   return (
-    <SafeAreaView className="flex-1 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      <View className="flex-1 px-6 py-8 relative">
-        {/* Floating Background Icons */}
-        <Animated.View
-          className="absolute top-20 right-8"
-          style={{
-            transform: [
-              {
-                translateY: floatingIcons[0].interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, -20],
-                }),
-              },
-            ],
-            opacity: floatingIcons[0].interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.3, 0.7],
-            }),
-          }}
-        >
-          <View className="bg-yellow-100 rounded-full p-3">
-            <Star size={24} color="#f59e0b" />
-          </View>
-        </Animated.View>
+    <SafeAreaView
+      className="flex-1"
+      style={{
+        backgroundColor: "rgba(255, 255, 255, 0.9)",
+      }}
+    >
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        {slides.map((slide, index) => {
+          const isFirst = index === 0;
+          const isFourth = index === 3;
 
-        <Animated.View
-          className="absolute top-40 left-8"
-          style={{
-            transform: [
-              {
-                translateY: floatingIcons[1].interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 15],
-                }),
-              },
-            ],
-            opacity: floatingIcons[1].interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.2, 0.6],
-            }),
-          }}
-        >
-          <View className="bg-green-100 rounded-full p-3">
-            <Zap size={20} color="#10b981" />
-          </View>
-        </Animated.View>
-
-        <Animated.View
-          className="absolute bottom-80 right-12"
-          style={{
-            transform: [
-              {
-                translateY: floatingIcons[2].interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, -10],
-                }),
-              },
-            ],
-            opacity: floatingIcons[2].interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.4, 0.8],
-            }),
-          }}
-        >
-          <View className="bg-purple-100 rounded-full p-2">
-            <Award size={18} color="#8b5cf6" />
-          </View>
-        </Animated.View>
-
-        {/* Main Content */}
-        <Animated.View
-          className="flex-1 justify-center"
-          style={{
-            opacity: animatedValue,
-            transform: [
-              {
-                translateY: animatedValue.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [50, 0],
-                }),
-              },
-            ],
-          }}
-        >
-          {/* Hero Section */}
-          <View className="items-center mb-16">
-            <Animated.View
-              className="relative mb-8"
+          return (
+            <View
+              key={index}
               style={{
-                transform: [
-                  {
-                    scale: animatedValue.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.8, 1],
-                    }),
-                  },
-                ],
+                width,
+                height,
+                backgroundColor: slide.bgColor || colors.background,
               }}
             >
-              <View className="bg-white rounded-full p-8 shadow-2xl border-4 border-indigo-100">
-                <Mic size={64} color="#6366f1" />
-              </View>
-              <View className="absolute -top-2 -right-2 bg-yellow-400 rounded-full p-2">
-                <Sparkles size={20} color="white" />
-              </View>
-            </Animated.View>
+              {isFirst ? (
+                <Image
+                  source={require("../first.jpg")}
+                  resizeMode="cover"
+                  style={{
+                    position: "absolute",
+                    width,
+                    height,
+                  }}
+                />
+              ) : null}
 
-            <Text className="text-5xl font-black text-gray-900 text-center mb-3">
-              ToastSpeech
-            </Text>
-            <Text className="text-xl text-gray-600 text-center leading-relaxed mb-6 px-4">
-              Transform your speaking skills with AI magic ✨
-            </Text>
+              <View
+                className="flex-1 items-center px-8"
+                style={{
+                  paddingTop: isFirst ? 100 : 0,
+                  justifyContent: isFirst ? "flex-start" : "center",
+                }}
+              >
+                {isFirst && (
+                  <Image
+                    source={require("../logots.png")}
+                    resizeMode="contain"
+                    style={{
+                      width: width * 0.35,
+                      height: height * 0.08,
+                      marginBottom: 16,
+                    }}
+                  />
+                )}
 
-            {/* Feature Pills */}
-            <View className="flex-row flex-wrap justify-center gap-2 mb-8">
-              <View className="bg-indigo-100 rounded-full px-4 py-2">
-                <Text className="text-indigo-700 font-semibold text-sm">
-                  🎯 Instant Feedback
+                {/* Only show slide image if not first slide */}
+                {!isFirst && slide.image && (
+                  <Image
+                    source={slide.image}
+                    resizeMode="contain"
+                    style={{
+                      width: width * 0.9,
+                      height: height * 0.35,
+                      marginBottom: 30,
+                    }}
+                  />
+                )}
+
+                <Text
+                  className="text-3xl font-bold text-center mb-4"
+                  style={{
+                    color: isFourth
+                      ? "#fff"
+                      : isFirst
+                        ? "#f7f9fa"
+                        : colors.text,
+                  }}
+                >
+                  {slide.title}
                 </Text>
-              </View>
-              <View className="bg-purple-100 rounded-full px-4 py-2">
-                <Text className="text-purple-700 font-semibold text-sm">
-                  📈 Track Progress
-                </Text>
-              </View>
-              <View className="bg-green-100 rounded-full px-4 py-2">
-                <Text className="text-green-700 font-semibold text-sm">
-                  🏆 Level Up
+
+                <Text
+                  className="text-base text-center leading-relaxed px-2"
+                  style={{
+                    color: isFourth
+                      ? "#fff"
+                      : isFirst
+                        ? "#f7f9fa"
+                        : colors.textSecondary,
+                  }}
+                >
+                  {slide.description}
                 </Text>
               </View>
             </View>
-          </View>
+          );
+        })}
+      </ScrollView>
 
-          {/* Action Buttons */}
-          <View className="space-y-4 px-4">
+      {/* Pagination + Actions */}
+      <View className="px-8 py-8 items-center space-y-5">
+        {/* Dots */}
+        <View className="flex-row mb-2">
+          {slides.map((_, index) => (
+            <View
+              key={index}
+              className={`h-2 rounded-full mx-1 ${
+                activeIndex === index ? "w-6 bg-black/80" : "w-2 bg-black/30"
+              }`}
+            />
+          ))}
+        </View>
+
+        {/* Buttons */}
+        {activeIndex === slides.length - 1 ? (
+          <>
             <TouchableOpacity
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl py-5 px-8 shadow-lg"
               onPress={handleGetStarted}
-              activeOpacity={0.8}
+              className="w-full py-4 rounded-2xl"
+              style={{ backgroundColor: "#000000" }}
             >
-              <View className="flex-row items-center justify-center">
-                <Text className="text-white font-bold text-xl mr-2">
-                  Start Your Journey
-                </Text>
-                <Sparkles size={20} color="white" />
-              </View>
+              <Text className="text-white text-center font-bold text-lg">
+                Get Started
+              </Text>
             </TouchableOpacity>
-
             <TouchableOpacity
-              className="bg-white/80 backdrop-blur border-2 border-gray-200 rounded-3xl py-4 px-8"
               onPress={handleSignIn}
-              activeOpacity={0.7}
+              className="w-full py-4 rounded-2xl border"
+              style={{ borderColor: colors.border }}
             >
-              <Text className="text-gray-700 font-semibold text-lg text-center">
-                Welcome Back
+              <Text
+                className="text-center font-semibold text-lg"
+                style={{ color: colors.text }}
+              >
+                Sign In
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View className="flex-row justify-between w-full">
+            <TouchableOpacity onPress={handleSkip}>
+              <Text
+                className="text-base font-medium"
+                style={{ color: colors.textSecondary }}
+              >
+                Skip
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleNext}>
+              <Text
+                className="text-base font-medium"
+                style={{ color: colors.primary }}
+              >
+                Next
               </Text>
             </TouchableOpacity>
           </View>
-        </Animated.View>
-
-        {/* Bottom Stats */}
-        <Animated.View
-          className="items-center mt-8"
-          style={{
-            opacity: animatedValue.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 1],
-            }),
-          }}
-        >
-          <View className="flex-row items-center space-x-6">
-            <View className="items-center">
-              <Text className="text-2xl font-bold text-indigo-600">10K+</Text>
-              <Text className="text-gray-500 text-xs">Speakers</Text>
-            </View>
-            <View className="w-px h-8 bg-gray-300" />
-            <View className="items-center">
-              <Text className="text-2xl font-bold text-purple-600">50K+</Text>
-              <Text className="text-gray-500 text-xs">Speeches</Text>
-            </View>
-            <View className="w-px h-8 bg-gray-300" />
-            <View className="items-center">
-              <Text className="text-2xl font-bold text-green-600">95%</Text>
-              <Text className="text-gray-500 text-xs">Improved</Text>
-            </View>
-          </View>
-        </Animated.View>
+        )}
       </View>
     </SafeAreaView>
   );

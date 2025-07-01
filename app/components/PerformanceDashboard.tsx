@@ -745,12 +745,9 @@ const PerformanceDashboard = ({
                   </Text>
                 </View>
               </View>
-              <TouchableOpacity
-                className="rounded-full px-4 py-2"
-                style={{ backgroundColor: colors.warning }}
-              >
-                <Text className="text-white text-xs font-bold">PRACTICE</Text>
-              </TouchableOpacity>
+              <View className="bg-orange-100 rounded-full px-3 py-1">
+                <Text className="text-orange-600 font-bold text-xs">FOCUS</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>

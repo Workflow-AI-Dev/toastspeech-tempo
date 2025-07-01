@@ -11,7 +11,7 @@ import {
 import {
   ArrowLeft,
   Mic,
-  Play,
+  Video,
   Award,
   TrendingUp,
   Clock,
@@ -37,12 +37,18 @@ interface SpeakerModeScreenProps {
 }
 
 type SpeechType = "toastmasters" | "custom";
-type CurrentStep = "speechType" | "speechDetails" | "record" | "results";
+type CurrentStep =
+  | "speechType"
+  | "speechDetails"
+  | "recordingMethod"
+  | "record"
+  | "results";
 
-const stepLabels = ["Type", "Details", "Record", "Results"];
+const stepLabels = ["Type", "Details", "Method", "Record", "Results"];
 const stepKeys: CurrentStep[] = [
   "speechType",
   "speechDetails",
+  "recordingMethod",
   "record",
   "results",
 ];
@@ -55,6 +61,9 @@ export default function SpeakerModeScreen({
   const colors = getThemeColors(theme);
   const [currentStep, setCurrentStep] = useState<CurrentStep>("speechType");
   const [speechType, setSpeechType] = useState<SpeechType | null>(null);
+  const [recordingMethod, setRecordingMethod] = useState<
+    "audio" | "video" | "upload" | null
+  >(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [speechDetails, setSpeechDetails] = useState({
     title: "",
@@ -650,11 +659,11 @@ export default function SpeakerModeScreen({
                 : colors.border,
               opacity: speechDetails.title.trim() ? 1 : 0.6,
             }}
-            onPress={() => setCurrentStep("record")}
+            onPress={() => setCurrentStep("recordingMethod")}
             disabled={!speechDetails.title.trim()}
           >
             <Text className="text-white font-bold text-lg text-center">
-              Continue to Recording
+              Continue to Recording Method
             </Text>
           </TouchableOpacity>
         </View>
@@ -662,7 +671,7 @@ export default function SpeakerModeScreen({
     </View>
   );
 
-  const renderRecordingView = () => (
+  const renderRecordingMethodSelection = () => (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <View
         className="px-6 py-6"
@@ -694,13 +703,274 @@ export default function SpeakerModeScreen({
             className="text-2xl font-bold mb-2 text-center"
             style={{ color: colors.text }}
           >
+            Choose Recording Method
+          </Text>
+          <Text
+            className="text-center mb-8 text-base"
+            style={{ color: colors.textSecondary }}
+          >
+            How would you like to record your speech?
+          </Text>
+
+          {/* Audio Only Option */}
+          <TouchableOpacity
+            className="rounded-3xl p-6 mb-6 shadow-lg"
+            style={{
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              borderWidth: 0.5,
+              shadowColor: theme === "dark" ? "#000" : "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: theme === "dark" ? 0.3 : 0.1,
+              shadowRadius: 12,
+              elevation: 8,
+            }}
+            onPress={() => {
+              setRecordingMethod("audio");
+              setCurrentStep("record");
+            }}
+          >
+            <View className="flex-row items-center mb-4">
+              <View
+                className="rounded-2xl p-4 mr-4"
+                style={{
+                  backgroundColor:
+                    theme === "dark" ? colors.surface : "#dbeafe",
+                }}
+              >
+                <Mic size={28} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text
+                  className="text-xl font-bold"
+                  style={{ color: colors.text }}
+                >
+                  Audio Only
+                </Text>
+                <Text
+                  className="text-base"
+                  style={{ color: colors.textSecondary }}
+                >
+                  Record voice only with microphone
+                </Text>
+              </View>
+              <ChevronRight size={24} color={colors.textSecondary} />
+            </View>
+            <View
+              className="rounded-2xl p-4"
+              style={{ backgroundColor: colors.surface }}
+            >
+              <Text
+                className="font-semibold mb-2"
+                style={{ color: colors.text }}
+              >
+                Perfect for:
+              </Text>
+              <Text
+                className="text-sm mb-1"
+                style={{ color: colors.textSecondary }}
+              >
+                • Quick sessions
+              </Text>
+              <Text
+                className="text-sm mb-1"
+                style={{ color: colors.textSecondary }}
+              >
+                • Focus on vocal delivery
+              </Text>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                • Smaller file sizes
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Video + Audio Option */}
+          <TouchableOpacity
+            className="rounded-3xl p-6 mb-6 shadow-lg"
+            style={{
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              borderWidth: 0.5,
+              shadowColor: theme === "dark" ? "#000" : "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: theme === "dark" ? 0.3 : 0.1,
+              shadowRadius: 12,
+              elevation: 8,
+            }}
+            onPress={() => {
+              setRecordingMethod("video");
+              setCurrentStep("record");
+            }}
+          >
+            <View className="flex-row items-center mb-4">
+              <View
+                className="rounded-2xl p-4 mr-4"
+                style={{
+                  backgroundColor:
+                    theme === "dark" ? colors.surface : "#f3e8ff",
+                }}
+              >
+                <Video size={28} color={colors.accent} />
+              </View>
+              <View className="flex-1">
+                <Text
+                  className="text-xl font-bold"
+                  style={{ color: colors.text }}
+                >
+                  Video + Audio
+                </Text>
+                <Text
+                  className="text-base"
+                  style={{ color: colors.textSecondary }}
+                >
+                  Record with camera and microphone
+                </Text>
+              </View>
+              <ChevronRight size={24} color={colors.textSecondary} />
+            </View>
+            <View
+              className="rounded-2xl p-4"
+              style={{ backgroundColor: colors.surface }}
+            >
+              <Text
+                className="font-semibold mb-2"
+                style={{ color: colors.text }}
+              >
+                Perfect for:
+              </Text>
+              <Text
+                className="text-sm mb-1"
+                style={{ color: colors.textSecondary }}
+              >
+                • Complete presentation analysis
+              </Text>
+              <Text
+                className="text-sm mb-1"
+                style={{ color: colors.textSecondary }}
+              >
+                • Body language feedback
+              </Text>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                • Comprehensive evaluation
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Upload Recording Option */}
+          <TouchableOpacity
+            className="rounded-3xl p-6 shadow-lg"
+            style={{
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              borderWidth: 0.5,
+              shadowColor: theme === "dark" ? "#000" : "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: theme === "dark" ? 0.3 : 0.1,
+              shadowRadius: 12,
+              elevation: 8,
+            }}
+            onPress={() => {
+              setRecordingMethod("upload");
+              setCurrentStep("record");
+            }}
+          >
+            <View className="flex-row items-center mb-4">
+              <View
+                className="rounded-2xl p-4 mr-4"
+                style={{
+                  backgroundColor:
+                    theme === "dark" ? colors.surface : "#dcfce7",
+                }}
+              >
+                <Upload size={28} color={colors.success} />
+              </View>
+              <View className="flex-1">
+                <Text
+                  className="text-xl font-bold"
+                  style={{ color: colors.text }}
+                >
+                  Upload Recording
+                </Text>
+                <Text
+                  className="text-base"
+                  style={{ color: colors.textSecondary }}
+                >
+                  Select a pre-recorded file from device
+                </Text>
+              </View>
+              <ChevronRight size={24} color={colors.textSecondary} />
+            </View>
+            <View
+              className="rounded-2xl p-4"
+              style={{ backgroundColor: colors.surface }}
+            >
+              <Text
+                className="font-semibold mb-2"
+                style={{ color: colors.text }}
+              >
+                Perfect for:
+              </Text>
+              <Text
+                className="text-sm mb-1"
+                style={{ color: colors.textSecondary }}
+              >
+                • Analyzing existing recordings
+              </Text>
+              <Text
+                className="text-sm mb-1"
+                style={{ color: colors.textSecondary }}
+              >
+                • Professional presentations
+              </Text>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                • Recorded speeches or meetings
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  );
+
+  const renderRecordingView = () => (
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <View
+        className="px-6 py-6"
+        style={{
+          backgroundColor: colors.surface,
+          borderBottomColor: colors.border,
+          borderBottomWidth: 0.5,
+        }}
+      >
+        <View className="flex-row items-center justify-between mb-4">
+          <TouchableOpacity
+            onPress={() => setCurrentStep("recordingMethod")}
+            className="rounded-full p-2"
+            style={{ backgroundColor: colors.surface }}
+          >
+            <ArrowLeft size={24} color={colors.primary} />
+          </TouchableOpacity>
+          <Text className="text-xl font-bold" style={{ color: colors.text }}>
+            Speaker Mode
+          </Text>
+          <View className="w-10" />
+        </View>
+        {renderProgressIndicator()}
+      </View>
+
+      <ScrollView className="flex-1">
+        <View className="p-6">
+          <Text
+            className="text-2xl font-bold mb-2 text-center"
+            style={{ color: colors.text }}
+          >
             Record Your Speech
           </Text>
           <Text
             className="text-center mb-8 text-base"
             style={{ color: colors.textSecondary }}
           >
-            Ready to practice? Let's record your speech for AI analysis
+            Ready to speak? Let's record your speech for AI analysis
           </Text>
 
           <View
@@ -729,51 +999,13 @@ export default function SpeakerModeScreen({
                   className="text-xl font-bold"
                   style={{ color: colors.text }}
                 >
-                  Practice Session
+                  Speaker Session
                 </Text>
                 <Text
                   className="text-base"
                   style={{ color: colors.textSecondary }}
                 >
                   Record your speech for AI analysis
-                </Text>
-              </View>
-            </View>
-
-            <View
-              className="rounded-2xl p-4 mb-4"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <View className="flex-row items-center mb-3">
-                <Lightbulb size={20} color={colors.warning} />
-                <Text className="font-bold ml-2" style={{ color: colors.text }}>
-                  Recording Tips
-                </Text>
-              </View>
-              <View className="space-y-2">
-                <Text
-                  className="text-sm mb-1"
-                  style={{ color: colors.textSecondary }}
-                >
-                  • Speak clearly and at a natural pace
-                </Text>
-                <Text
-                  className="text-sm mb-1"
-                  style={{ color: colors.textSecondary }}
-                >
-                  • Maintain good posture and eye contact
-                </Text>
-                <Text
-                  className="text-sm mb-1"
-                  style={{ color: colors.textSecondary }}
-                >
-                  • Target duration: {speechDetails.duration || "2-5 minutes"}
-                </Text>
-                <Text
-                  className="text-sm"
-                  style={{ color: colors.textSecondary }}
-                >
-                  • Find a quiet environment for best results
                 </Text>
               </View>
             </View>
@@ -839,20 +1071,32 @@ export default function SpeakerModeScreen({
             onRecordingComplete={handleRecordingComplete}
             isProcessing={isProcessing}
             analysisResults={analysisResults}
+            recordingMethod={recordingMethod}
           />
 
           {/* Confirmation Modal */}
           <Modal
             visible={showConfirmModal}
             transparent
-            animationType="fade"
+            animationType="slide"
             onRequestClose={() => setShowConfirmModal(false)}
           >
-            <View className="flex-1 bg-black/50 justify-center items-center">
+            <View className="flex-1 justify-end bg-black/40">
               <View
-                className="rounded-3xl mx-6 p-6 max-w-sm w-full"
-                style={{ backgroundColor: colors.card }}
+                className="rounded-t-3xl px-6 pt-6 pb-10"
+                style={{
+                  backgroundColor: colors.card,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: -4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 10,
+                  elevation: 20,
+                }}
               >
+                {/* Drag Handle */}
+                <View className="w-10 h-1.5 bg-gray-400/50 rounded-full self-center mb-4" />
+
+                {/* Modal Content */}
                 <View className="items-center mb-6">
                   <View
                     className="rounded-full p-4 mb-4"
@@ -861,44 +1105,55 @@ export default function SpeakerModeScreen({
                         theme === "dark" ? colors.surface : "#dcfce7",
                     }}
                   >
-                    <CheckCircle size={32} color={colors.success} />
+                    <CheckCircle size={36} color={colors.success} />
                   </View>
+
                   <Text
-                    className="text-xl font-bold mb-2"
+                    className="text-xl font-bold mb-2 text-center"
                     style={{ color: colors.text }}
                   >
                     Ready to Submit?
                   </Text>
                   <Text
-                    className="text-center text-base"
+                    className="text-center text-base leading-6"
                     style={{ color: colors.textSecondary }}
                   >
-                    Your speech will be sent for AI analysis. This usually takes
-                    30-60 seconds.
+                    Your speech will be sent for AI analysis. This usually takes{" "}
+                    <Text style={{ fontWeight: "600", color: colors.text }}>
+                      30–60 seconds.
+                    </Text>
                   </Text>
                 </View>
 
+                {/* Buttons */}
                 <View className="space-y-3">
                   <TouchableOpacity
-                    className="rounded-2xl py-4"
+                    className="rounded-2xl py-4 px-6 flex-row justify-center items-center"
                     style={{ backgroundColor: colors.success }}
                     onPress={confirmSubmission}
                   >
-                    <Text className="text-white font-bold text-center text-lg">
+                    <Text className="text-white font-bold text-lg">
                       Yes, Analyze My Speech
                     </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    className="rounded-2xl py-4"
-                    style={{ backgroundColor: colors.surface }}
-                    onPress={() => setShowConfirmModal(false)}
+                    className="rounded-2xl py-4 px-6 flex-row justify-center items-center"
+                    style={{
+                      backgroundColor:
+                        theme === "dark" ? colors.surface : "#f0f9ff",
+                    }}
+                    onPress={() => {
+                      setShowConfirmModal(false);
+                      navigation.navigate("speaker-mode");
+                    }}
                   >
+                    <Mic size={20} color={colors.primary} />
                     <Text
-                      className="font-bold text-center text-lg"
-                      style={{ color: colors.text }}
+                      className="ml-2 font-bold text-lg"
+                      style={{ color: colors.primary }}
                     >
-                      Continue Recording
+                      Record Another Speech
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -1168,7 +1423,7 @@ export default function SpeakerModeScreen({
               className="text-xl font-bold mb-4"
               style={{ color: colors.text }}
             >
-              Quick Feedback
+              Major Feedback
             </Text>
 
             <View className="mb-4">
@@ -1258,6 +1513,7 @@ export default function SpeakerModeScreen({
     >
       {currentStep === "speechType" && renderSpeechTypeSelection()}
       {currentStep === "speechDetails" && renderSpeechDetails()}
+      {currentStep === "recordingMethod" && renderRecordingMethodSelection()}
       {currentStep === "record" && renderRecordingView()}
       {currentStep === "results" && renderResultsView()}
     </SafeAreaView>

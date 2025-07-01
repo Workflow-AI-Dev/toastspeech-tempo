@@ -10,6 +10,9 @@ import {
   Target,
   Award,
   TrendingUp,
+  Video,
+  Upload,
+  FileText,
 } from "lucide-react-native";
 
 import * as Haptics from "expo-haptics";
@@ -23,6 +26,7 @@ interface SpeechRecorderProps {
     emotionalDelivery: number;
     overallScore: number;
   };
+  recordingMethod?: "audio" | "video" | "upload" | null;
 }
 
 const SpeechRecorder = ({
@@ -34,9 +38,10 @@ const SpeechRecorder = ({
     emotionalDelivery: 78,
     overallScore: 82,
   },
+  recordingMethod = "audio",
 }: SpeechRecorderProps) => {
   const [recordingState, setRecordingState] = useState<
-    "idle" | "recording" | "paused" | "completed"
+    "idle" | "recording" | "paused" | "completed" | "uploading"
   >("idle");
   const [timer, setTimer] = useState(0);
   const [audioLevels, setAudioLevels] = useState<number[]>(Array(30).fill(5));
@@ -107,8 +112,29 @@ const SpeechRecorder = ({
     setRecordingState("completed");
     // Simulate sending recording data
     setTimeout(() => {
-      onRecordingComplete({ duration: timer, timestamp: new Date() });
+      onRecordingComplete({
+        duration: timer,
+        timestamp: new Date(),
+        method: recordingMethod,
+      });
     }, 1000);
+  };
+
+  const handleFileUpload = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setRecordingState("uploading");
+    // Simulate file upload process
+    setTimeout(() => {
+      setRecordingState("completed");
+      setTimeout(() => {
+        onRecordingComplete({
+          duration: 180, // 3 minutes as example
+          timestamp: new Date(),
+          method: "upload",
+          fileName: "uploaded_speech.mp4",
+        });
+      }, 1000);
+    }, 2000);
   };
 
   const resetRecording = () => {
@@ -117,14 +143,53 @@ const SpeechRecorder = ({
     setAudioLevels(Array(30).fill(5));
   };
 
+  const getRecordingIcon = () => {
+    switch (recordingMethod) {
+      case "video":
+        return <Video size={40} color="white" />;
+      case "upload":
+        return <Upload size={40} color="white" />;
+      default:
+        return <Mic size={40} color="white" />;
+    }
+  };
+
+  const getRecordingTitle = () => {
+    switch (recordingMethod) {
+      case "video":
+        return "Video + Audio Recording";
+      case "upload":
+        return "Upload Recording";
+      default:
+        return "Audio Recording";
+    }
+  };
+
+  const getRecordingDescription = () => {
+    switch (recordingMethod) {
+      case "video":
+        return "Tap to start recording with camera and microphone";
+      case "upload":
+        return "Tap to select a file from your device";
+      default:
+        return "Tap the mic to start recording";
+    }
+  };
+
   return (
     <View className="bg-gradient-to-b from-purple-50 to-indigo-50 w-full h-[500px] rounded-2xl overflow-hidden">
       {/* Header */}
       <View className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 items-center">
         <View className="flex-row items-center">
-          <Zap size={24} color="white" />
+          {recordingMethod === "video" ? (
+            <Video size={24} color="white" />
+          ) : recordingMethod === "upload" ? (
+            <Upload size={24} color="white" />
+          ) : (
+            <Zap size={24} color="white" />
+          )}
           <Text className="text-white text-xl font-bold ml-2">
-            AI Speech Coach
+            {getRecordingTitle()}
           </Text>
         </View>
         {recordingState !== "idle" && (
@@ -144,25 +209,22 @@ const SpeechRecorder = ({
         {recordingState === "idle" && (
           <View className="items-center">
             <Text className="text-xl font-bold text-gray-800 mb-2 text-center">
-              Ready to Practice?
+              Ready?
             </Text>
             <Text className="text-gray-600 mb-8 text-center">
-              Tap the mic to start recording and get instant AI feedback!
+              {getRecordingDescription()}
             </Text>
 
             <TouchableOpacity
-              onPress={handleStartRecording}
+              onPress={
+                recordingMethod === "upload"
+                  ? handleFileUpload
+                  : handleStartRecording
+              }
               className="bg-gradient-to-r from-red-500 to-pink-500 w-24 h-24 rounded-full items-center justify-center shadow-lg"
             >
-              <Mic size={40} color="white" />
+              {getRecordingIcon()}
             </TouchableOpacity>
-
-            <View className="flex-row items-center mt-6 bg-white/50 rounded-full px-4 py-2">
-              <Target size={16} color="#6366f1" />
-              <Text className="text-indigo-600 text-sm font-semibold ml-2">
-                Aim for 2-5 minutes
-              </Text>
-            </View>
           </View>
         )}
 
@@ -214,42 +276,23 @@ const SpeechRecorder = ({
             <View className="mt-8 bg-white/50 rounded-2xl p-4 items-center">
               <Text className="text-lg font-bold text-gray-800">
                 {recordingState === "recording"
-                  ? "🔴 Recording..."
+                  ? recordingMethod === "video"
+                    ? "🎥 Recording Video..."
+                    : "🔴 Recording Audio..."
                   : "⏸️ Paused"}
               </Text>
               <Text className="text-gray-600 text-center mt-1">
                 {recordingState === "recording"
-                  ? "Speak clearly and confidently!"
+                  ? recordingMethod === "video"
+                    ? "Look at the camera and speak clearly!"
+                    : "Speak clearly and confidently!"
                   : "Tap mic to resume recording"}
               </Text>
             </View>
           </View>
         )}
 
-        {recordingState === "completed" && !isProcessing && (
-          <View className="items-center">
-            <View className="bg-green-100 rounded-full p-6 mb-4">
-              <CheckCircle size={60} color="#16a34a" />
-            </View>
-            <Text className="text-2xl font-bold text-gray-800 mb-2">
-              Amazing! 🎉
-            </Text>
-            <Text className="text-gray-600 text-center mb-6">
-              Your speech has been recorded successfully.
-            </Text>
-
-            <TouchableOpacity
-              onPress={resetRecording}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-4 rounded-2xl shadow-lg"
-            >
-              <Text className="text-white font-bold text-lg">
-                🎤 Record Another
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {isProcessing && (
+        {(isProcessing || recordingState === "uploading") && (
           <View className="items-center">
             <Animated.View
               style={{
@@ -272,78 +315,42 @@ const SpeechRecorder = ({
                 ],
               }}
             >
-              <Loader size={60} color="#7c3aed" />
+              {recordingState === "uploading" ? (
+                <Upload size={60} color="#7c3aed" />
+              ) : (
+                <Loader size={60} color="#7c3aed" />
+              )}
             </Animated.View>
             <Text className="text-xl font-bold text-gray-800 mb-2">
-              🤖 AI is Analyzing...
+              {recordingState === "uploading"
+                ? "Uploading File..."
+                : "AI is Analyzing..."}
             </Text>
             <Text className="text-gray-600 text-center">
-              Hang tight! We're processing your speech to give you personalized
-              feedback.
+              {recordingState === "uploading"
+                ? "Processing your uploaded file for analysis."
+                : "Hang tight! We're processing your speech to give you personalized feedback."}
             </Text>
 
             <View className="flex-row mt-4 space-x-2">
               <View className="bg-white/50 rounded-full px-3 py-1">
-                <Text className="text-sm text-gray-700">📊 Analyzing pace</Text>
+                <Text className="text-sm text-gray-700">
+                  {recordingMethod === "video"
+                    ? "🎥 Analyzing video"
+                    : "📊 Analyzing pace"}
+                </Text>
               </View>
               <View className="bg-white/50 rounded-full px-3 py-1">
                 <Text className="text-sm text-gray-700">
-                  🎯 Checking clarity
+                  {recordingMethod === "video"
+                    ? "👤 Checking gestures"
+                    : "🎯 Checking clarity"}
                 </Text>
               </View>
             </View>
           </View>
         )}
       </View>
-
-      {/* Analysis Results (if available) */}
-      {recordingState === "completed" && !isProcessing && analysisResults && (
-        <View className="bg-white/90 backdrop-blur-sm p-4 rounded-t-2xl border-t border-gray-200">
-          <View className="flex-row items-center mb-3">
-            <Award size={20} color="#7c3aed" />
-            <Text className="text-lg font-bold ml-2">Your Results</Text>
-          </View>
-
-          <View className="flex-row justify-between items-center">
-            <View className="flex-1">
-              <View className="flex-row justify-between mb-2">
-                <Text className="text-gray-700">🏃‍♂️ Pace:</Text>
-                <Text className="font-bold text-purple-600">
-                  {analysisResults.pace}/100
-                </Text>
-              </View>
-              <View className="flex-row justify-between mb-2">
-                <Text className="text-gray-700">🚫 Filler Words:</Text>
-                <Text className="font-bold text-orange-600">
-                  {analysisResults.fillerWords}
-                </Text>
-              </View>
-            </View>
-
-            <View className="ml-6 items-center">
-              <View className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-full w-16 h-16 items-center justify-center">
-                <Text className="font-bold text-xl text-purple-600">
-                  {analysisResults.overallScore}
-                </Text>
-              </View>
-              <Text className="text-xs text-gray-500 mt-1">Overall</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl py-3 mt-4"
-            onPress={() => {
-              // This would typically be handled by the parent component
-              // For now, we'll just show an alert
-              alert("Navigate to detailed feedback");
-            }}
-          >
-            <Text className="text-white font-bold text-center">
-              📋 View Detailed Feedback
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
   );
 };

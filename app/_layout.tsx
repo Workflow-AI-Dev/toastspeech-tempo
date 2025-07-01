@@ -11,6 +11,7 @@ import "react-native-reanimated";
 import "../global.css";
 import { Platform } from "react-native";
 import { ThemeProvider } from "./context/ThemeContext";
+import { AuthProvider } from "./context/AuthContext";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -48,45 +49,53 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <NavigationThemeProvider value={DefaultTheme}>
-        <Stack
-          screenOptions={({ route }) => ({
-            headerShown: !route.name.startsWith("tempobook"),
-          })}
-        >
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="sign-up" options={{ headerShown: false }} />
-          <Stack.Screen name="sign-in" options={{ headerShown: false }} />
-          <Stack.Screen name="subscription" options={{ headerShown: false }} />
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="speaker-mode" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="ai-evaluation-summary"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="detailed-feedback"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="evaluator-mode"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="profile-settings"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="performance-dashboard"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="feedback-library"
-            options={{ headerShown: false }}
-          />
-        </Stack>
-        <StatusBar style="auto" />
-      </NavigationThemeProvider>
+      <AuthProvider>
+        <NavigationThemeProvider value={DefaultTheme}>
+          <Stack
+            screenOptions={({ route }) => ({
+              headerShown: !route.name.startsWith("tempobook"),
+            })}
+          >
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+            <Stack.Screen name="sign-up" options={{ headerShown: false }} />
+            <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="subscription"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="speaker-mode"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ai-evaluation-summary"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="detailed-feedback"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="evaluator-mode"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="profile-settings"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="performance-dashboard"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="feedback-library"
+              options={{ headerShown: false }}
+            />
+          </Stack>
+          <StatusBar style="auto" />
+        </NavigationThemeProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
