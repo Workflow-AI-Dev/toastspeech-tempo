@@ -64,8 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       segments[0] === "(auth)" ||
       segments[0] === "onboarding" ||
       segments[0] === "sign-in" ||
-      segments[0] === "sign-up" ||
-      segments[0] === "subscription";
+      segments[0] === "sign-up";
 
     if (!user && !inAuthGroup) {
       // Redirect to onboarding if not authenticated

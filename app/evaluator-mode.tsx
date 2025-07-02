@@ -4,5 +4,10 @@ import { useRouter } from "expo-router";
 export default function EvaluatorMode() {
   const router = useRouter();
 
-  return <EvaluatorModeScreen onBack={() => router.back()} />;
+  return (
+    <EvaluatorModeScreen
+      onBack={() => router.back()}
+      onViewDetailedFeedback={() => router.push("/detailed-feedback-eval")}
+    />
+  );
 }

@@ -17,6 +17,8 @@ const slides = [
   {
     title: "Welcome to ToastSpeech",
     description: "AI-powered coaching to boost your public speaking game.",
+    image: require("../public.jpg"),
+    bgColor: "#f6f2ef",
   },
   {
     title: "AI-Powered Analysis",
@@ -33,8 +35,8 @@ const slides = [
   {
     title: "Level Up Skills",
     description: "Structured practice with gamified achievements.",
-    image: require("../up.png"),
-    bgColor: "#ba303a",
+    image: require("../girl.gif"),
+    bgColor: "#fd6356",
   },
   {
     title: "Start Free",
@@ -101,19 +103,8 @@ export default function OnboardingScreen() {
                 height,
                 backgroundColor: slide.bgColor || colors.background,
               }}
+              className="flex-1"
             >
-              {isFirst ? (
-                <Image
-                  source={require("../first.jpg")}
-                  resizeMode="cover"
-                  style={{
-                    position: "absolute",
-                    width,
-                    height,
-                  }}
-                />
-              ) : null}
-
               <View
                 className="flex-1 items-center px-8"
                 style={{
@@ -133,13 +124,12 @@ export default function OnboardingScreen() {
                   />
                 )}
 
-                {/* Only show slide image if not first slide */}
-                {!isFirst && slide.image && (
+                {slide.image && (
                   <Image
                     source={slide.image}
                     resizeMode="contain"
                     style={{
-                      width: width * 0.9,
+                      width: width * 1,
                       height: height * 0.35,
                       marginBottom: 30,
                     }}
@@ -149,11 +139,7 @@ export default function OnboardingScreen() {
                 <Text
                   className="text-3xl font-bold text-center mb-4"
                   style={{
-                    color: isFourth
-                      ? "#fff"
-                      : isFirst
-                        ? "#f7f9fa"
-                        : colors.text,
+                    color: isFourth ? "#fff" : isFirst ? "#000" : colors.text,
                   }}
                 >
                   {slide.title}
@@ -165,7 +151,7 @@ export default function OnboardingScreen() {
                     color: isFourth
                       ? "#fff"
                       : isFirst
-                        ? "#f7f9fa"
+                        ? "#444"
                         : colors.textSecondary,
                   }}
                 >

@@ -77,6 +77,10 @@ export default function RootLayout() {
               options={{ headerShown: false }}
             />
             <Stack.Screen
+              name="detailed-feedback-eval"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
               name="evaluator-mode"
               options={{ headerShown: false }}
             />
@@ -90,6 +94,14 @@ export default function RootLayout() {
             />
             <Stack.Screen
               name="feedback-library"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="evaluator-summary"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="evaluator-complete"
               options={{ headerShown: false }}
             />
           </Stack>

@@ -182,6 +182,15 @@ export default function ProfileSettings({
           onPress: () => setIsEditing(true),
         },
         {
+          icon: Crown,
+          title: "Change Subscription",
+          description: "Current Plan - Try & Taste",
+          onPress: () => {
+            router.push("/subscription");
+          },
+        },
+
+        {
           icon: Shield,
           title: "Privacy & Security",
           description: "Manage your privacy settings",
@@ -235,6 +244,16 @@ export default function ProfileSettings({
           description: "Get help and contact support",
           onPress: () => {},
         },
+        {
+          icon: Trophy,
+          title: "Get Progress Report",
+          description: "Email your full progess report",
+          onPress: () => {
+            // TODO: trigger progress report export/email
+            alert("Progress report sent to your email!");
+          },
+        },
+
         {
           icon: LogOut,
           title: "Sign Out",
@@ -291,12 +310,6 @@ export default function ProfileSettings({
                 className="w-full h-full"
                 resizeMode="cover"
               />
-              <View
-                className="absolute -bottom-1 -right-1 rounded-full w-8 h-8 items-center justify-center"
-                style={{ backgroundColor: colors.primary }}
-              >
-                <Camera size={16} color="white" />
-              </View>
             </TouchableOpacity>
 
             {isEditing ? (

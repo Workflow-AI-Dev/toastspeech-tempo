@@ -15,8 +15,13 @@ export default function FeedbackLibraryPage() {
       className="flex-1"
       style={{ backgroundColor: colors.background }}
     >
-      <FeedbackLibrary />;{/* Bottom Navigation */}
-      {/* Bottom Navigation */}
+      <FeedbackLibrary
+        onViewDetailedFeedback={() => router.push("/detailed-feedback")}
+        onViewDetailedFeedbackEval={() =>
+          router.push("/detailed-feedback-eval")
+        }
+      />
+      ;{/* Bottom Navigation */}
       <View
         className="flex-row justify-around items-center py-4 border-t"
         style={{ backgroundColor: colors.card, borderTopColor: colors.border }}

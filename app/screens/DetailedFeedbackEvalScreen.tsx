@@ -11,27 +11,18 @@ import {
   CheckCircle,
   AlertTriangle,
   Lightbulb,
-  TrendingUp,
-  Clock,
-  Mic,
-  Volume2,
-  Eye,
-  Heart,
-  Brain,
-  MessageSquare,
-  BarChart3,
   Play,
   Pause,
+  Volume2,
+  MessageSquare,
   AlignLeft,
+  Eye,
+  Heart,
+  BarChart3,
+  Clock,
 } from "lucide-react-native";
 
-interface DetailedFeedbackScreenProps {
-  onBack?: () => void;
-}
-
-export default function DetailedFeedbackScreen({
-  onBack = () => {},
-}: DetailedFeedbackScreenProps) {
+export default function DetailedFeedbackEvalScreen({ onBack = () => {} }) {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -44,194 +35,140 @@ export default function DetailedFeedbackScreen({
       icon: MessageSquare,
       color: "#8b5cf6",
     },
-    { id: "structure", label: "Structure", icon: AlignLeft, color: "#ec4899" },
+    { id: "content", label: "Content", icon: AlignLeft, color: "#ec4899" },
     { id: "delivery", label: "Delivery", icon: Eye, color: "#10b981" },
     { id: "emotion", label: "Emotion", icon: Heart, color: "#f59e0b" },
   ];
 
   const detailedFeedback = {
     vocal: {
-      title: "Vocal Delivery",
-      score: 85,
-      strengths: [
-        {
-          text: "Excellent vocal variety with pitch modulation",
-          timestamp: "0:45",
-          confidence: 95,
-        },
-        {
-          text: "Clear articulation throughout the speech",
-          timestamp: "2:15",
-          confidence: 92,
-        },
-        {
-          text: "Appropriate volume for audience engagement",
-          timestamp: "3:30",
-          confidence: 88,
-        },
-      ],
-      improvements: [
-        {
-          text: "Pace slightly fast during technical explanations",
-          timestamp: "1:20",
-          severity: "medium",
-          suggestion: "Slow down by 10-15% when explaining complex concepts",
-        },
-        {
-          text: "Inconsistent pause lengths between sentences",
-          timestamp: "2:45",
-          severity: "low",
-          suggestion: "Practice using 1-2 second pauses consistently",
-        },
-      ],
-      metrics: {
-        averagePace: "165 WPM",
-        optimalRange: "140-160 WPM",
-        pauseFrequency: "Every 8.5 words",
-        volumeConsistency: "87%",
-      },
-    },
-    language: {
-      title: "Language & Grammar",
-      score: 78,
-      strengths: [
-        {
-          text: "Rich vocabulary with varied word choices",
-          timestamp: "1:10",
-          confidence: 90,
-        },
-        {
-          text: "Proper grammar structure throughout",
-          timestamp: "Overall",
-          confidence: 85,
-        },
-      ],
-      improvements: [
-        {
-          text: "8 filler words detected ('um', 'uh', 'like')",
-          timestamp: "Multiple",
-          severity: "high",
-          suggestion:
-            "Practice with recording to build awareness of filler word usage",
-          details: [
-            "'Um' - 4 instances (0:30, 1:45, 2:20, 3:10)",
-            "'Uh' - 3 instances (0:55, 2:35, 3:45)",
-            "'Like' - 1 instance (1:30)",
-          ],
-        },
-        {
-          text: "Repetitive sentence starters",
-          timestamp: "1:00-2:00",
-          severity: "medium",
-          suggestion: "Vary sentence beginnings to maintain audience interest",
-        },
-      ],
-      metrics: {
-        vocabularyDiversity: "72%",
-        grammarAccuracy: "94%",
-        fillerWordRate: "1.8 per minute",
-        sentenceVariety: "65%",
-      },
-    },
-    structure: {
-      title: "Speech Structure",
-      score: 80,
-      strengths: [
-        {
-          text: "Clear opening with attention-grabber",
-          timestamp: "0:00-0:30",
-          confidence: 90,
-        },
-        {
-          text: "Logical flow of main points",
-          timestamp: "Throughout",
-          confidence: 87,
-        },
-      ],
-      improvements: [
-        {
-          text: "Weak conclusion lacking strong call-to-action",
-          timestamp: "3:45-4:00",
-          severity: "medium",
-          suggestion: "End with a memorable takeaway or action step",
-        },
-      ],
-      metrics: {
-        introEffectiveness: "85%",
-        transitionClarity: "78%",
-        mainPointClarity: "80%",
-        conclusionImpact: "70%",
-      },
-    },
-    delivery: {
-      title: "Physical Delivery",
+      title: "Vocal Feedback",
       score: 82,
       strengths: [
         {
-          text: "Strong eye contact with audience",
-          timestamp: "Throughout",
-          confidence: 88,
+          text: "Good pitch control and vocal modulation",
+          timestamp: "1:05",
+          confidence: 90,
         },
         {
-          text: "Natural hand gestures for emphasis",
-          timestamp: "1:30-2:00",
+          text: "Pacing matched tone of message",
+          timestamp: "2:20",
+          confidence: 88,
+        },
+      ],
+      improvements: [
+        {
+          text: "Volume dropped during conclusion",
+          timestamp: "3:45",
+          severity: "medium",
+          suggestion: "Maintain consistent vocal energy till the end",
+        },
+      ],
+      metrics: {
+        clarityScore: "87%",
+        modulationRange: "78%",
+        averagePace: "158 WPM",
+      },
+    },
+    language: {
+      title: "Language & Expression",
+      score: 76,
+      strengths: [
+        {
+          text: "Varied and clear expressions",
+          timestamp: "1:40",
           confidence: 85,
         },
       ],
       improvements: [
         {
-          text: "Limited movement and positioning",
-          timestamp: "Overall",
-          severity: "medium",
-          suggestion: "Use purposeful movement to emphasize transitions",
-        },
-        {
-          text: "Occasional fidgeting with hands",
-          timestamp: "2:30-3:00",
+          text: "Used the word 'basically' excessively",
+          timestamp: "2:00-3:00",
           severity: "low",
-          suggestion: "Practice relaxed, open posture",
+          suggestion: "Minimize fillers to enhance professionalism",
         },
       ],
       metrics: {
-        eyeContactScore: "85%",
-        gestureVariety: "72%",
-        postureConsistency: "78%",
-        movementPurpose: "65%",
+        fillerWordRate: "2.1/min",
+        vocabularyUse: "70%",
+        grammarAccuracy: "96%",
       },
     },
-    emotion: {
-      title: "Emotional Delivery",
-      score: 89,
+    content: {
+      title: "Content Quality",
+      score: 88,
       strengths: [
         {
-          text: "Authentic enthusiasm for the topic",
-          timestamp: "0:15-1:00",
+          text: "Accurate summary of the speaker's structure",
+          timestamp: "0:30-1:00",
           confidence: 92,
         },
         {
-          text: "Emotional connection with personal stories",
-          timestamp: "2:00-2:45",
-          confidence: 95,
-        },
-        {
-          text: "Confident and engaging tone",
-          timestamp: "Throughout",
-          confidence: 87,
+          text: "Identified key transitions and rhetorical tools",
+          timestamp: "1:50",
+          confidence: 89,
         },
       ],
       improvements: [
         {
-          text: "Energy dip during middle section",
-          timestamp: "2:45-3:15",
+          text: "Missed mentioning call-to-action",
+          timestamp: "3:40",
           severity: "medium",
-          suggestion: "Maintain consistent energy by varying vocal dynamics",
+          suggestion: "Mention all core components of the speech",
         },
       ],
       metrics: {
-        emotionalRange: "78%",
-        authenticity: "92%",
-        audienceConnection: "85%",
-        energyConsistency: "73%",
+        accuracy: "90%",
+        coverage: "85%",
+        structureReflection: "78%",
+      },
+    },
+    delivery: {
+      title: "Evaluator's Delivery",
+      score: 79,
+      strengths: [
+        {
+          text: "Confident posture and consistent gestures",
+          timestamp: "1:15",
+          confidence: 84,
+        },
+      ],
+      improvements: [
+        {
+          text: "Eye contact dropped during second half",
+          timestamp: "2:30-3:30",
+          severity: "low",
+          suggestion: "Practice sustained eye contact",
+        },
+      ],
+      metrics: {
+        eyeContact: "72%",
+        gestureUse: "80%",
+        movementFluidity: "68%",
+      },
+    },
+    emotion: {
+      title: "Emotional Resonance",
+      score: 84,
+      strengths: [
+        {
+          text: "Warm tone and supportive energy",
+          timestamp: "Throughout",
+          confidence: 91,
+        },
+      ],
+      improvements: [
+        {
+          text: "Could have smiled more during encouragement",
+          timestamp: "3:00",
+          severity: "low",
+          suggestion: "Smiling adds emotional connection and encouragement",
+        },
+      ],
+      metrics: {
+        positivity: "88%",
+        empathyShown: "82%",
+        vocalWarmth: "79%",
       },
     },
   };
@@ -241,47 +178,44 @@ export default function DetailedFeedbackScreen({
       type: "strength",
       icon: CheckCircle,
       color: "#10b981",
-      title: "Natural Storyteller",
-      description:
-        "Your personal anecdotes created strong emotional connections with the audience.",
+      title: "Supportive Evaluator",
+      description: "Your praise was meaningful and specific, boosting morale.",
     },
     {
       type: "improvement",
       icon: AlertTriangle,
       color: "#f59e0b",
-      title: "Filler Word Awareness",
-      description:
-        "Focus on eliminating filler words to sound more polished and confident.",
+      title: "Structural Completeness",
+      description: "Try to include all parts of the speech in your critique.",
     },
     {
       type: "tip",
       icon: Lightbulb,
       color: "#8b5cf6",
-      title: "Practice Recommendation",
-      description:
-        "Record yourself daily for 2 minutes to build awareness of speaking patterns.",
+      title: "Balance is Key",
+      description: "Equal focus on praise and suggestions builds credibility.",
     },
   ];
 
-  const renderCategoryContent = (categoryId: string) => {
+  const renderCategoryContent = (categoryId) => {
     if (categoryId === "all") {
       return (
         <View className="space-y-6">
-          {/* Overall Insights */}
+          {/* Insights */}
           <View className="bg-white rounded-3xl p-6 shadow-sm">
             <Text className="text-xl font-bold text-gray-900 mb-4">
               Key Insights
             </Text>
             <View className="space-y-4">
               {overallInsights.map((insight, index) => {
-                const IconComponent = insight.icon;
+                const Icon = insight.icon;
                 return (
                   <View key={index} className="flex-row items-start">
                     <View
                       className="rounded-full p-2 mr-3 mt-1"
                       style={{ backgroundColor: `${insight.color}20` }}
                     >
-                      <IconComponent size={16} color={insight.color} />
+                      <Icon size={16} color={insight.color} />
                     </View>
                     <View className="flex-1">
                       <Text className="font-bold text-gray-900 mb-1">
@@ -337,15 +271,13 @@ export default function DetailedFeedbackScreen({
       );
     }
 
-    const category =
-      detailedFeedback[categoryId as keyof typeof detailedFeedback];
+    const category = detailedFeedback[categoryId];
     if (!category) return null;
 
     return (
       <View className="space-y-6">
-        {/* Category Header */}
         <View className="bg-white rounded-3xl p-6 shadow-sm">
-          <View className="flex-row items-center justify-between mb-4">
+          <View className="flex-row justify-between mb-4">
             <Text className="text-2xl font-bold text-gray-900">
               {category.title}
             </Text>
@@ -355,13 +287,12 @@ export default function DetailedFeedbackScreen({
               </Text>
             </View>
           </View>
-
           {/* Metrics */}
           <View className="bg-gray-50 rounded-2xl p-4">
             <Text className="font-bold text-gray-800 mb-3">Key Metrics</Text>
             <View className="grid grid-cols-2 gap-3">
               {Object.entries(category.metrics).map(([key, value]) => (
-                <View key={key} className="">
+                <View key={key}>
                   <Text className="text-gray-600 text-sm capitalize">
                     {key.replace(/([A-Z])/g, " $1").trim()}
                   </Text>
@@ -381,22 +312,22 @@ export default function DetailedFeedbackScreen({
             </Text>
           </View>
           <View className="space-y-4">
-            {category.strengths.map((strength, index) => (
-              <View key={index} className="bg-green-50 rounded-2xl p-4">
-                <View className="flex-row items-start justify-between mb-2">
+            {category.strengths.map((s, i) => (
+              <View key={i} className="bg-green-50 rounded-2xl p-4">
+                <View className="flex-row justify-between mb-2">
                   <Text className="text-green-800 font-semibold flex-1">
-                    {strength.text}
+                    {s.text}
                   </Text>
                   <View className="bg-green-100 rounded-full px-2 py-1">
                     <Text className="text-green-700 text-xs font-bold">
-                      {strength.confidence}%
+                      {s.confidence}%
                     </Text>
                   </View>
                 </View>
                 <View className="flex-row items-center">
                   <Clock size={14} color="#059669" />
                   <Text className="text-green-700 text-sm ml-1">
-                    {strength.timestamp}
+                    {s.timestamp}
                   </Text>
                 </View>
               </View>
@@ -413,42 +344,40 @@ export default function DetailedFeedbackScreen({
             </Text>
           </View>
           <View className="space-y-4">
-            {category.improvements.map((improvement, index) => (
-              <View key={index} className="bg-orange-50 rounded-2xl p-4">
-                <View className="flex-row items-start justify-between mb-2">
+            {category.improvements.map((imp, i) => (
+              <View key={i} className="bg-orange-50 rounded-2xl p-4">
+                <View className="flex-row justify-between mb-2">
                   <Text className="text-orange-800 font-semibold flex-1">
-                    {improvement.text}
+                    {imp.text}
                   </Text>
                   <View
                     className={`rounded-full px-2 py-1 ${
-                      improvement.severity === "high"
+                      imp.severity === "high"
                         ? "bg-red-100"
-                        : improvement.severity === "medium"
+                        : imp.severity === "medium"
                           ? "bg-orange-100"
                           : "bg-yellow-100"
                     }`}
                   >
                     <Text
                       className={`text-xs font-bold ${
-                        improvement.severity === "high"
+                        imp.severity === "high"
                           ? "text-red-700"
-                          : improvement.severity === "medium"
+                          : imp.severity === "medium"
                             ? "text-orange-700"
                             : "text-yellow-700"
                       }`}
                     >
-                      {improvement.severity.toUpperCase()}
+                      {imp.severity.toUpperCase()}
                     </Text>
                   </View>
                 </View>
-
                 <View className="flex-row items-center mb-3">
                   <Clock size={14} color="#d97706" />
                   <Text className="text-orange-700 text-sm ml-1">
-                    {improvement.timestamp}
+                    {imp.timestamp}
                   </Text>
                 </View>
-
                 <View className="bg-white rounded-xl p-3">
                   <View className="flex-row items-center mb-2">
                     <Lightbulb size={16} color="#7c3aed" />
@@ -456,25 +385,7 @@ export default function DetailedFeedbackScreen({
                       Suggestion
                     </Text>
                   </View>
-                  <Text className="text-gray-700">
-                    {improvement.suggestion}
-                  </Text>
-
-                  {improvement.details && (
-                    <View className="mt-3">
-                      <Text className="text-gray-600 font-medium mb-2">
-                        Details:
-                      </Text>
-                      {improvement.details.map((detail, detailIndex) => (
-                        <Text
-                          key={detailIndex}
-                          className="text-gray-600 text-sm ml-2"
-                        >
-                          • {detail}
-                        </Text>
-                      ))}
-                    </View>
-                  )}
+                  <Text className="text-gray-700">{imp.suggestion}</Text>
                 </View>
               </View>
             ))}
@@ -486,7 +397,6 @@ export default function DetailedFeedbackScreen({
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
       <View className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
         <View className="flex-row items-center justify-between mb-4">
           <TouchableOpacity
@@ -496,7 +406,7 @@ export default function DetailedFeedbackScreen({
             <ArrowLeft size={24} color="white" />
           </TouchableOpacity>
           <Text className="text-white text-xl font-bold">
-            Detailed Feedback
+            Evaluation Feedback
           </Text>
           <TouchableOpacity
             onPress={() => setIsPlaying(!isPlaying)}
@@ -509,37 +419,32 @@ export default function DetailedFeedbackScreen({
             )}
           </TouchableOpacity>
         </View>
-
         <Text className="text-white/80">
-          Comprehensive analysis of your speech performance
+          In-depth review of your evaluation delivery
         </Text>
       </View>
 
-      {/* Category Tabs */}
       <View className="bg-white px-6 py-4">
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row space-x-2">
-            {categories.map((category) => {
-              const IconComponent = category.icon;
-              const isSelected = selectedCategory === category.id;
+            {categories.map((cat) => {
+              const Icon = cat.icon;
+              const isSelected = selectedCategory === cat.id;
               return (
                 <TouchableOpacity
-                  key={category.id}
-                  onPress={() => setSelectedCategory(category.id)}
+                  key={cat.id}
+                  onPress={() => setSelectedCategory(cat.id)}
                   className={`flex-row items-center px-4 py-2 rounded-2xl ${
                     isSelected ? "bg-purple-100" : "bg-gray-100"
                   }`}
                 >
-                  <IconComponent
-                    size={16}
-                    color={isSelected ? "#7c3aed" : category.color}
-                  />
+                  <Icon size={16} color={isSelected ? "#7c3aed" : cat.color} />
                   <Text
                     className={`font-semibold ml-2 ${
                       isSelected ? "text-purple-700" : "text-gray-600"
                     }`}
                   >
-                    {category.label}
+                    {cat.label}
                   </Text>
                 </TouchableOpacity>
               );
@@ -548,7 +453,6 @@ export default function DetailedFeedbackScreen({
         </ScrollView>
       </View>
 
-      {/* Content */}
       <ScrollView className="flex-1 px-6 py-4">
         {renderCategoryContent(selectedCategory)}
       </ScrollView>

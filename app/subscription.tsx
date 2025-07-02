@@ -6,7 +6,7 @@ import {
   ScrollView,
   Animated,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Check,
@@ -16,11 +16,17 @@ import {
   Award,
   Shield,
   Users,
+  ChevronLeft,
 } from "lucide-react-native";
 
 export default function SubscriptionScreen() {
   const router = useRouter();
-  const [selectedPlan, setSelectedPlan] = useState("essential");
+  const { from } = useLocalSearchParams();
+  const isFromProfile = Array.isArray(from)
+    ? from.includes("profile-settings")
+    : from === "profile-settings";
+
+  const [selectedPlan, setSelectedPlan] = useState("free"); // Highlight Try & Taste by default
   const [planAnimations] = useState([
     new Animated.Value(0),
     new Animated.Value(0),
@@ -42,35 +48,45 @@ export default function SubscriptionScreen() {
     {
       id: "free",
       name: "Try & Taste",
-      price: "Free",
+      price: "$0",
+      usage: "1 evaluation/month",
       features: [
-        "1 speech analysis/month",
-        "Basic feedback",
-        "Access to community forum",
+        "Basic voice-only AI evaluation",
+        "Sandwich summary only",
+        "Limited dashboard: filler words + pace",
+        "Watermarked reports",
       ],
-      limitations: ["No video analysis", "No evaluator tools"],
+      limitations: [
+        "No video uploads",
+        "No evaluator tools",
+        "No downloadable reports",
+      ],
     },
     {
       id: "essential",
       name: "Practice & Improve",
-      price: "$5/mo",
+      price: "$5/month",
+      usage: "2 evaluations/month",
       features: [
-        "5 analyses/month",
-        "Video + voice analysis",
-        "Detailed feedback",
-        "Progress tracking",
+        "Voice + video AI evaluations",
+        "Full evaluation breakdown (grammar, tone, etc.)",
+        "Improvement history",
+        "Clean downloadable reports",
+        "Email insights after each speech",
       ],
       limitations: [],
     },
     {
       id: "pro",
       name: "Coach & Analyze",
-      price: "$20/mo",
+      price: "$20/month",
+      usage: "10 evaluations/month",
       features: [
-        "Unlimited analyses",
-        "Evaluator mode",
-        "Team collaboration",
-        "1-on-1 coaching",
+        "Everything in Essential",
+        "Evaluator Mode (record your own eval)",
+        "AI feedback on evaluations",
+        "Long-term analytics history",
+        "Team collaboration tools",
       ],
       limitations: [],
     },
@@ -89,6 +105,15 @@ export default function SubscriptionScreen() {
         className="flex-1 px-6 pt-10"
         showsVerticalScrollIndicator={false}
       >
+        {/* Back Button */}
+        {isFromProfile && (
+          <View className="absolute top-4 left-4 z-10">
+            <TouchableOpacity onPress={() => router.back()} className="p-2">
+              <ChevronLeft size={24} color="#0f172a" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View className="items-center mb-10">
           <View className="bg-neutral-200 rounded-full p-6 mb-4">
             <Rocket size={32} color="#0f172a" />
@@ -125,7 +150,7 @@ export default function SubscriptionScreen() {
                 }`}
                 onPress={() => handlePlanSelect(plan.id)}
               >
-                <View className="flex-row justify-between items-center mb-4">
+                <View className="flex-row justify-between items-center mb-2">
                   <Text className="text-xl font-medium text-gray-900">
                     {plan.name}
                   </Text>
@@ -133,15 +158,15 @@ export default function SubscriptionScreen() {
                     {plan.price}
                   </Text>
                 </View>
+                <Text className="text-sm text-gray-500 mb-4">{plan.usage}</Text>
 
-                <View className="space-y-3">
+                <View className="space-y-2">
                   {plan.features.map((feat, idx) => (
                     <View key={idx} className="flex-row items-center">
                       <Check size={18} color="#22c55e" className="mr-2" />
                       <Text className="text-gray-700 text-base">{feat}</Text>
                     </View>
                   ))}
-
                   {plan.limitations.map((lim, idx) => (
                     <View key={idx} className="flex-row items-center">
                       <X size={18} color="#9ca3af" className="mr-2" />
@@ -157,84 +182,61 @@ export default function SubscriptionScreen() {
         </View>
 
         <View className="mt-16 px-6 py-8 bg-white rounded-2xl border border-gray-200 space-y-6 shadow-sm">
-          {/* Benefit Item */}
-          <View className="flex-row items-start">
-            <View className="w-8 h-8 mr-4 justify-center items-center">
-              <BarChart2 size={20} color="#0f172a" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-base font-semibold text-gray-900 mb-1">
-                Progress Analytics
-              </Text>
-              <Text className="text-sm text-gray-500 leading-relaxed">
-                Track clarity, pacing, and improvement trends over time.
-              </Text>
-            </View>
-          </View>
-
-          <View className="w-full h-px bg-gray-100" />
-
-          {/* Benefit Item */}
-          <View className="flex-row items-start">
-            <View className="w-8 h-8 mr-4 justify-center items-center">
-              <Award size={20} color="#0f172a" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-base font-semibold text-gray-900 mb-1">
-                Feedback That Guides
-              </Text>
-              <Text className="text-sm text-gray-500 leading-relaxed">
-                Useful suggestions to help you grow with each speech.
-              </Text>
-            </View>
-          </View>
-
-          <View className="w-full h-px bg-gray-100" />
-
-          {/* Benefit Item */}
-          <View className="flex-row items-start">
-            <View className="w-8 h-8 mr-4 justify-center items-center">
-              <Shield size={20} color="#0f172a" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-base font-semibold text-gray-900 mb-1">
-                Your Data is Yours
-              </Text>
-              <Text className="text-sm text-gray-500 leading-relaxed">
-                We respect your privacy. Data is encrypted and secure.
-              </Text>
-            </View>
-          </View>
-
-          <View className="w-full h-px bg-gray-100" />
-
-          {/* Benefit Item */}
-          <View className="flex-row items-start">
-            <View className="w-8 h-8 mr-4 justify-center items-center">
-              <Users size={20} color="#0f172a" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-base font-semibold text-gray-900 mb-1">
-                Private, Growing Community
-              </Text>
-              <Text className="text-sm text-gray-500 leading-relaxed">
-                Join fellow speakers who care about leveling up — quietly.
-              </Text>
-            </View>
-          </View>
+          <Benefit
+            icon={BarChart2}
+            title="Progress Analytics"
+            desc="Track clarity, pacing, and improvement trends over time."
+          />
+          <Divider />
+          <Benefit
+            icon={Award}
+            title="Feedback That Guides"
+            desc="Useful suggestions to help you grow with each speech."
+          />
+          <Divider />
+          <Benefit
+            icon={Shield}
+            title="Your Data is Yours"
+            desc="We respect your privacy. Data is encrypted and secure."
+          />
+          <Divider />
+          <Benefit
+            icon={Users}
+            title="Private, Growing Community"
+            desc="Join fellow speakers who care about leveling up — quietly."
+          />
         </View>
 
-        <View className="mt-16 mb-10 items-center">
-          <TouchableOpacity
-            className="bg-neutral-800 px-6 py-4 rounded-full"
-            onPress={() => router.push("/")}
-          >
-            <Text className="text-white font-semibold text-lg">
-              Skip for now
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Skip Button */}
+        {!isFromProfile && (
+          <View className="mt-16 mb-10 items-center">
+            <TouchableOpacity
+              className="bg-neutral-800 px-6 py-4 rounded-full"
+              onPress={() => router.push("/")}
+            >
+              <Text className="text-white font-semibold text-lg">
+                Skip for now
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const Benefit = ({ icon: Icon, title, desc }) => (
+  <View className="flex-row items-start">
+    <View className="w-8 h-8 mr-4 justify-center items-center">
+      <Icon size={20} color="#0f172a" />
+    </View>
+    <View className="flex-1">
+      <Text className="text-base font-semibold text-gray-900 mb-1">
+        {title}
+      </Text>
+      <Text className="text-sm text-gray-500 leading-relaxed">{desc}</Text>
+    </View>
+  </View>
+);
+
+const Divider = () => <View className="w-full h-px bg-gray-100" />;
