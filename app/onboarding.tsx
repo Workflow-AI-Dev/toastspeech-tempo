@@ -17,31 +17,31 @@ const slides = [
   {
     title: "Welcome to ToastSpeech",
     description: "AI-powered coaching to boost your public speaking game.",
-    image: require("../public.jpg"),
+    image: require("../assets/images/public.jpg"),
     bgColor: "#f6f2ef",
   },
   {
     title: "AI-Powered Analysis",
     description: "Get instant feedback on pace, clarity, and confidence.",
-    image: require("./assets/images/aimee.png"),
+    image: require("../assets/images/aimee.png"),
     bgColor: "#caddfe",
   },
   {
     title: "Track Your Progress",
     description: "Monitor improvement with detailed analytics.",
-    image: require("./assets/images/progress.gif"),
+    image: require("../assets/images/progress.gif"),
     bgColor: "#f6d183",
   },
   {
     title: "Level Up Skills",
     description: "Structured practice with gamified achievements.",
-    image: require("./assets/images/girl.gif"),
+    image: require("../assets/images/girl.gif"),
     bgColor: "#fd6356",
   },
   {
     title: "Start Free",
     description: "To unlock your speech journey.",
-    image: require("./assets/images/skillssss.gif"),
+    image: require("../assets/images/skillssss.gif"),
   },
 ];
 
@@ -114,7 +114,7 @@ export default function OnboardingScreen() {
               >
                 {isFirst && (
                   <Image
-                    source={require("./assets/images/logots.png")}
+                    source={require("../assets/images/logots.png")}
                     resizeMode="contain"
                     style={{
                       width: width * 0.35,
