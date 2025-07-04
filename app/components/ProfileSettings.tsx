@@ -32,11 +32,14 @@ import {
   X,
   Shuffle,
   Check,
+  BriefcaseIcon,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "expo-router";
 import { useAuth } from "../context/AuthContext";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface ProfileSettingsProps {
   user?: {
@@ -74,6 +77,18 @@ const avatarStyles = [
   "pixel-art",
 ];
 
+const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"];
+const ageGroups = ["18-25", "26-35", "36-45", "46-55", "56-65", "65+"];
+const professions = [
+  "Student",
+  "Professional",
+  "Manager",
+  "Executive",
+  "Entrepreneur",
+  "Teacher",
+  "Other",
+];
+
 // Generate random seeds for avatars
 const generateRandomSeeds = (count: number = 12): string[] => {
   return Array.from({ length: count }, () =>
@@ -109,8 +124,6 @@ export default function ProfileSettings({
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [dailyReminders, setDailyReminders] = useState(true);
   const [weeklyReports, setWeeklyReports] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState(user.name);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(user.avatar || "felix");
   const [selectedAvatarStyle, setSelectedAvatarStyle] = useState("avataaars");
@@ -118,6 +131,15 @@ export default function ProfileSettings({
   const [isShuffling, setIsShuffling] = useState(false);
   const router = useRouter();
   const { width } = Dimensions.get("window");
+  const { signOut } = useAuth();
+  const [profileData, setProfileData] = useState<any | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState("");
+  const [editedEmail, setEditedEmail] = useState("");
+  const [editedGender, setEditedGender] = useState("");
+  const [editedAgeGroup, setEditedAgeGroup] = useState("");
+  const [editedProfession, setEditedProfession] = useState("");
+  const [emailError, setEmailError] = useState("");
 
   // Initialize avatar seeds on component mount
   useEffect(() => {
@@ -125,36 +147,72 @@ export default function ProfileSettings({
   }, []);
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Logout error:", error.message);
-      return;
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Logout error:", error);
     }
-    router.push("/sign-in");
   };
 
-  const handleAvatarSelect = async (avatarSeed: string) => {
-    setSelectedAvatar(avatarSeed);
-    setShowAvatarModal(false);
-
-    // Save avatar to user profile in Supabase
-    if (authUser) {
+  useEffect(() => {
+    const fetchProfile = async () => {
       try {
-        const { error } = await supabase.auth.updateUser({
-          data: {
-            avatar: avatarSeed,
-            avatar_style: selectedAvatarStyle,
+        const token = await AsyncStorage.getItem("auth_token");
+        if (!token) {
+          console.warn("No access token found");
+          return;
+        }
+
+        const response = await axios.get("http://127.0.0.1:8000/auth/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
         });
 
-        if (error) {
-          console.error("Error updating avatar:", error.message);
-        } else {
-          console.log("Avatar updated successfully");
-        }
-      } catch (error) {
-        console.error("Error updating avatar:", error);
+        console.log("✅ Profile fetched:", response.data);
+        setProfileData(response.data);
+      } catch (err) {
+        console.error("❌ Error fetching profile:", err);
       }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const handleAvatarSelect = async (avatarSeed: string) => {
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (!token) {
+        console.warn("No access token found");
+        return;
+      }
+
+      // Call API to update avatar
+      const res = await axios.put(
+        "http://127.0.0.1:8000/user/edit-profile",
+        {
+          avatar: avatarSeed,
+          avatar_style: selectedAvatarStyle,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      // Update UI
+      setSelectedAvatar(avatarSeed);
+      setProfileData((prev: any) => ({
+        ...prev,
+        avatar: avatarSeed,
+        avatar_style: selectedAvatarStyle,
+      }));
+
+      setShowAvatarModal(false);
+      console.log("✅ Avatar updated:", res.data);
+    } catch (err) {
+      console.error("❌ Failed to update avatar:", err);
     }
   };
 
@@ -171,6 +229,55 @@ export default function ProfileSettings({
     setAvatarSeeds(generateRandomSeeds(12));
   };
 
+  const startEditing = () => {
+    setIsEditing(true);
+    setEditedName(profileData?.name || "");
+    setEditedEmail(profileData?.email || "");
+    setEditedGender(profileData?.gender || "");
+    setEditedAgeGroup(profileData?.age_group || "");
+    setEditedProfession(profileData?.profession || "");
+    setEmailError("");
+  };
+
+  const validateEmail = (email: string) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
+
+  const onSave = async () => {
+    if (!validateEmail(editedEmail)) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (!token) return;
+
+      const res = await axios.put(
+        "http://127.0.0.1:8000/user/edit-profile",
+        {
+          name: editedName,
+          email: editedEmail,
+          gender: editedGender,
+          age_group: editedAgeGroup,
+          profession: editedProfession,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      setProfileData(res.data);
+      setIsEditing(false);
+      setEmailError("");
+      console.log("✅ Profile updated", res.data);
+    } catch (err) {
+      console.error("❌ Failed to update profile", err);
+    }
+  };
+
   const settingsGroups = [
     {
       title: "Account",
@@ -179,12 +286,12 @@ export default function ProfileSettings({
           icon: Edit3,
           title: "Edit Profile",
           description: "Update your personal information",
-          onPress: () => setIsEditing(true),
+          onPress: startEditing,
         },
         {
           icon: Crown,
           title: "Change Subscription",
-          description: "Current Plan - Try & Taste",
+          description: "Current Plan - " + `${profileData?.subscription_plan}`,
           onPress: () => {
             router.push("/subscription");
           },
@@ -269,21 +376,21 @@ export default function ProfileSettings({
     {
       icon: Crown,
       label: "Level",
-      value: user.level.toString(),
+      value: profileData?.level.toString(),
       color: "#f59e0b",
       bgColor: "#fef3c7",
     },
     {
       icon: Flame,
       label: "Days streak",
-      value: `${user.streak}`,
+      value: profileData?.streak.toString(),
       color: "#ea580c",
       bgColor: "#fed7aa",
     },
     {
       icon: Trophy,
       label: "Avg Score",
-      value: user.avgScore.toString(),
+      value: profileData?.avg_score.toString(),
       color: "#10b981",
       bgColor: "#d1fae5",
     },
@@ -305,68 +412,53 @@ export default function ProfileSettings({
             >
               <Image
                 source={{
-                  uri: generateAvatarUrl(selectedAvatar, selectedAvatarStyle),
+                  uri: generateAvatarUrl(
+                    profileData?.avatar,
+                    profileData?.avatar_style,
+                  ),
                 }}
                 className="w-full h-full"
                 resizeMode="cover"
               />
             </TouchableOpacity>
 
-            {isEditing ? (
-              <View className="items-center">
+            <View className="items-center">
+              {isEditing ? (
                 <TextInput
-                  className="text-2xl font-bold text-center rounded-xl px-4 py-2 mb-2 border"
-                  style={{
-                    backgroundColor: colors.card,
-                    color: colors.text,
-                    borderColor: colors.border,
-                  }}
                   value={editedName}
                   onChangeText={setEditedName}
-                  autoFocus
-                  placeholderTextColor={colors.textSecondary}
+                  style={{
+                    color: colors.text,
+                    fontSize: 20,
+                    fontWeight: "bold",
+                    borderBottomWidth: 1,
+                    borderColor: colors.border,
+                    paddingVertical: 4,
+                    minWidth: 200,
+                  }}
                 />
-                <View className="flex-row space-x-3">
-                  <TouchableOpacity
-                    className="rounded-xl px-4 py-2"
-                    style={{ backgroundColor: colors.primary }}
-                    onPress={() => {
-                      setIsEditing(false);
-                      // Save name logic here
-                    }}
-                  >
-                    <Text className="text-white font-semibold">Save</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    className="rounded-xl px-4 py-2"
-                    style={{ backgroundColor: colors.surface }}
-                    onPress={() => {
-                      setIsEditing(false);
-                      setEditedName(user.name);
-                    }}
-                  >
-                    <Text
-                      className="font-semibold"
-                      style={{ color: colors.text }}
-                    >
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <View className="items-center">
+              ) : (
                 <Text
                   className="text-2xl font-bold mb-1"
                   style={{ color: colors.text }}
                 >
-                  {user.name}
+                  {profileData?.name || "Loading..."}
                 </Text>
-                <Text className="mb-4" style={{ color: colors.textSecondary }}>
-                  Member since {user.joinDate}
-                </Text>
-              </View>
-            )}
+              )}
+
+              <Text className="mb-4" style={{ color: colors.textSecondary }}>
+                Member since{" "}
+                {profileData?.created_at
+                  ? new Date(profileData.created_at).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "long",
+                        year: "numeric",
+                      },
+                    )
+                  : "Loading..."}
+              </Text>
+            </View>
 
             {/* Stats Row */}
             <View className="flex-row justify-center space-x-4 mt-4">
@@ -399,37 +491,406 @@ export default function ProfileSettings({
           </View>
         </View>
 
-        {/* Contact Info */}
-        <View
-          className="px-6 py-6 border-b"
-          style={{ borderBottomColor: colors.border }}
-        >
-          <Text
-            className="text-lg font-bold mb-4"
-            style={{ color: colors.text }}
-          >
-            Contact Information
-          </Text>
-          <View className="space-y-3">
-            <View className="flex-row items-center">
-              <Mail size={20} color={colors.textSecondary} />
-              <Text className="ml-3" style={{ color: colors.text }}>
-                {user.email}
-              </Text>
-            </View>
-            <View className="flex-row items-center">
-              <Phone size={20} color={colors.textSecondary} />
-              <Text className="ml-3" style={{ color: colors.text }}>
-                {user.phone}
-              </Text>
-            </View>
-            <View className="flex-row items-center">
-              <MapPin size={20} color={colors.textSecondary} />
-              <Text className="ml-3" style={{ color: colors.text }}>
-                {user.location}
-              </Text>
-            </View>
+        {/* Personal Information */}
+        <View className="px-6 py-6">
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-lg font-bold" style={{ color: colors.text }}>
+              Personal Information
+            </Text>
+            {!isEditing && (
+              <TouchableOpacity
+                onPress={startEditing}
+                className="rounded-full p-2"
+                style={{ backgroundColor: colors.surface }}
+              >
+                <Edit3 size={18} color={colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
+
+          {isEditing ? (
+            <View
+              className="rounded-3xl p-6 shadow-lg"
+              style={{
+                backgroundColor: colors.card,
+                shadowColor: theme === "dark" ? "#000" : "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: theme === "dark" ? 0.3 : 0.1,
+                shadowRadius: 12,
+                elevation: 8,
+              }}
+            >
+              {/* Name Field */}
+              <View className="mb-6">
+                <View className="flex-row items-center mb-3">
+                  <View
+                    className="rounded-xl p-2 mr-3"
+                    style={{ backgroundColor: colors.surface }}
+                  >
+                    <User size={18} color={colors.primary} />
+                  </View>
+                  <Text
+                    className="font-semibold"
+                    style={{ color: colors.text }}
+                  >
+                    Full Name
+                  </Text>
+                </View>
+                <TextInput
+                  value={editedName}
+                  onChangeText={setEditedName}
+                  className="rounded-2xl px-4 py-3"
+                  style={{
+                    backgroundColor: colors.surface,
+                    color: colors.text,
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                  }}
+                  placeholder="Enter your full name"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+
+              {/* Email Field */}
+              <View className="mb-6">
+                <View className="flex-row items-center mb-3">
+                  <View
+                    className="rounded-xl p-2 mr-3"
+                    style={{ backgroundColor: colors.surface }}
+                  >
+                    <Mail size={18} color={colors.primary} />
+                  </View>
+                  <Text
+                    className="font-semibold"
+                    style={{ color: colors.text }}
+                  >
+                    Email Address
+                  </Text>
+                </View>
+                <TextInput
+                  value={editedEmail}
+                  onChangeText={(text) => {
+                    setEditedEmail(text);
+                    if (!validateEmail(text)) {
+                      setEmailError("Please enter a valid email address");
+                    } else {
+                      setEmailError("");
+                    }
+                  }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  className="rounded-2xl px-4 py-3"
+                  style={{
+                    backgroundColor: colors.surface,
+                    color: colors.text,
+                    borderColor: emailError ? colors.error : colors.border,
+                    borderWidth: 1,
+                  }}
+                  placeholder="Enter your email address"
+                  placeholderTextColor={colors.textSecondary}
+                />
+                {!!emailError && (
+                  <Text
+                    className="text-sm mt-2 ml-1"
+                    style={{ color: colors.error }}
+                  >
+                    {emailError}
+                  </Text>
+                )}
+              </View>
+
+              {/* Gender Selection */}
+              <View className="mb-6">
+                <View className="flex-row items-center mb-3">
+                  <View
+                    className="rounded-xl p-2 mr-3"
+                    style={{ backgroundColor: colors.surface }}
+                  >
+                    <User size={18} color={colors.primary} />
+                  </View>
+                  <Text
+                    className="font-semibold"
+                    style={{ color: colors.text }}
+                  >
+                    Gender
+                  </Text>
+                </View>
+                <View className="flex-row flex-wrap">
+                  {genderOptions.map((option) => {
+                    const selected = editedGender === option;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        onPress={() => setEditedGender(option)}
+                        className="rounded-full px-4 py-2 mr-2 mb-2 border-2"
+                        style={{
+                          backgroundColor: selected
+                            ? colors.primary + "20"
+                            : colors.surface,
+                          borderColor: selected
+                            ? colors.primary
+                            : colors.border,
+                        }}
+                      >
+                        <Text
+                          className="text-sm font-medium"
+                          style={{
+                            color: selected
+                              ? colors.primary
+                              : colors.textSecondary,
+                          }}
+                        >
+                          {option}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Age Group Selection */}
+              <View className="mb-6">
+                <View className="flex-row items-center mb-3">
+                  <View
+                    className="rounded-xl p-2 mr-3"
+                    style={{ backgroundColor: colors.surface }}
+                  >
+                    <Calendar size={18} color={colors.primary} />
+                  </View>
+                  <Text
+                    className="font-semibold"
+                    style={{ color: colors.text }}
+                  >
+                    Age Group
+                  </Text>
+                </View>
+                <View className="flex-row flex-wrap">
+                  {ageGroups.map((option) => {
+                    const selected = editedAgeGroup === option;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        onPress={() => setEditedAgeGroup(option)}
+                        className="rounded-full px-4 py-2 mr-2 mb-2 border-2"
+                        style={{
+                          backgroundColor: selected
+                            ? colors.primary + "20"
+                            : colors.surface,
+                          borderColor: selected
+                            ? colors.primary
+                            : colors.border,
+                        }}
+                      >
+                        <Text
+                          className="text-sm font-medium"
+                          style={{
+                            color: selected
+                              ? colors.primary
+                              : colors.textSecondary,
+                          }}
+                        >
+                          {option}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Profession Selection */}
+              <View className="mb-6">
+                <View className="flex-row items-center mb-3">
+                  <View
+                    className="rounded-xl p-2 mr-3"
+                    style={{ backgroundColor: colors.surface }}
+                  >
+                    <BriefcaseIcon size={18} color={colors.primary} />
+                  </View>
+                  <Text
+                    className="font-semibold"
+                    style={{ color: colors.text }}
+                  >
+                    Profession
+                  </Text>
+                </View>
+                <View className="flex-row flex-wrap">
+                  {professions.map((option) => {
+                    const selected = editedProfession === option;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        onPress={() => setEditedProfession(option)}
+                        className="rounded-full px-4 py-2 mr-2 mb-2 border-2"
+                        style={{
+                          backgroundColor: selected
+                            ? colors.primary + "20"
+                            : colors.surface,
+                          borderColor: selected
+                            ? colors.primary
+                            : colors.border,
+                        }}
+                      >
+                        <Text
+                          className="text-sm font-medium"
+                          style={{
+                            color: selected
+                              ? colors.primary
+                              : colors.textSecondary,
+                          }}
+                        >
+                          {option}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Action Buttons */}
+              <View className="flex-row space-x-3">
+                <TouchableOpacity
+                  onPress={() => setIsEditing(false)}
+                  className="flex-1 rounded-2xl py-4 px-6"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Text
+                    className="font-bold text-center"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={onSave}
+                  className="flex-1 rounded-2xl py-4 px-6"
+                  style={{ backgroundColor: colors.primary }}
+                >
+                  <Text className="text-white font-bold text-center">
+                    Save Changes
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View className="space-y-3">
+              {/* Email Info Card */}
+              <View
+                className="rounded-2xl p-4"
+                style={{ backgroundColor: colors.surface }}
+              >
+                <View className="flex-row items-center">
+                  <View
+                    className="rounded-xl p-2 mr-3"
+                    style={{ backgroundColor: colors.card }}
+                  >
+                    <Mail size={18} color={colors.primary} />
+                  </View>
+                  <View className="flex-1">
+                    <Text
+                      className="text-sm font-medium"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Email Address
+                    </Text>
+                    <Text
+                      className="font-semibold mt-1"
+                      style={{ color: colors.text }}
+                    >
+                      {profileData?.email || "Not set"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Gender Info Card */}
+              <View
+                className="rounded-2xl p-4"
+                style={{ backgroundColor: colors.surface }}
+              >
+                <View className="flex-row items-center">
+                  <View
+                    className="rounded-xl p-2 mr-3"
+                    style={{ backgroundColor: colors.card }}
+                  >
+                    <User size={18} color={colors.primary} />
+                  </View>
+                  <View className="flex-1">
+                    <Text
+                      className="text-sm font-medium"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Gender
+                    </Text>
+                    <Text
+                      className="font-semibold mt-1"
+                      style={{ color: colors.text }}
+                    >
+                      {profileData?.gender || "Not specified"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Age Group Info Card */}
+              <View
+                className="rounded-2xl p-4"
+                style={{ backgroundColor: colors.surface }}
+              >
+                <View className="flex-row items-center">
+                  <View
+                    className="rounded-xl p-2 mr-3"
+                    style={{ backgroundColor: colors.card }}
+                  >
+                    <Calendar size={18} color={colors.primary} />
+                  </View>
+                  <View className="flex-1">
+                    <Text
+                      className="text-sm font-medium"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Age Group
+                    </Text>
+                    <Text
+                      className="font-semibold mt-1"
+                      style={{ color: colors.text }}
+                    >
+                      {profileData?.age_group || "Not specified"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Profession Info Card */}
+              <View
+                className="rounded-2xl p-4"
+                style={{ backgroundColor: colors.surface }}
+              >
+                <View className="flex-row items-center">
+                  <View
+                    className="rounded-xl p-2 mr-3"
+                    style={{ backgroundColor: colors.card }}
+                  >
+                    <BriefcaseIcon size={18} color={colors.primary} />
+                  </View>
+                  <View className="flex-1">
+                    <Text
+                      className="text-sm font-medium"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Profession
+                    </Text>
+                    <Text
+                      className="font-semibold mt-1"
+                      style={{ color: colors.text }}
+                    >
+                      {profileData?.profession || "Not specified"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Settings Groups */}
@@ -681,7 +1142,10 @@ export default function ProfileSettings({
               >
                 <Image
                   source={{
-                    uri: generateAvatarUrl(selectedAvatar, selectedAvatarStyle),
+                    uri: generateAvatarUrl(
+                      profileData?.avatar,
+                      profileData?.avatar_style,
+                    ),
                   }}
                   className="w-full h-full"
                   resizeMode="cover"

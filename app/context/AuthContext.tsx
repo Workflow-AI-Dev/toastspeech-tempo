@@ -5,13 +5,11 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "../../lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useSegments } from "expo-router";
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: any;
   loading: boolean;
   signUp: (
     email: string,
@@ -24,39 +22,41 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const BASE_URL = "http://127.0.0.1:8000";
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const checkAuth = async () => {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+      const res = await fetch(`${BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    return () => subscription.unsubscribe();
+      if (res.ok) {
+        const userData = await res.json();
+        setUser(userData);
+      }
+
+      setLoading(false);
+    };
+
+    checkAuth();
   }, []);
 
-  // Handle navigation based on auth state
   useEffect(() => {
     if (loading) return;
 
@@ -67,58 +67,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       segments[0] === "sign-up";
 
     if (!user && !inAuthGroup) {
-      // Redirect to onboarding if not authenticated
       router.replace("/onboarding");
     } else if (user && inAuthGroup) {
-      // Redirect to home if authenticated and in auth screens
       router.replace("/");
     }
   }, [user, segments, loading]);
 
-  const signUp = async (email: string, password: string, userData: any) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    userData: any,
+  ): Promise<{ error: any }> => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: userData.name,
-            gender: userData.gender,
-            age_group: userData.ageGroup,
-            profession: userData.profession,
-            purposes: userData.purposes,
-            custom_purpose: userData.customPurpose,
-          },
-        },
+      const res = await fetch(`${BASE_URL}/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          name: userData.name,
+          gender: userData.gender,
+          age_group: userData.ageGroup,
+          profession: userData.profession,
+          purposes: userData.purposes,
+          custom_purpose: userData.customPurpose,
+        }),
       });
 
-      if (error) {
-        return { error };
-      }
+      const data = await res.json();
+      if (!res.ok) return { error: data.detail || "Signup failed" };
 
-      // If sign up successful, redirect to subscription
-      if (data.user) {
-        router.push("/subscription");
-      }
-
+      router.push("/subscription");
       return { error: null };
     } catch (error) {
       return { error };
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (
+    email: string,
+    password: string,
+  ): Promise<{ error: any }> => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const res = await fetch(`${BASE_URL}/auth/signin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) {
-        return { error };
+      const data = await res.json();
+      if (!res.ok) return { error: data.detail || "Login failed" };
+
+      const token = data.access_token;
+      await AsyncStorage.setItem("auth_token", token);
+
+      const meRes = await fetch(`${BASE_URL}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const userData = await meRes.json();
+      if (meRes.ok) {
+        setUser(userData);
       }
 
-      // Navigation will be handled by the auth state change listener
       return { error: null };
     } catch (error) {
       return { error };
@@ -127,7 +140,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      await AsyncStorage.removeItem("auth_token");
+      setUser(null);
       router.replace("/onboarding");
     } catch (error) {
       console.error("Error signing out:", error);
@@ -135,19 +149,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const resetPassword = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "your-app://reset-password",
-      });
-      return { error };
-    } catch (error) {
-      return { error };
-    }
+    return { error: "Reset password not supported yet." };
   };
 
   const value: AuthContextType = {
     user,
-    session,
     loading,
     signUp,
     signIn,
