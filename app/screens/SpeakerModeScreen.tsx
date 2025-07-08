@@ -28,7 +28,7 @@ import {
   BookOpen,
   ChevronRight,
 } from "lucide-react-native";
-import SpeechRecorder from "../components/SpeechRecorder";
+import SpeechRecorder from "../components/SpeechRecorderSpeaker";
 import QuickFeedback from "../components/QuickFeedback";
 import ProgressIndicator from "../components/ProgressIndicator";
 import { useTheme, getThemeColors } from "../context/ThemeContext";

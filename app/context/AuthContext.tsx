@@ -97,7 +97,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const data = await res.json();
       if (!res.ok) return { error: data.detail || "Signup failed" };
 
-      router.push("/subscription");
+      // If signup returns a token, store it and authenticate the user
+      if (data.access_token) {
+        const token = data.access_token;
+        await AsyncStorage.setItem("auth_token", token);
+
+        // Fetch user data
+        const meRes = await fetch(`${BASE_URL}/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const userDataResponse = await meRes.json();
+        if (meRes.ok) {
+          setUser(userDataResponse);
+        }
+      } else {
+        // If no token returned, try to sign in automatically
+        const signInResult = await signIn(email, password);
+        if (signInResult.error) {
+          return { error: signInResult.error };
+        }
+      }
+
       return { error: null };
     } catch (error) {
       return { error };

@@ -12,14 +12,39 @@ export default function SignInScreen() {
     email: "",
     password: "",
   });
+  const [errors, setErrors] = useState({
+    email: "",
+    password: "",
+  });
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignIn = async () => {
-    if (!formData.email || !formData.password) {
-      Alert.alert("Missing Fields", "Please fill in both fields.");
-      return;
+    const newErrors = { email: "", password: "" };
+    let isValid = true;
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = "Invalid email format";
+      isValid = false;
     }
+
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    if (!isValid) return;
 
     setIsLoading(true);
 
@@ -77,33 +102,45 @@ export default function SignInScreen() {
         </Text>
 
         {/* Email */}
-        <View className="relative mb-6">
+        <View className="relative mb-2">
           <TextInput
             placeholder="Email"
             keyboardType="email-address"
             autoCapitalize="none"
-            className="bg-[#f6f7fb] px-12 py-4 rounded-xl border border-gray-200 text-gray-900"
+            className={`bg-[#f6f7fb] px-12 py-4 rounded-xl border text-gray-900 ${
+              errors.email ? "border-red-500" : "border-gray-200"
+            }`}
             value={formData.email}
-            onChangeText={(text) => setFormData({ ...formData, email: text })}
+            onChangeText={(text) => {
+              setFormData({ ...formData, email: text });
+              if (errors.email) setErrors({ ...errors, email: "" });
+            }}
           />
           <Mail
             size={20}
             color="#6b7280"
             style={{ position: "absolute", top: 18, left: 16 }}
           />
+          {errors.email ? (
+            <Text className="text-red-500 text-sm mt-1 ml-1">
+              {errors.email}
+            </Text>
+          ) : null}
         </View>
 
-        {/* Password */}
         <View className="relative mb-2">
           <TextInput
             placeholder="Password"
-            autoCapitalize="none"
             secureTextEntry={!showPassword}
-            className="bg-[#f6f7fb] px-12 py-4 rounded-xl border border-gray-200 text-gray-900"
+            autoCapitalize="none"
+            className={`bg-[#f6f7fb] px-12 py-4 rounded-xl border text-gray-900 ${
+              errors.password ? "border-red-500" : "border-gray-200"
+            }`}
             value={formData.password}
-            onChangeText={(text) =>
-              setFormData({ ...formData, password: text })
-            }
+            onChangeText={(text) => {
+              setFormData({ ...formData, password: text });
+              if (errors.password) setErrors({ ...errors, password: "" });
+            }}
           />
           <Lock
             size={20}
@@ -120,6 +157,11 @@ export default function SignInScreen() {
               <Eye size={22} color="#6b7280" />
             )}
           </TouchableOpacity>
+          {errors.password ? (
+            <Text className="text-red-500 text-sm mt-1 ml-1">
+              {errors.password}
+            </Text>
+          ) : null}
         </View>
 
         {/* Forgot Password */}

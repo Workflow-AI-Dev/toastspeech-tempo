@@ -25,7 +25,7 @@ import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-interface SpeechRecorderProps {
+interface SpeechRecorderSpeakerProps {
   onRecordingComplete?: (recordingData: any) => void;
   isProcessing?: boolean;
   analysisResults?: {
@@ -58,11 +58,11 @@ const { hasPermission: hasVisionCameraPermission, requestPermission } =
     ? useCameraPermission()
     : { hasPermission: false, requestPermission: async () => false };
 
-const SpeechRecorder = ({
+const SpeechRecorderSpeaker = ({
   onRecordingComplete = () => {},
   isProcessing = false,
   recordingMethod = "audio",
-}: SpeechRecorderProps) => {
+}: SpeechRecorderSpeakerProps) => {
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "paused" | "completed" | "uploading"
   >("idle");
@@ -174,7 +174,7 @@ const SpeechRecorder = ({
     fileName = "recording.mp4",
     mimeType = "application/octet-stream",
     taskType = "audio_evaluation",
-    modeType = "evaluator",
+    modeType = "speaker",
     token,
   }) => {
     try {
@@ -203,7 +203,6 @@ const SpeechRecorder = ({
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          // DO NOT manually set Content-Type; fetch + FormData handles it
         },
         body: formData,
       });
@@ -868,4 +867,4 @@ const SpeechRecorder = ({
   );
 };
 
-export default SpeechRecorder;
+export default SpeechRecorderSpeaker;

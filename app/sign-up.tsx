@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   TextInput,
   ScrollView,
-  Alert,
   Animated,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "./context/AuthContext";
@@ -40,6 +40,18 @@ export default function SignUpScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [progressAnim] = useState(new Animated.Value(0));
+  const [errors, setErrors] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    gender: "",
+    ageGroup: "",
+    profession: "",
+    purposes: "",
+    customPurpose: "",
+  });
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"];
   const ageGroups = ["18-25", "26-35", "36-45", "46-55", "56-65", "65+"];
@@ -69,14 +81,153 @@ export default function SignUpScreen() {
 
   useEffect(() => {
     Animated.timing(progressAnim, {
-      toValue: currentStep / 3,
+      toValue: (currentStep - 1) / 2, // range: 0 to 1
       duration: 300,
       useNativeDriver: false,
     }).start();
   }, [currentStep]);
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateStep1 = () => {
+    const newErrors = { ...errors };
+    let isValid = true;
+
+    // Name validation
+    if (!formData.name.trim()) {
+      newErrors.name = "Please enter your full name";
+      isValid = false;
+    } else {
+      newErrors.name = "";
+    }
+
+    // Email validation
+    if (!formData.email.trim()) {
+      newErrors.email = "Please enter your email address";
+      isValid = false;
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+      isValid = false;
+    } else {
+      newErrors.email = "";
+    }
+
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = "Please enter a password";
+      isValid = false;
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+      isValid = false;
+    } else {
+      newErrors.password = "";
+    }
+
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password";
+      isValid = false;
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+      isValid = false;
+    } else {
+      newErrors.confirmPassword = "";
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const validateStep2 = () => {
+    const newErrors = { ...errors };
+    let isValid = true;
+
+    // Gender validation
+    if (!formData.gender) {
+      newErrors.gender = "Please select your gender";
+      isValid = false;
+    } else {
+      newErrors.gender = "";
+    }
+
+    // Age group validation
+    if (!formData.ageGroup) {
+      newErrors.ageGroup = "Please select your age group";
+      isValid = false;
+    } else {
+      newErrors.ageGroup = "";
+    }
+
+    // Profession validation
+    if (!formData.profession) {
+      newErrors.profession = "Please select your profession";
+      isValid = false;
+    } else {
+      newErrors.profession = "";
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const validateStep3 = () => {
+    const newErrors = { ...errors };
+    let isValid = true;
+
+    // Purpose validation
+    if (formData.purposes.length === 0) {
+      newErrors.purposes = "Please select at least one purpose";
+      isValid = false;
+    } else {
+      newErrors.purposes = "";
+    }
+
+    // Custom purpose validation if "Other" is selected
+    if (formData.purposes.includes("Other") && !formData.customPurpose.trim()) {
+      newErrors.customPurpose = "Please specify your custom purpose";
+      isValid = false;
+    } else {
+      newErrors.customPurpose = "";
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const validateAllSteps = () => {
+    const step1Valid = validateStep1();
+    const step2Valid = validateStep2();
+    const step3Valid = validateStep3();
+
+    if (!step1Valid) {
+      setCurrentStep(1);
+      return false;
+    }
+    if (!step2Valid) {
+      setCurrentStep(2);
+      return false;
+    }
+    if (!step3Valid) {
+      setCurrentStep(3);
+      return false;
+    }
+
+    return true;
+  };
+
   const nextStep = () => {
-    if (currentStep < 3) {
+    let isValid = false;
+
+    if (currentStep === 1) {
+      isValid = validateStep1();
+    } else if (currentStep === 2) {
+      isValid = validateStep2();
+    }
+
+    if (isValid && currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -88,18 +239,8 @@ export default function SignUpScreen() {
   };
 
   const handleSignUp = async () => {
-    if (!formData.name || !formData.email || !formData.password) {
-      Alert.alert("Missing fields", "Please fill all required fields.");
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      Alert.alert("Password mismatch", "Passwords do not match.");
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      Alert.alert("Weak password", "Password must be at least 6 characters.");
+    // Validate all steps before proceeding
+    if (!validateAllSteps()) {
       return;
     }
 
@@ -113,12 +254,27 @@ export default function SignUpScreen() {
       );
 
       if (error) {
-        Alert.alert("Sign Up Failed", error.message);
+        Toast.show({
+          type: "error",
+          text1: "Sign Up Failed",
+          text2:
+            typeof error === "string"
+              ? error
+              : error.message || "Please try again",
+          position: "top",
+          visibilityTime: 4000,
+        });
         setIsLoading(false);
         return;
       }
     } catch (error) {
-      Alert.alert("Error", "Something went wrong. Try again.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Something went wrong. Please try again.",
+        position: "top",
+        visibilityTime: 4000,
+      });
       setIsLoading(false);
     }
   };
@@ -127,7 +283,7 @@ export default function SignUpScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <ScrollView className="flex-1 px-6 py-8">
+      <ScrollView ref={scrollViewRef} className="flex-1 px-6 py-8">
         <View className="flex-row justify-between items-center mb-6">
           <TouchableOpacity
             className="p-2 rounded-full border border-gray-300"
@@ -142,14 +298,16 @@ export default function SignUpScreen() {
           <Text className="text-2xl font-semibold text-gray-900 mb-1">
             {stepTitle[currentStep - 1]}
           </Text>
-          <View className="bg-gray-200 rounded-full h-2 mt-3">
+          <View className="bg-gray-200 rounded-full h-2 mt-3 overflow-hidden">
             <Animated.View
-              className="bg-black rounded-full h-2"
               style={{
                 width: progressAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: ["0%", "100%"],
                 }),
+                height: 8,
+                backgroundColor: "black",
+                borderRadius: 999,
               }}
             />
           </View>
@@ -157,91 +315,142 @@ export default function SignUpScreen() {
 
         {currentStep === 1 && (
           <View className="space-y-5">
-            <View className="relative">
-              <TextInput
-                placeholder="Full Name"
-                className="bg-[#f6f7fb] px-12 py-4 rounded-xl border border-gray-200 text-gray-900"
-                value={formData.name}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, name: text })
-                }
-              />
-              <User
-                size={20}
-                color="#999"
-                style={{ position: "absolute", top: 18, left: 16 }}
-              />
+            <View>
+              <View className="relative">
+                <TextInput
+                  placeholder="Full Name"
+                  className={`bg-[#f6f7fb] px-12 py-4 rounded-xl border text-gray-900 ${
+                    errors.name ? "border-red-500" : "border-gray-200"
+                  }`}
+                  value={formData.name}
+                  onChangeText={(text) => {
+                    setFormData({ ...formData, name: text });
+                    if (errors.name) {
+                      setErrors({ ...errors, name: "" });
+                    }
+                  }}
+                />
+                <User
+                  size={20}
+                  color="#999"
+                  style={{ position: "absolute", top: 18, left: 16 }}
+                />
+              </View>
+              {errors.name ? (
+                <Text className="text-red-500 text-sm mt-1 ml-1">
+                  {errors.name}
+                </Text>
+              ) : null}
             </View>
 
-            <View className="relative">
-              <TextInput
-                placeholder="Email"
-                keyboardType="email-address"
-                className="bg-[#f6f7fb] px-12 py-4 rounded-xl border border-gray-200 text-gray-900"
-                value={formData.email}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, email: text })
-                }
-              />
-              <Mail
-                size={20}
-                color="#999"
-                style={{ position: "absolute", top: 18, left: 16 }}
-              />
+            <View>
+              <View className="relative">
+                <TextInput
+                  placeholder="Email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  className={`bg-[#f6f7fb] px-12 py-4 rounded-xl border text-gray-900 ${
+                    errors.email ? "border-red-500" : "border-gray-200"
+                  }`}
+                  value={formData.email}
+                  onChangeText={(text) => {
+                    setFormData({ ...formData, email: text });
+                    if (errors.email) {
+                      setErrors({ ...errors, email: "" });
+                    }
+                  }}
+                />
+                <Mail
+                  size={20}
+                  color="#999"
+                  style={{ position: "absolute", top: 18, left: 16 }}
+                />
+              </View>
+              {errors.email ? (
+                <Text className="text-red-500 text-sm mt-1 ml-1">
+                  {errors.email}
+                </Text>
+              ) : null}
             </View>
 
-            <View className="relative">
-              <TextInput
-                placeholder="Password"
-                secureTextEntry={!showPassword}
-                className="bg-[#f6f7fb] px-12 py-4 rounded-xl border border-gray-200 text-gray-900"
-                value={formData.password}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, password: text })
-                }
-              />
-              <Lock
-                size={20}
-                color="#999"
-                style={{ position: "absolute", top: 18, left: 16 }}
-              />
-              <TouchableOpacity
-                style={{ position: "absolute", right: 16, top: 16 }}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff size={20} color="#666" />
-                ) : (
-                  <Eye size={20} color="#666" />
-                )}
-              </TouchableOpacity>
+            <View>
+              <View className="relative">
+                <TextInput
+                  placeholder="Password"
+                  secureTextEntry={!showPassword}
+                  className={`bg-[#f6f7fb] px-12 py-4 rounded-xl border text-gray-900 ${
+                    errors.password ? "border-red-500" : "border-gray-200"
+                  }`}
+                  value={formData.password}
+                  onChangeText={(text) => {
+                    setFormData({ ...formData, password: text });
+                    if (errors.password) {
+                      setErrors({ ...errors, password: "" });
+                    }
+                  }}
+                />
+                <Lock
+                  size={20}
+                  color="#999"
+                  style={{ position: "absolute", top: 18, left: 16 }}
+                />
+                <TouchableOpacity
+                  style={{ position: "absolute", right: 16, top: 16 }}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color="#666" />
+                  ) : (
+                    <Eye size={20} color="#666" />
+                  )}
+                </TouchableOpacity>
+              </View>
+              {errors.password ? (
+                <Text className="text-red-500 text-sm mt-1 ml-1">
+                  {errors.password}
+                </Text>
+              ) : null}
             </View>
 
-            <View className="relative">
-              <TextInput
-                placeholder="Confirm Password"
-                secureTextEntry={!showConfirmPassword}
-                className="bg-[#f6f7fb] px-12 py-4 rounded-xl border border-gray-200 text-gray-900"
-                value={formData.confirmPassword}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, confirmPassword: text })
-                }
-              />
-              <Lock
-                size={20}
-                color="#999"
-                style={{ position: "absolute", top: 18, left: 16 }}
-              />
-              <TouchableOpacity
-                style={{ position: "absolute", right: 16, top: 16 }}
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff size={20} color="#666" />
-                ) : (
-                  <Eye size={20} color="#666" />
-                )}
-              </TouchableOpacity>
+            <View>
+              <View className="relative">
+                <TextInput
+                  placeholder="Confirm Password"
+                  secureTextEntry={!showConfirmPassword}
+                  className={`bg-[#f6f7fb] px-12 py-4 rounded-xl border text-gray-900 ${
+                    errors.confirmPassword
+                      ? "border-red-500"
+                      : "border-gray-200"
+                  }`}
+                  value={formData.confirmPassword}
+                  onChangeText={(text) => {
+                    setFormData({ ...formData, confirmPassword: text });
+                    if (errors.confirmPassword) {
+                      setErrors({ ...errors, confirmPassword: "" });
+                    }
+                  }}
+                />
+                <Lock
+                  size={20}
+                  color="#999"
+                  style={{ position: "absolute", top: 18, left: 16 }}
+                />
+                <TouchableOpacity
+                  style={{ position: "absolute", right: 16, top: 16 }}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={20} color="#666" />
+                  ) : (
+                    <Eye size={20} color="#666" />
+                  )}
+                </TouchableOpacity>
+              </View>
+              {errors.confirmPassword ? (
+                <Text className="text-red-500 text-sm mt-1 ml-1">
+                  {errors.confirmPassword}
+                </Text>
+              ) : null}
             </View>
           </View>
         )}
@@ -249,98 +458,159 @@ export default function SignUpScreen() {
         {/* Step 2 */}
         {currentStep === 2 && (
           <View className="space-y-6">
-            <Text className="text-base font-medium text-gray-800">Gender</Text>
-            <View className="flex-row flex-wrap gap-2">
-              {genderOptions.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  className={`px-4 py-3 rounded-xl border text-sm font-medium ${
-                    formData.gender === option
-                      ? "border-black bg-gray-100 text-black"
-                      : "bg-[#f6f7fb] border-gray-200 text-gray-800"
-                  }`}
-                  onPress={() => setFormData({ ...formData, gender: option })}
-                >
-                  <Text>{option}</Text>
-                </TouchableOpacity>
-              ))}
+            <View>
+              <Text className="text-base font-medium text-gray-800 mb-3">
+                Gender
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {genderOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    className={`px-4 py-3 rounded-xl border text-sm font-medium ${
+                      formData.gender === option
+                        ? "border-black bg-gray-100 text-black"
+                        : "bg-[#f6f7fb] border-gray-200 text-gray-800"
+                    }`}
+                    onPress={() => {
+                      setFormData({ ...formData, gender: option });
+                      if (errors.gender) {
+                        setErrors({ ...errors, gender: "" });
+                      }
+                    }}
+                  >
+                    <Text>{option}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {errors.gender ? (
+                <Text className="text-red-500 text-sm mt-2 ml-1">
+                  {errors.gender}
+                </Text>
+              ) : null}
             </View>
 
-            <Text className="text-base font-medium text-gray-800">
-              Age Group
-            </Text>
-
-            <View className="flex-row flex-wrap gap-2">
-              {ageGroups.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  className={`px-4 py-3 rounded-xl border text-sm font-medium ${
-                    formData.ageGroup === option
-                      ? "border-black bg-gray-100 text-black"
-                      : "bg-[#f6f7fb] border-gray-200 text-gray-800"
-                  }`}
-                  onPress={() => setFormData({ ...formData, ageGroup: option })}
-                >
-                  <Text>{option}</Text>
-                </TouchableOpacity>
-              ))}
+            <View>
+              <Text className="text-base font-medium text-gray-800 mb-3">
+                Age Group
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {ageGroups.map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    className={`px-4 py-3 rounded-xl border text-sm font-medium ${
+                      formData.ageGroup === option
+                        ? "border-black bg-gray-100 text-black"
+                        : "bg-[#f6f7fb] border-gray-200 text-gray-800"
+                    }`}
+                    onPress={() => {
+                      setFormData({ ...formData, ageGroup: option });
+                      if (errors.ageGroup) {
+                        setErrors({ ...errors, ageGroup: "" });
+                      }
+                    }}
+                  >
+                    <Text>{option}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {errors.ageGroup ? (
+                <Text className="text-red-500 text-sm mt-2 ml-1">
+                  {errors.ageGroup}
+                </Text>
+              ) : null}
             </View>
 
-            <Text className="text-base font-medium text-gray-800">
-              Profession
-            </Text>
-
-            <View className="flex-row flex-wrap gap-2">
-              {professions.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  className={`px-4 py-3 rounded-xl border text-sm font-medium ${
-                    formData.profession === option
-                      ? "border-black bg-gray-100 text-black"
-                      : "bg-[#f6f7fb] border-gray-200 text-gray-800"
-                  }`}
-                  onPress={() =>
-                    setFormData({ ...formData, profession: option })
-                  }
-                >
-                  <Text>{option}</Text>
-                </TouchableOpacity>
-              ))}
+            <View>
+              <Text className="text-base font-medium text-gray-800 mb-3">
+                Profession
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {professions.map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    className={`px-4 py-3 rounded-xl border text-sm font-medium ${
+                      formData.profession === option
+                        ? "border-black bg-gray-100 text-black"
+                        : "bg-[#f6f7fb] border-gray-200 text-gray-800"
+                    }`}
+                    onPress={() => {
+                      setFormData({ ...formData, profession: option });
+                      if (errors.profession) {
+                        setErrors({ ...errors, profession: "" });
+                      }
+                    }}
+                  >
+                    <Text>{option}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {errors.profession ? (
+                <Text className="text-red-500 text-sm mt-2 ml-1">
+                  {errors.profession}
+                </Text>
+              ) : null}
             </View>
           </View>
         )}
 
         {currentStep === 3 && (
           <View className="space-y-6">
-            <Text className="text-base font-medium text-gray-800">Purpose</Text>
+            <View>
+              <Text className="text-base font-medium text-gray-800 mb-3">
+                Purpose (select atleast 1)
+              </Text>
 
-            {purposeOptions.map((purpose) => (
-              <TouchableOpacity
-                key={purpose}
-                className={`flex-row items-center justify-between px-5 py-4 rounded-xl border text-sm font-medium ${
-                  formData.purposes.includes(purpose)
-                    ? "border-black bg-gray-100 text-black"
-                    : "bg-[#f6f7fb] border-gray-200 text-gray-800"
-                }`}
-                onPress={() => handlePurposeToggle(purpose)}
-              >
-                <Text>{purpose}</Text>
+              {purposeOptions.map((purpose) => (
+                <TouchableOpacity
+                  key={purpose}
+                  className={`flex-row items-center justify-between px-5 py-4 rounded-xl border text-sm font-medium mb-3 ${
+                    formData.purposes.includes(purpose)
+                      ? "border-black bg-gray-100 text-black"
+                      : "bg-[#f6f7fb] border-gray-200 text-gray-800"
+                  }`}
+                  onPress={() => {
+                    handlePurposeToggle(purpose);
+                    if (errors.purposes) {
+                      setErrors({ ...errors, purposes: "" });
+                    }
+                  }}
+                >
+                  <Text>{purpose}</Text>
 
-                {formData.purposes.includes(purpose) && (
-                  <Check size={18} color="#111" />
-                )}
-              </TouchableOpacity>
-            ))}
+                  {formData.purposes.includes(purpose) && (
+                    <Check size={18} color="#111" />
+                  )}
+                </TouchableOpacity>
+              ))}
+
+              {errors.purposes ? (
+                <Text className="text-red-500 text-sm mt-1 ml-1">
+                  {errors.purposes}
+                </Text>
+              ) : null}
+            </View>
 
             {formData.purposes.includes("Other") && (
-              <TextInput
-                placeholder="Custom purpose"
-                className="bg-[#f6f7fb] px-5 py-4 rounded-xl border border-gray-200 text-gray-900"
-                value={formData.customPurpose}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, customPurpose: text })
-                }
-              />
+              <View>
+                <TextInput
+                  placeholder="Custom purpose"
+                  className={`bg-[#f6f7fb] px-5 py-4 rounded-xl border text-gray-900 ${
+                    errors.customPurpose ? "border-red-500" : "border-gray-200"
+                  }`}
+                  value={formData.customPurpose}
+                  onChangeText={(text) => {
+                    setFormData({ ...formData, customPurpose: text });
+                    if (errors.customPurpose) {
+                      setErrors({ ...errors, customPurpose: "" });
+                    }
+                  }}
+                />
+                {errors.customPurpose ? (
+                  <Text className="text-red-500 text-sm mt-1 ml-1">
+                    {errors.customPurpose}
+                  </Text>
+                ) : null}
+              </View>
             )}
           </View>
         )}
@@ -371,6 +641,7 @@ export default function SignUpScreen() {
           </View>
         </View>
       </ScrollView>
+      <Toast />
     </SafeAreaView>
   );
 }
