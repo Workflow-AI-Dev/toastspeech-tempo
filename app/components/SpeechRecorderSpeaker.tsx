@@ -75,6 +75,25 @@ const SpeechRecorderSpeaker = ({
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const cameraRef = useRef<Camera>(null);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const processingMessages = [
+    "Processing file...",
+    "Hang tight...",
+    "AI is analyzing...",
+    "Curating results for you...",
+    "Almost done...",
+  ];
+
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  useEffect(() => {
+    if (isProcessing || recordingState === "uploading") {
+      const interval = setInterval(() => {
+        setMessageIndex((prev) => (prev + 1) % processingMessages.length);
+      }, 2000); // switch message every 2s
+
+      return () => clearInterval(interval);
+    }
+  }, [isProcessing, recordingState]);
 
   const BASE_URL = "http://127.0.0.1:8000";
 
@@ -368,19 +387,6 @@ const SpeechRecorderSpeaker = ({
               fileSize: fileSize,
             });
           }, 1000);
-
-          const token = await AsyncStorage.getItem("auth_token");
-
-          await uploadFileToBackend({
-            fileUri: processedUri,
-            fileName: "recording.mp4", // or grab from selected file
-            taskType:
-              recordingMethod === "video"
-                ? "video_evaluation"
-                : "audio_evaluation",
-            modeType: "evaluator", // or speaker
-            token,
-          });
         } catch (error) {
           console.error("Error processing recorded file:", error);
           setRecordingState("completed");
@@ -391,8 +397,10 @@ const SpeechRecorderSpeaker = ({
               duration: timer,
               timestamp: new Date(),
               method: recordingMethod,
-              recordingUri: recordingUri,
-              fileSize: null,
+              recordingUri: processedUri,
+              fileName: file.name,
+              fileSize: processedSize,
+              mimeType: file.mimeType,
             });
           }, 1000);
         }
@@ -454,29 +462,15 @@ const SpeechRecorderSpeaker = ({
           setRecordingState("completed");
           setTimeout(() => {
             onRecordingComplete({
-              duration: 180, // This would be calculated from actual file
+              duration: timer,
               timestamp: new Date(),
-              method: "upload",
+              method: recordingMethod,
+              recordingUri: processedUri,
               fileName: file.name,
-              fileUri: processedUri,
               fileSize: processedSize,
               mimeType: file.mimeType,
             });
           }, 1000);
-
-          const token = await AsyncStorage.getItem("auth_token");
-
-          await uploadFileToBackend({
-            fileUri: processedUri,
-            fileName: file.name,
-            mimeType: file.mimeType,
-            taskType:
-              recordingMethod === "video"
-                ? "video_evaluation"
-                : "audio_evaluation",
-            modeType: "evaluator",
-            token,
-          });
         } catch (error) {
           console.error("Error processing uploaded file:", error);
 
@@ -842,23 +836,18 @@ const SpeechRecorderSpeaker = ({
                 ],
               }}
             >
-              {recordingState === "uploading" ? (
-                <Upload size={60} color="#7c3aed" />
-              ) : (
-                <Loader size={60} color="#7c3aed" />
-              )}
+              <Loader size={60} color="#7c3aed" />
             </Animated.View>
+
             <Text className="text-xl font-bold text-gray-800 mb-2">
-              {recordingState === "uploading"
-                ? "Compressing & Processing..."
-                : "AI is Analyzing..."}
+              {processingMessages[messageIndex]}
             </Text>
             <Text className="text-gray-600 text-center">
               {recordingState === "uploading"
                 ? selectedFile
                   ? `Optimizing ${selectedFile.name} for upload...`
-                  : "Compressing video to reduce file size and processing for analysis."
-                : "Hang tight! We're processing your speech to give you personalized feedback."}
+                  : "Compressing video and preparing it for analysis."
+                : "Analyzing speech patterns, emotional delivery, and pacing..."}
             </Text>
           </View>
         )}

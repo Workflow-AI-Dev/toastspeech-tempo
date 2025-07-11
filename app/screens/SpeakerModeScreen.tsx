@@ -32,6 +32,9 @@ import SpeechRecorder from "../components/SpeechRecorderSpeaker";
 import QuickFeedback from "../components/QuickFeedback";
 import ProgressIndicator from "../components/ProgressIndicator";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
+import { useRouter } from "expo-router";
 
 interface SpeakerModeScreenProps {
   onBack?: () => void;
@@ -55,6 +58,8 @@ const stepKeys: CurrentStep[] = [
   "results",
 ];
 
+const BASE_URL = "http://127.0.0.1:8000";
+
 export default function SpeakerModeScreen({
   onBack = () => {},
   onViewDetailedFeedback = () => {},
@@ -75,51 +80,183 @@ export default function SpeakerModeScreen({
     criteria: [] as string[],
   });
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [recordingData, setRecordingData] = useState(null);
+  const [analysisResults, setAnalysisResults] = useState(null);
+  const [feedback, setFeedback] = useState({
+    strengths: [],
+    improvements: [],
+    keyInsights: [],
+  });
+  const [detailedFeedback, setDetailedFeedback] = useState(null);
+  const router = useRouter();
 
-  const analysisResults = {
-    overallScore: 87,
-    pace: 85,
-    fillerWords: 8,
-    emotionalDelivery: 89,
-    clarity: 92,
-    confidence: 84,
-    engagement: 88,
-    improvement: "+15",
-    duration: "4:32",
-    wordCount: 425,
-    avgPause: "1.2s",
-  };
+  // const analysisResults = {
+  //   overallScore: 87,
+  //   pace: 85,
+  //   fillerWords: 8,
+  //   emotionalDelivery: 89,
+  //   clarity: 92,
+  //   confidence: 84,
+  //   engagement: 88,
+  //   improvement: "+15",
+  //   duration: "4:32",
+  //   wordCount: 425,
+  //   avgPause: "1.2s",
+  // };
 
-  const feedback = {
-    strengths: [
-      "Excellent vocal variety and tone modulation",
-      "Strong opening that captured attention immediately",
-      "Clear articulation throughout the speech",
-      "Good use of pauses for emphasis",
-    ],
-    improvements: [
-      "Reduce filler words like 'um' and 'uh' (8 instances)",
-      "Work on smoother transitions between main points",
-      "Consider adding more concrete examples",
-    ],
-    keyInsights: [
-      "Your confidence increased 23% from start to finish",
-      "Peak engagement occurred during storytelling segments",
-      "Speaking pace was optimal for audience comprehension",
-    ],
-  };
+  // const feedback = {
+  //   strengths: [
+  //     "Excellent vocal variety and tone modulation",
+  //     "Strong opening that captured attention immediately",
+  //     "Clear articulation throughout the speech",
+  //     "Good use of pauses for emphasis",
+  //   ],
+  //   improvements: [
+  //     "Reduce filler words like 'um' and 'uh' (8 instances)",
+  //     "Work on smoother transitions between main points",
+  //     "Consider adding more concrete examples",
+  //   ],
+  //   keyInsights: [
+  //     "Your confidence increased 23% from start to finish",
+  //     "Peak engagement occurred during storytelling segments",
+  //     "Speaking pace was optimal for audience comprehension",
+  //   ],
+  // };
 
-  const handleRecordingComplete = () => {
+  const handleRecordingComplete = (data) => {
+    setRecordingData(data); // Save recording file info
+    console.log(data);
     setShowConfirmModal(true);
   };
 
-  const confirmSubmission = () => {
+  const getTaskType = (method: string, fileName: string): string => {
+    if (method === "audio") return "audio_evaluation";
+    if (method === "video") return "video_evaluation";
+
+    // If uploaded, check file extension
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    const videoExtensions = ["mp4", "mov", "avi", "mkv"];
+    const audioExtensions = ["mp3", "m4a", "wav", "aac", "ogg"];
+
+    if (ext && videoExtensions.includes(ext)) return "video_evaluation";
+    if (ext && audioExtensions.includes(ext)) return "audio_evaluation";
+
+    // Fallback (just in case)
+    return "audio_evaluation";
+  };
+
+  const uploadFileToBackend = async ({
+    fileUri,
+    fileName,
+    mimeType,
+    taskType,
+    modeType,
+    speechType,
+    token,
+  }) => {
+    try {
+      const formData = new FormData();
+
+      if (Platform.OS === "web") {
+        // Fetch actual file blob from URI for web
+        const res = await fetch(fileUri);
+        const blob = await res.blob();
+
+        const file = new File([blob], fileName, { type: mimeType });
+        formData.append("file", file);
+      } else {
+        // React Native FormData expects this format
+        formData.append("file", {
+          uri: fileUri,
+          name: fileName,
+          type: mimeType,
+        });
+      }
+
+      formData.append("task_type", taskType);
+      formData.append("mode_type", modeType);
+      formData.append("speech_type", speechType);
+
+      const response = await fetch(`${BASE_URL}/speech/process_file`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(err || "Upload failed");
+      }
+
+      const data = await response.json();
+      console.log("✅ Upload success:", data);
+      return data;
+    } catch (err) {
+      console.error("❌ Upload error:", err);
+      throw err;
+    }
+  };
+
+  const confirmSubmission = async () => {
     setShowConfirmModal(false);
     setIsProcessing(true);
-    setTimeout(() => {
+
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+
+      const taskType = getTaskType(
+        recordingData?.method || recordingMethod,
+        recordingData?.fileName || "recording.mp4",
+      );
+
+      const result = await uploadFileToBackend({
+        fileUri: recordingData.recordingUri,
+        fileName: recordingData.fileName || "recording.mp4",
+        mimeType: recordingData.mimeType || "application/octet-stream",
+        taskType: taskType,
+        modeType: "speaker",
+        speechType: speechType || "custom", // pulled from earlier step
+        token,
+      });
+
+      const mappedResults = {
+        overallScore: result.summary.Metadata?.overall_score ?? 0,
+        pace: result.summary.Metadata?.words_per_minute ?? 0,
+        fillerWords: 0, // Gemini may not return this yet
+        emotionalDelivery: 0,
+        clarity: 0,
+        confidence: 0,
+        engagement: 0,
+        improvement: "N/A", // Or calculate based on history
+        duration: result.summary.Metadata?.duration ?? "00:00",
+        avgPause: `${result.summary.Metadata?.average_pause_duration ?? 0}s`,
+      };
+
+      const mappedFeedback = {
+        strengths: result.summary.Commendations ?? [],
+        improvements: result.summary.Recommendations ?? [],
+        keyInsights: [
+          result.summary.Introduction,
+          result.summary.Conclusion,
+        ].filter(Boolean),
+      };
+
+      const detailedFeedback = result.detailed;
+
+      setAnalysisResults(mappedResults);
+      setFeedback(mappedFeedback);
+      setDetailedFeedback(detailedFeedback);
+
+      console.log(mappedResults);
+
       setIsProcessing(false);
       setCurrentStep("results");
-    }, 3000);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      setIsProcessing(false);
+    }
   };
 
   const evaluationCriteria = [
@@ -865,7 +1002,7 @@ export default function SpeakerModeScreen({
                   className="text-base"
                   style={{ color: colors.textSecondary }}
                 >
-                  Select a pre-recorded file from device
+                  Select a pre-recorded file (audio/video) from device
                 </Text>
               </View>
               <ChevronRight size={24} color={colors.textSecondary} />
@@ -1188,7 +1325,15 @@ export default function SpeakerModeScreen({
         <QuickFeedback
           analysisResults={analysisResults}
           feedback={feedback}
-          onViewDetailedFeedback={onViewDetailedFeedback}
+          detailedFeedback={detailedFeedback}
+          onViewDetailedFeedback={() => {
+            router.push({
+              pathname: "/detailed-feedback",
+              params: {
+                feedback: JSON.stringify(detailedFeedback),
+              },
+            });
+          }}
           onRecordAnother={() => setCurrentStep("record")}
         />
       </ScrollView>

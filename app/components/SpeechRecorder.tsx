@@ -75,6 +75,8 @@ const SpeechRecorder = ({
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const cameraRef = useRef<Camera>(null);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [pendingRecordingData, setPendingRecordingData] = useState<any>(null);
 
   const BASE_URL = "http://127.0.0.1:8000";
 
@@ -85,6 +87,12 @@ const SpeechRecorder = ({
   useEffect(() => {
     requestPermissions();
   }, []);
+
+  useEffect(() => {
+    if (!showConfirmationModal) {
+      setPendingRecordingData(null);
+    }
+  }, [showConfirmationModal]);
 
   const requestPermissions = async () => {
     try {
@@ -169,57 +177,33 @@ const SpeechRecorder = ({
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const uploadFileToBackend = async ({
-    fileUri,
-    fileName = "recording.mp4",
-    mimeType = "application/octet-stream",
-    taskType = "audio_evaluation",
-    modeType = "evaluator",
-    token,
-  }) => {
-    try {
-      const formData = new FormData();
-
-      if (Platform.OS === "web") {
-        // Fetch actual file blob from URI for web
-        const res = await fetch(fileUri);
-        const blob = await res.blob();
-
-        const file = new File([blob], fileName, { type: mimeType });
-        formData.append("file", file);
-      } else {
-        // React Native FormData expects this format
-        formData.append("file", {
-          uri: fileUri,
-          name: fileName,
-          type: mimeType,
-        });
-      }
-
-      formData.append("task_type", taskType);
-      formData.append("mode_type", modeType);
-
-      const response = await fetch(`${BASE_URL}/speech/process_file`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // DO NOT manually set Content-Type; fetch + FormData handles it
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const err = await response.text();
-        throw new Error(err || "Upload failed");
-      }
-
-      const data = await response.json();
-      console.log("✅ Upload success:", data);
-      return data;
-    } catch (err) {
-      console.error("❌ Upload error:", err);
-      throw err;
+  const getFileType = (
+    uri: string,
+    fileName?: string,
+    mimeType?: string,
+  ): "audio" | "video" | "unknown" => {
+    // Use MIME type first if available:
+    if (mimeType) {
+      if (mimeType.startsWith("audio")) return "audio";
+      if (mimeType.startsWith("video")) return "video";
     }
+    // Fallback to extension check:
+    const name = fileName || uri;
+    const lower = name.toLowerCase();
+    if (
+      lower.endsWith(".mp4") ||
+      lower.endsWith(".mov") ||
+      lower.endsWith(".avi")
+    )
+      return "video";
+    if (
+      lower.endsWith(".mp3") ||
+      lower.endsWith(".wav") ||
+      lower.endsWith(".m4a")
+    )
+      return "audio";
+
+    return "unknown";
   };
 
   const handleStartRecording = async () => {
@@ -302,7 +286,7 @@ const SpeechRecorder = ({
         setRecordingState("paused");
       } else if (recordingState === "paused") {
         if (recording && recordingMethod === "audio") {
-          await recording.startAsync();
+          await recording.resumeAsync();
         } else if (recordingMethod === "video" && cameraRef.current && device) {
           // Restart video recording
           setIsRecordingVideo(true);
@@ -328,6 +312,9 @@ const SpeechRecorder = ({
   };
 
   const handleStopRecording = async () => {
+    let processedUri = null;
+    let fileSize = 0;
+
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -354,59 +341,60 @@ const SpeechRecorder = ({
       // Process and compress the file if needed
       if (recordingUri) {
         try {
-          const { uri: processedUri, size: fileSize } =
-            await processVideoFile(recordingUri);
+          const fileType = getFileType(recordingUri);
+          console.log("Recording stopped.");
+          console.log("URI:", recordingUri);
+          console.log("File type:", fileType);
+
+          const { uri, size } = await processVideoFile(recordingUri);
+          processedUri = uri;
+          fileSize = size;
 
           setRecordingState("completed");
+          const fallbackUri = processedUri || (selectedFile?.uri ?? null);
 
           // Send recording data with processed file URI
           setTimeout(() => {
-            onRecordingComplete({
+            setPendingRecordingData({
               duration: timer,
               timestamp: new Date(),
               method: recordingMethod,
-              recordingUri: processedUri,
+              recordingUri: fallbackUri,
               fileSize: fileSize,
+              fileType: fileType,
             });
+            setShowConfirmationModal(true);
           }, 1000);
-
-          const token = await AsyncStorage.getItem("auth_token");
-
-          await uploadFileToBackend({
-            fileUri: processedUri,
-            fileName: "recording.mp4", // or grab from selected file
-            taskType:
-              recordingMethod === "video"
-                ? "video_evaluation"
-                : "audio_evaluation",
-            modeType: "evaluator", // or speaker
-            token,
-          });
         } catch (error) {
           console.error("Error processing recorded file:", error);
           setRecordingState("completed");
 
+          const fallbackUri = processedUri || (selectedFile?.uri ?? null);
+
           // Fallback to original file
           setTimeout(() => {
-            onRecordingComplete({
+            setPendingRecordingData({
               duration: timer,
               timestamp: new Date(),
               method: recordingMethod,
-              recordingUri: recordingUri,
-              fileSize: null,
+              recordingUri: fallbackUri,
+              fileSize: fileSize,
             });
+            setShowConfirmationModal(true);
           }, 1000);
         }
       } else {
         setRecordingState("completed");
+        const fallbackUri = processedUri || (selectedFile?.uri ?? null);
         setTimeout(() => {
-          onRecordingComplete({
+          setPendingRecordingData({
             duration: timer,
             timestamp: new Date(),
             method: recordingMethod,
-            recordingUri: null,
-            fileSize: null,
+            recordingUri: fallbackUri,
+            fileSize: fileSize,
           });
+          setShowConfirmationModal(true);
         }, 1000);
       }
     } catch (error) {
@@ -421,6 +409,8 @@ const SpeechRecorder = ({
 
   const handleFileUpload = async () => {
     console.log("test");
+    let processedUri = null;
+    let fileSize = 0;
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -442,57 +432,61 @@ const SpeechRecorder = ({
         setSelectedFile(file);
         setRecordingState("uploading");
 
+        const fileType = getFileType(file.uri, file.name, file.mimeType);
+        console.log("File uploaded:");
+        console.log("URI:", file.uri);
+        console.log("File type:", fileType);
+
         try {
           // Always process and compress the uploaded file
-          const { uri: processedUri, size: processedSize } =
-            await processVideoFile(file.uri, file.name);
+          const processed = await processVideoFile(file.uri, file.name);
+          processedUri = processed.uri;
+          fileSize = processed.size;
 
-          const fileSizeInMB = processedSize / (1024 * 1024);
+          const fileSizeInMB = fileSize / (1024 * 1024);
           console.log(
             `Final processed file size: ${fileSizeInMB.toFixed(2)} MB`,
           );
 
           setRecordingState("completed");
+          const fallbackUri = processedUri || selectedFile?.uri;
+
+          if (!fallbackUri) {
+            console.error("No valid URI found for uploaded file.");
+            Alert.alert(
+              "Upload Error",
+              "Something went wrong with the selected file.",
+            );
+            return;
+          }
+
           setTimeout(() => {
-            onRecordingComplete({
-              duration: 180, // This would be calculated from actual file
+            setPendingRecordingData({
+              duration: timer,
               timestamp: new Date(),
-              method: "upload",
-              fileName: file.name,
-              fileUri: processedUri,
-              fileSize: processedSize,
-              mimeType: file.mimeType,
+              method: recordingMethod,
+              recordingUri: fallbackUri, // ✅ fallbackUri is guaranteed valid now
+              fileSize: fileSize,
+              fileType: fileType,
             });
+            setShowConfirmationModal(true);
           }, 1000);
-
-          const token = await AsyncStorage.getItem("auth_token");
-
-          await uploadFileToBackend({
-            fileUri: processedUri,
-            fileName: file.name,
-            mimeType: file.mimeType,
-            taskType:
-              recordingMethod === "video"
-                ? "video_evaluation"
-                : "audio_evaluation",
-            modeType: "evaluator",
-            token,
-          });
         } catch (error) {
           console.error("Error processing uploaded file:", error);
 
           // Use original file if processing fails
           setRecordingState("completed");
+          const fallbackUri = processedUri || (selectedFile?.uri ?? null);
+
           setTimeout(() => {
-            onRecordingComplete({
-              duration: 180,
+            setPendingRecordingData({
+              duration: timer,
               timestamp: new Date(),
-              method: "upload",
-              fileName: file.name,
-              fileUri: file.uri,
-              fileSize: file.size,
-              mimeType: file.mimeType,
+              method: recordingMethod,
+              recordingUri: fallbackUri,
+              fileSize: fileSize,
             });
+            setShowConfirmationModal(true);
           }, 1000);
         }
       }
@@ -631,6 +625,8 @@ const SpeechRecorder = ({
       setRecordingState("idle");
       setTimer(0);
       setAudioLevels(Array(30).fill(5));
+      setSelectedFile(null);
+      setPendingRecordingData(null);
     } catch (error) {
       console.error("Error resetting recording:", error);
     }
@@ -741,12 +737,14 @@ const SpeechRecorder = ({
                   audio={true}
                   fps={5}
                   videoStabilizationMode="auto"
-                  format={device.formats.find(
-                    (f) =>
-                      f.videoWidth <= 640 &&
-                      f.videoHeight <= 480 &&
-                      f.maxFps >= 5,
-                  )}
+                  format={
+                    device.formats.find(
+                      (f) =>
+                        f.videoWidth <= 640 &&
+                        f.videoHeight <= 480 &&
+                        f.maxFps >= 5,
+                    ) ?? device.formats[0]
+                  }
                 />
               </View>
             ) : recordingMethod === "video" && Platform.OS === "web" ? (
@@ -861,6 +859,48 @@ const SpeechRecorder = ({
                   : "Compressing video to reduce file size and processing for analysis."
                 : "Hang tight! We're processing your speech to give you personalized feedback."}
             </Text>
+          </View>
+        )}
+
+        {showConfirmationModal && (
+          <View className="absolute inset-0 bg-black/50 justify-center items-center z-50">
+            <View className="bg-white rounded-2xl p-6 w-11/12 shadow-xl">
+              <Text className="text-lg font-bold text-gray-800 mb-2 text-center">
+                Use This Recording?
+              </Text>
+              <Text className="text-gray-600 mb-6 text-center">
+                Do you want to continue with this recording or upload?
+              </Text>
+
+              <View className="flex-row justify-between space-x-4">
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowConfirmationModal(false);
+                    resetRecording();
+                  }}
+                  className="flex-1 bg-red-100 py-3 rounded-xl"
+                >
+                  <Text className="text-red-600 font-semibold text-center">
+                    Record Again
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowConfirmationModal(false);
+                    if (pendingRecordingData) {
+                      onRecordingComplete(pendingRecordingData);
+                    }
+                    setPendingRecordingData(null);
+                  }}
+                  className="flex-1 bg-green-600 py-3 rounded-xl"
+                >
+                  <Text className="text-white font-semibold text-center">
+                    Use This
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         )}
       </View>

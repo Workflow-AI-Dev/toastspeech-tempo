@@ -23,20 +23,47 @@ import {
   Play,
   Pause,
   AlignLeft,
+  Flame,
+  HandMetal,
 } from "lucide-react-native";
 
 interface DetailedFeedbackScreenProps {
-  onBack?: () => void;
+  detailed: QuickFeedbackProps["detailedFeedback"];
+  onBack: () => void;
 }
 
-export default function DetailedFeedbackScreen({
-  onBack = () => {},
-}: DetailedFeedbackScreenProps) {
+const DetailedFeedbackScreen = ({
+  detailed,
+  onBack,
+}: DetailedFeedbackScreenProps) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isPlaying, setIsPlaying] = useState(false);
+  const hasFeedback = (category: any) => {
+    return (
+      category?.strengths?.length > 0 || category?.improvements?.length > 0
+    );
+  };
 
   const categories = [
     { id: "all", label: "All", icon: BarChart3, color: "#6b7280" },
+    {
+      id: "gestures",
+      label: "Gestures",
+      icon: HandMetal, // expressive hand icon
+      color: "#14b8a6",
+    },
+    {
+      id: "presence",
+      label: "Stage Presence",
+      icon: Mic, // presence on stage / speech delivery
+      color: "#f472b6",
+    },
+    {
+      id: "visuals",
+      label: "Visual Engagement",
+      icon: Heart, // emotional/visual connection
+      color: "#fb923c",
+    },
     { id: "vocal", label: "Vocal", icon: Volume2, color: "#3b82f6" },
     {
       id: "language",
@@ -45,196 +72,88 @@ export default function DetailedFeedbackScreen({
       color: "#8b5cf6",
     },
     { id: "structure", label: "Structure", icon: AlignLeft, color: "#ec4899" },
-    { id: "delivery", label: "Delivery", icon: Eye, color: "#10b981" },
-    { id: "emotion", label: "Emotion", icon: Heart, color: "#f59e0b" },
+    {
+      id: "storytelling",
+      label: "Storytelling",
+      icon: Flame,
+      color: "#ef4444",
+    },
+    {
+      id: "question",
+      label: "Question Resolution",
+      icon: Brain, // Thoughtful processing
+      color: "#f59e0b",
+    },
+    {
+      id: "storyStages",
+      label: "Story Stages",
+      icon: Clock, // Timing and sequencing
+      color: "#0ea5e9",
+    },
+    {
+      id: "audience",
+      label: "Audience Connection",
+      icon: Eye, // Connection with the crowd
+      color: "#10b981",
+    },
   ];
 
-  const detailedFeedback = {
-    vocal: {
-      title: "Vocal Delivery",
-      score: 85,
-      strengths: [
-        {
-          text: "Excellent vocal variety with pitch modulation",
-          timestamp: "0:45",
-          confidence: 95,
-        },
-        {
-          text: "Clear articulation throughout the speech",
-          timestamp: "2:15",
-          confidence: 92,
-        },
-        {
-          text: "Appropriate volume for audience engagement",
-          timestamp: "3:30",
-          confidence: 88,
-        },
-      ],
-      improvements: [
-        {
-          text: "Pace slightly fast during technical explanations",
-          timestamp: "1:20",
-          severity: "medium",
-          suggestion: "Slow down by 10-15% when explaining complex concepts",
-        },
-        {
-          text: "Inconsistent pause lengths between sentences",
-          timestamp: "2:45",
-          severity: "low",
-          suggestion: "Practice using 1-2 second pauses consistently",
-        },
-      ],
-      metrics: {
-        averagePace: "165 WPM",
-        optimalRange: "140-160 WPM",
-        pauseFrequency: "Every 8.5 words",
-        volumeConsistency: "87%",
-      },
-    },
-    language: {
-      title: "Language & Grammar",
-      score: 78,
-      strengths: [
-        {
-          text: "Rich vocabulary with varied word choices",
-          timestamp: "1:10",
-          confidence: 90,
-        },
-        {
-          text: "Proper grammar structure throughout",
-          timestamp: "Overall",
-          confidence: 85,
-        },
-      ],
-      improvements: [
-        {
-          text: "8 filler words detected ('um', 'uh', 'like')",
-          timestamp: "Multiple",
-          severity: "high",
-          suggestion:
-            "Practice with recording to build awareness of filler word usage",
-          details: [
-            "'Um' - 4 instances (0:30, 1:45, 2:20, 3:10)",
-            "'Uh' - 3 instances (0:55, 2:35, 3:45)",
-            "'Like' - 1 instance (1:30)",
-          ],
-        },
-        {
-          text: "Repetitive sentence starters",
-          timestamp: "1:00-2:00",
-          severity: "medium",
-          suggestion: "Vary sentence beginnings to maintain audience interest",
-        },
-      ],
-      metrics: {
-        vocabularyDiversity: "72%",
-        grammarAccuracy: "94%",
-        fillerWordRate: "1.8 per minute",
-        sentenceVariety: "65%",
-      },
-    },
-    structure: {
-      title: "Speech Structure",
-      score: 80,
-      strengths: [
-        {
-          text: "Clear opening with attention-grabber",
-          timestamp: "0:00-0:30",
-          confidence: 90,
-        },
-        {
-          text: "Logical flow of main points",
-          timestamp: "Throughout",
-          confidence: 87,
-        },
-      ],
-      improvements: [
-        {
-          text: "Weak conclusion lacking strong call-to-action",
-          timestamp: "3:45-4:00",
-          severity: "medium",
-          suggestion: "End with a memorable takeaway or action step",
-        },
-      ],
-      metrics: {
-        introEffectiveness: "85%",
-        transitionClarity: "78%",
-        mainPointClarity: "80%",
-        conclusionImpact: "70%",
-      },
-    },
-    delivery: {
-      title: "Physical Delivery",
-      score: 82,
-      strengths: [
-        {
-          text: "Strong eye contact with audience",
-          timestamp: "Throughout",
-          confidence: 88,
-        },
-        {
-          text: "Natural hand gestures for emphasis",
-          timestamp: "1:30-2:00",
-          confidence: 85,
-        },
-      ],
-      improvements: [
-        {
-          text: "Limited movement and positioning",
-          timestamp: "Overall",
-          severity: "medium",
-          suggestion: "Use purposeful movement to emphasize transitions",
-        },
-        {
-          text: "Occasional fidgeting with hands",
-          timestamp: "2:30-3:00",
-          severity: "low",
-          suggestion: "Practice relaxed, open posture",
-        },
-      ],
-      metrics: {
-        eyeContactScore: "85%",
-        gestureVariety: "72%",
-        postureConsistency: "78%",
-        movementPurpose: "65%",
-      },
-    },
-    emotion: {
-      title: "Emotional Delivery",
-      score: 89,
-      strengths: [
-        {
-          text: "Authentic enthusiasm for the topic",
-          timestamp: "0:15-1:00",
-          confidence: 92,
-        },
-        {
-          text: "Emotional connection with personal stories",
-          timestamp: "2:00-2:45",
-          confidence: 95,
-        },
-        {
-          text: "Confident and engaging tone",
-          timestamp: "Throughout",
-          confidence: 87,
-        },
-      ],
-      improvements: [
-        {
-          text: "Energy dip during middle section",
-          timestamp: "2:45-3:15",
-          severity: "medium",
-          suggestion: "Maintain consistent energy by varying vocal dynamics",
-        },
-      ],
-      metrics: {
-        emotionalRange: "78%",
-        authenticity: "92%",
-        audienceConnection: "85%",
-        energyConsistency: "73%",
-      },
-    },
+  const categoryMap = {
+    gestures: { title: "Gestures", key: "Gestures" },
+    presence: { title: "Stage Presence", key: "StagePresence" },
+    visuals: { title: "Visual Engagement", key: "VisualEngagement" },
+    vocal: { title: "Vocal Variety", key: "VocalVariety" },
+    language: { title: "Language & Grammar", key: "Language" },
+    structure: { title: "Speech Structure", key: "SpeechStructure" },
+    storytelling: { title: "Storytelling", key: "Storytelling" },
+    question: { title: "Question Resolution", key: "QuestionResolution" },
+    storyStages: { title: "Story Stages", key: "StoryStages" },
+    audience: { title: "Audience Connection", key: "Connections" },
   };
+
+  const normalizeToArray = (value: any) => {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object") return [value];
+    return [];
+  };
+
+  const parseCategory = (detailed: any, key: string, title: string) => {
+    const commendationsRaw = normalizeToArray(
+      detailed?.[`${key}_commendations`],
+    );
+    const recommendationsRaw = normalizeToArray(
+      detailed?.[`${key}_recommendations`],
+    );
+
+    const strengths = commendationsRaw.map((item: any) => ({
+      text: item.action,
+      timestamp: item.timestamp || "N/A",
+      impact: item.impact,
+      details: item.details || undefined,
+    }));
+
+    const improvements = recommendationsRaw.map((item: any) => ({
+      text: item.action,
+      timestamp: item.timestamp || "N/A",
+      suggestion: item.suggestion,
+      details: item.details || undefined,
+    }));
+
+    return {
+      title,
+      score: detailed?.[`${key}_score`] ?? 0,
+      strengths,
+      improvements,
+      metrics: detailed?.[`${key}_metrics`] || undefined,
+    };
+  };
+
+  const detailedFeedback = Object.fromEntries(
+    Object.entries(categoryMap).map(([id, { key, title }]) => [
+      id,
+      parseCategory(detailed, key, title),
+    ]),
+  );
 
   const overallInsights = [
     {
@@ -303,34 +222,53 @@ export default function DetailedFeedbackScreen({
               Category Breakdown
             </Text>
             <View className="space-y-4">
-              {Object.entries(detailedFeedback).map(([key, category]) => (
-                <TouchableOpacity
-                  key={key}
-                  onPress={() => setSelectedCategory(key)}
-                  className="flex-row items-center justify-between bg-gray-50 rounded-2xl p-4"
-                >
-                  <View className="flex-1">
-                    <Text className="font-semibold text-gray-900">
-                      {category.title}
-                    </Text>
-                    <View className="flex-row items-center mt-1">
-                      <View className="bg-gray-200 rounded-full h-2 w-20 mr-3">
+              {categories
+                .filter(
+                  (cat) =>
+                    cat.id !== "all" && hasFeedback(detailedFeedback[cat.id]),
+                )
+                .map((cat) => {
+                  const category = detailedFeedback[cat.id];
+                  const IconComponent = cat.icon;
+                  const color = cat.color;
+
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      onPress={() => setSelectedCategory(cat.id)}
+                      className="flex-row items-center justify-between bg-gray-50 rounded-2xl p-4"
+                    >
+                      <View className="flex-row items-center flex-1">
                         <View
-                          className="rounded-full h-2 bg-blue-500"
-                          style={{ width: `${category.score}%` }}
-                        />
+                          className="rounded-full p-2 mr-3"
+                          style={{ backgroundColor: `${color}20` }}
+                        >
+                          <IconComponent size={16} color={color} />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="font-semibold text-gray-900">
+                            {category.title}
+                          </Text>
+                          <View className="bg-gray-200 rounded-full h-2 w-full mt-2">
+                            <View
+                              className="rounded-full h-2"
+                              style={{
+                                width: `${(category.score / 10) * 100}%`,
+                                backgroundColor: color,
+                              }}
+                            />
+                          </View>
+                        </View>
                       </View>
-                      <Text className="text-gray-600 text-sm">
-                        {category.strengths.length} strengths,{" "}
-                        {category.improvements.length} improvements
+                      <Text
+                        className="font-bold text-lg"
+                        style={{ color: color }}
+                      >
+                        {category.score}/10
                       </Text>
-                    </View>
-                  </View>
-                  <Text className="font-bold text-gray-900 text-lg">
-                    {category.score}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    </TouchableOpacity>
+                  );
+                })}
             </View>
           </View>
         </View>
@@ -351,13 +289,13 @@ export default function DetailedFeedbackScreen({
             </Text>
             <View className="bg-blue-100 rounded-full px-4 py-2">
               <Text className="font-bold text-blue-600 text-lg">
-                {category.score}/100
+                {category.score}/10
               </Text>
             </View>
           </View>
 
           {/* Metrics */}
-          <View className="bg-gray-50 rounded-2xl p-4">
+          {/*<View className="bg-gray-50 rounded-2xl p-4">
             <Text className="font-bold text-gray-800 mb-3">Key Metrics</Text>
             <View className="grid grid-cols-2 gap-3">
               {Object.entries(category.metrics).map(([key, value]) => (
@@ -369,7 +307,7 @@ export default function DetailedFeedbackScreen({
                 </View>
               ))}
             </View>
-          </View>
+          </View>*/}
         </View>
 
         {/* Strengths */}
@@ -387,17 +325,59 @@ export default function DetailedFeedbackScreen({
                   <Text className="text-green-800 font-semibold flex-1">
                     {strength.text}
                   </Text>
-                  <View className="bg-green-100 rounded-full px-2 py-1">
-                    <Text className="text-green-700 text-xs font-bold">
-                      {strength.confidence}%
+                  {/*<View
+                    className={`rounded-full px-2 py-1 ${
+                      strength.severity === "high"
+                        ? "bg-red-100"
+                        : strength.severity === "medium"
+                          ? "bg-orange-100"
+                          : "bg-yellow-100"
+                    }`}
+                  >
+                    <Text
+                      className={`text-xs font-bold ${
+                        strength.severity === "high"
+                          ? "text-red-700"
+                          : strength.severity === "medium"
+                            ? "text-orange-700"
+                            : "text-yellow-700"
+                      }`}
+                    >
+                      {strength.severity.toUpperCase()}
                     </Text>
-                  </View>
+                  </View>*/}
                 </View>
                 <View className="flex-row items-center">
                   <Clock size={14} color="#059669" />
                   <Text className="text-green-700 text-sm ml-1">
                     {strength.timestamp}
                   </Text>
+                </View>
+
+                <View className="bg-white rounded-xl p-3">
+                  <View className="flex-row items-center mb-2">
+                    <Flame size={16} color="#22c55e" />
+                    <Text className="text-green-800 font-semibold ml-2">
+                      Impact
+                    </Text>
+                  </View>
+                  <Text className="text-gray-700">{strength.impact}</Text>
+
+                  {strength.details && (
+                    <View className="mt-3">
+                      <Text className="text-gray-600 font-medium mb-2">
+                        Details:
+                      </Text>
+                      {strength.details.map((detail, detailIndex) => (
+                        <Text
+                          key={detailIndex}
+                          className="text-gray-600 text-sm ml-2"
+                        >
+                          • {detail}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
                 </View>
               </View>
             ))}
@@ -409,7 +389,7 @@ export default function DetailedFeedbackScreen({
           <View className="flex-row items-center mb-4">
             <AlertTriangle size={24} color="#f59e0b" />
             <Text className="text-xl font-bold text-gray-900 ml-2">
-              Areas for Improvement ({category.improvements.length})
+              Weaknesses ({category.improvements.length})
             </Text>
           </View>
           <View className="space-y-4">
@@ -419,7 +399,7 @@ export default function DetailedFeedbackScreen({
                   <Text className="text-orange-800 font-semibold flex-1">
                     {improvement.text}
                   </Text>
-                  <View
+                  {/*<View
                     className={`rounded-full px-2 py-1 ${
                       improvement.severity === "high"
                         ? "bg-red-100"
@@ -439,7 +419,7 @@ export default function DetailedFeedbackScreen({
                     >
                       {improvement.severity.toUpperCase()}
                     </Text>
-                  </View>
+                  </View>*/}
                 </View>
 
                 <View className="flex-row items-center mb-3">
@@ -451,8 +431,8 @@ export default function DetailedFeedbackScreen({
 
                 <View className="bg-white rounded-xl p-3">
                   <View className="flex-row items-center mb-2">
-                    <Lightbulb size={16} color="#7c3aed" />
-                    <Text className="text-purple-700 font-semibold ml-2">
+                    <Lightbulb size={16} color="#f97316" />
+                    <Text className="text-orange-800 font-semibold ml-2">
                       Suggestion
                     </Text>
                   </View>
@@ -519,31 +499,36 @@ export default function DetailedFeedbackScreen({
       <View className="bg-white px-6 py-4">
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row space-x-2">
-            {categories.map((category) => {
-              const IconComponent = category.icon;
-              const isSelected = selectedCategory === category.id;
-              return (
-                <TouchableOpacity
-                  key={category.id}
-                  onPress={() => setSelectedCategory(category.id)}
-                  className={`flex-row items-center px-4 py-2 rounded-2xl ${
-                    isSelected ? "bg-purple-100" : "bg-gray-100"
-                  }`}
-                >
-                  <IconComponent
-                    size={16}
-                    color={isSelected ? "#7c3aed" : category.color}
-                  />
-                  <Text
-                    className={`font-semibold ml-2 ${
-                      isSelected ? "text-purple-700" : "text-gray-600"
+            {categories
+              .filter(
+                (cat) =>
+                  cat.id === "all" || hasFeedback(detailedFeedback[cat.id]),
+              )
+              .map((cat) => {
+                const IconComponent = cat.icon;
+                const isSelected = selectedCategory === cat.id;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    onPress={() => setSelectedCategory(cat.id)}
+                    className={`flex-row items-center px-4 py-2 rounded-2xl ${
+                      isSelected ? "bg-purple-100" : "bg-gray-100"
                     }`}
                   >
-                    {category.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                    <IconComponent
+                      size={16}
+                      color={isSelected ? "#7c3aed" : cat.color}
+                    />
+                    <Text
+                      className={`font-semibold ml-2 ${
+                        isSelected ? "text-purple-700" : "text-gray-600"
+                      }`}
+                    >
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
           </View>
         </ScrollView>
       </View>
@@ -554,4 +539,6 @@ export default function DetailedFeedbackScreen({
       </ScrollView>
     </SafeAreaView>
   );
-}
+};
+
+export default DetailedFeedbackScreen;

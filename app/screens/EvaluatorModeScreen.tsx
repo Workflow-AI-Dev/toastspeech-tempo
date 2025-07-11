@@ -31,6 +31,14 @@ export default function EvaluatorModeScreen({
   const [evaluationRecordMode, setEvaluationRecordMode] = useState<
     "audio" | "video"
   >("audio");
+  const [speakerFile, setSpeakerFile] = useState<{
+    uri: string;
+    type: "audio" | "video";
+  } | null>(null);
+  const [evaluatorFile, setEvaluatorFile] = useState<{
+    uri: string;
+    type: "audio" | "video";
+  } | null>(null);
 
   // Upload step handlers
   const handleFileUpload = () => {
@@ -43,8 +51,21 @@ export default function EvaluatorModeScreen({
   );
 
   // Called after recording original speech in record step
-  const onRecordComplete = () => {
-    setCurrentStep("selectMode"); // Changed to go to selectMode next
+  const onSpeakerRecordComplete = (file: {
+    uri: string;
+    type: "audio" | "video";
+  }) => {
+    console.log("Speaker file recorded/uploaded:", file);
+    setSpeakerFile(file);
+    setCurrentStep("selectMode");
+  };
+
+  const onEvaluatorRecordComplete = (file: {
+    uri: string;
+    type: "audio" | "video";
+  }) => {
+    console.log("Evaluator file recorded/uploaded:", file);
+    setEvaluatorFile(file);
   };
 
   // Evaluation submit
@@ -195,7 +216,7 @@ export default function EvaluatorModeScreen({
   const renderRecordStep = () => (
     <View className="flex-1 px-6 py-4">
       <SpeechRecorder
-        onRecordingComplete={onRecordComplete}
+        onRecordingComplete={onSpeakerRecordComplete}
         isProcessing={false}
         recordingMethod={recordMode}
       />
@@ -370,13 +391,7 @@ export default function EvaluatorModeScreen({
         </View>
 
         <SpeechRecorder
-          onRecordingComplete={() => {
-            setTimeout(() => {
-              setTranscribedText(
-                "This is a well-structured speech with clear objectives. The speaker demonstrated good knowledge of sustainable technology and effectively engaged the audience. Areas for improvement include speaking pace and gesture usage.",
-              );
-            }, 2000);
-          }}
+          onRecordingComplete={onEvaluatorRecordComplete}
           isProcessing={false}
           recordingMethod={
             evaluationRecordMode === "video"
