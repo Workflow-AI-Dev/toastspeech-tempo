@@ -42,10 +42,7 @@ interface QuickFeedbackProps {
   detailedFeedback: {
     Introduction: string;
     Conclusion: string;
-    VocalVariety_commendations: {
-      point_1: string;
-      point_2: string;
-    };
+    VocalVariety_commendations: string[];
     VocalVariety_recommendations: {
       point: string;
     };
@@ -176,7 +173,7 @@ const QuickFeedback = ({
               className="text-sm mt-1"
               style={{ color: colors.textSecondary }}
             >
-              Words/min
+              Pace(WPM)
             </Text>
             <Text className="font-bold" style={{ color: colors.text }}>
               {analysisResults.pace}
@@ -380,7 +377,7 @@ const QuickFeedback = ({
             className="text-xl font-bold ml-2"
             style={{ color: colors.text }}
           >
-            Weaknesses ({feedback.improvements.length})
+            Recommendations ({feedback.improvements.length})
           </Text>
         </View>
 

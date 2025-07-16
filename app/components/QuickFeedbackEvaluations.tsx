@@ -9,33 +9,74 @@ import {
   ClipboardCheck,
   Mic,
   Zap,
+  Clock,
+  Flame,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 
 interface QuickFeedbackEvaluationsProps {
   evaluationResults: {
     overallScore: number;
-    evaluationAccuracy: number;
-    speakingQuality: number;
-    contentInsight: number;
-    clarity: number;
-    confidence: number;
     improvement: string;
     duration: string;
-    wordCount: number;
+    pace: number;
     avgPause: string;
   };
   feedback: {
-    strengths: string[];
-    improvements: string[];
+    strengths: {
+      timestamp: string;
+      action: string;
+      impact: string;
+    }[];
+    improvements: {
+      timestamp: string;
+      action: string;
+      suggestion: string;
+    }[];
     keyInsights: string[];
   };
-  onViewDetailedFeedback: () => void;
+  detailedFeedback: {
+    Introduction: string;
+    Conclusion: string;
+    AnalysisQuality_commendations: string[];
+    AnalysisQuality_recommendations: {
+      point: string;
+    };
+    AnalysisQuality_score: number;
+    Recommendations_commendations: {
+      point_1: string;
+      point_2: string;
+    };
+    Recommendations_recommendations: {
+      point: string;
+    };
+    Recommendations_score: number;
+    DeliveryTechnique_commendations: {
+      point_1: string;
+      point_2: string;
+    };
+    DeliveryTechnique_recommendations: {
+      point: string;
+    };
+    DeliveryTechnique_score: number;
+    OverallImpact_commendations: {
+      point_1: string;
+      point_2: string;
+    };
+    OverallImpact_recommendations: {
+      point: string;
+    };
+    OverallImpact_score: number;
+  };
+  onViewDetailedFeedback: (
+    detailedFeedback: QuickFeedbackEvaluationsProps["detailedFeedback"],
+  ) => void;
 }
 
 const QuickFeedbackEvaluations = ({
   evaluationResults,
   feedback,
+  detailedFeedback,
   onViewDetailedFeedback,
 }: QuickFeedbackEvaluationsProps) => {
   const { theme } = useTheme();
@@ -78,15 +119,15 @@ const QuickFeedbackEvaluations = ({
 
         <View className="flex-row justify-between">
           <View className="items-center">
-            <ClipboardCheck size={20} color={colors.textSecondary} />
+            <Clock size={20} color={colors.textSecondary} />
             <Text
               className="text-sm mt-1"
               style={{ color: colors.textSecondary }}
             >
-              Accuracy
+              Duration
             </Text>
             <Text className="font-bold" style={{ color: colors.text }}>
-              {evaluationResults.evaluationAccuracy}%
+              {evaluationResults.duration}
             </Text>
           </View>
           <View className="items-center">
@@ -95,10 +136,10 @@ const QuickFeedbackEvaluations = ({
               className="text-sm mt-1"
               style={{ color: colors.textSecondary }}
             >
-              Words
+              Pace(WPM)
             </Text>
             <Text className="font-bold" style={{ color: colors.text }}>
-              {evaluationResults.wordCount}
+              {evaluationResults.pace}
             </Text>
           </View>
           <View className="items-center">
@@ -116,7 +157,7 @@ const QuickFeedbackEvaluations = ({
         </View>
       </View>
 
-      {/* Quick Metrics */}
+      {/*
       <View
         className="rounded-3xl p-6 mb-6 shadow-lg"
         style={{ backgroundColor: colors.card }}
@@ -171,7 +212,7 @@ const QuickFeedbackEvaluations = ({
             </View>
           ))}
         </View>
-      </View>
+      </View>/*}
 
       {/* Key Insights */}
       <View
@@ -207,60 +248,118 @@ const QuickFeedbackEvaluations = ({
         </View>
       </View>
 
-      {/* Feedback Summary */}
+      {/* Commendations Section */}
       <View
         className="rounded-3xl p-6 mb-6 shadow-lg"
-        style={{ backgroundColor: colors.card }}
+        style={{
+          backgroundColor: colors.card,
+          shadowColor: theme === "dark" ? "#000" : "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: theme === "dark" ? 0.3 : 0.1,
+          shadowRadius: 12,
+          elevation: 8,
+        }}
       >
-        <Text className="text-xl font-bold mb-4" style={{ color: colors.text }}>
-          Summary
-        </Text>
-
-        <View className="mb-4">
-          <View className="flex-row items-center mb-2">
-            <CheckCircle size={20} color={colors.success} />
-            <Text className="font-bold ml-2" style={{ color: colors.success }}>
-              Strengths
-            </Text>
-          </View>
-          <View className="space-y-2">
-            {feedback.strengths.slice(0, 2).map((item, index) => (
-              <Text
-                key={index}
-                className="text-sm ml-7"
-                style={{ color: colors.textSecondary }}
-              >
-                • {item}
-              </Text>
-            ))}
-          </View>
+        <View className="flex-row items-center mb-4">
+          <CheckCircle size={24} color={colors.success} />
+          <Text
+            className="text-xl font-bold ml-2"
+            style={{ color: colors.text }}
+          >
+            Strengths ({feedback.strengths.length})
+          </Text>
         </View>
 
-        <View>
-          <View className="flex-row items-center mb-2">
-            <AlertCircle size={20} color={colors.warning} />
-            <Text className="font-bold ml-2" style={{ color: colors.warning }}>
-              Areas to Improve
-            </Text>
-          </View>
-          <View className="space-y-2">
-            {feedback.improvements.slice(0, 2).map((item, index) => (
-              <Text
-                key={index}
-                className="text-sm ml-7"
-                style={{ color: colors.textSecondary }}
-              >
-                • {item}
+        <View className="space-y-4">
+          {feedback.strengths.slice(0, 3).map((item, index) => (
+            <View
+              key={index}
+              className="rounded-2xl p-4"
+              style={{
+                backgroundColor: theme === "dark" ? "#052e16" : "#dcfce7",
+              }}
+            >
+              <Text className="font-semibold text-green-900 mb-1">
+                {item.action}
               </Text>
-            ))}
-          </View>
+              <View className="flex-row items-center mb-2">
+                <Clock size={14} color="#15803d" />
+                <Text className="text-green-700 text-sm ml-1">
+                  {item.timestamp}
+                </Text>
+              </View>
+              <View className="bg-white rounded-xl p-3">
+                <View className="flex-row items-center mb-1">
+                  <Flame size={16} color="#22c55e" />
+                  <Text className="text-green-800 font-semibold ml-2">
+                    Impact
+                  </Text>
+                </View>
+                <Text className="text-gray-700">{item.impact}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Recommendations Section */}
+      <View
+        className="rounded-3xl p-6 mb-6 shadow-lg"
+        style={{
+          backgroundColor: colors.card,
+          shadowColor: theme === "dark" ? "#000" : "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: theme === "dark" ? 0.3 : 0.1,
+          shadowRadius: 12,
+          elevation: 8,
+        }}
+      >
+        <View className="flex-row items-center mb-4">
+          <AlertCircle size={24} color={colors.warning} />
+          <Text
+            className="text-xl font-bold ml-2"
+            style={{ color: colors.text }}
+          >
+            Recommendations ({feedback.improvements.length})
+          </Text>
+        </View>
+
+        <View className="space-y-4">
+          {feedback.improvements.slice(0, 3).map((item, index) => (
+            <View
+              key={index}
+              className="rounded-2xl p-4"
+              style={{
+                backgroundColor: theme === "dark" ? "#7c2d12" : "#fef3c7",
+              }}
+            >
+              <Text className="font-semibold text-orange-900 mb-1">
+                {item.action}
+              </Text>
+              <View className="flex-row items-center mb-2">
+                <Clock size={14} color="#c2410c" />
+                <Text className="text-orange-700 text-sm ml-1">
+                  {item.timestamp}
+                </Text>
+              </View>
+              <View className="bg-white rounded-xl p-3">
+                <View className="flex-row items-center mb-1">
+                  <Lightbulb size={16} color="#f97316" />
+                  <Text className="text-orange-800 font-semibold ml-2">
+                    Suggestion
+                  </Text>
+                </View>
+                <Text className="text-gray-700">{item.suggestion}</Text>
+              </View>
+            </View>
+          ))}
         </View>
       </View>
 
       {/* Action Buttons */}
       <View className="space-y-3 mb-8">
         <TouchableOpacity
-          onPress={onViewDetailedFeedback}
+          onPress={() => onViewDetailedFeedback(detailedFeedback)}
           className="rounded-2xl py-4 px-6"
           style={{ backgroundColor: colors.primary }}
         >

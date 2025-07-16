@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   Calendar,
   Trophy,
   TrendingUp,
+  TrendingDown,
   Mic,
   Play,
   Award,
@@ -26,12 +27,14 @@ import {
   BarChart3,
   Target,
   Zap,
-  Lightbulb,
   CheckCircle,
   AlertCircle,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import QuickFeedback from "./QuickFeedback";
+import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BASE_URL } from "../config/api";
 
 interface SpeechEntry {
   id: string;
@@ -39,7 +42,6 @@ interface SpeechEntry {
   date: string;
   duration: string;
   score: number;
-  transcription: string;
   feedback: string[];
   suggestions: string[];
   emoji: string;
@@ -49,92 +51,111 @@ interface SpeechEntry {
 
 interface SpeechLibraryProps {
   speeches?: SpeechEntry[];
+  isLoading?: boolean;
   onEditNotes?: (id: string) => void;
   onDeleteEntry?: (id: string) => void;
   onViewDetailedFeedback?: () => void;
+  onRefresh?: () => void;
 }
 
 export default function SpeechLibrary({
+  speeches = [],
   onViewDetailedFeedback = () => {},
-  speeches = [
-    {
-      id: "1",
-      title: "My Leadership Journey",
-      date: "2023-10-15",
-      duration: "5:32",
-      score: 85,
-      emoji: <Mic size={24} color="#7c3aed" />,
-      category: "Personal Story",
-      improvement: "+12",
-      transcription:
-        "Hello everyone, my name is John and today I want to talk about effective communication...",
-      feedback: [
-        "🎯 Excellent eye contact throughout the speech",
-        "📢 Clear and confident voice projection",
-        '⚠️ Used too many filler words ("um", "like")',
-        "💪 Strong opening but conclusion needs work",
-      ],
-      suggestions: [
-        "Practice eliminating filler words with recording exercises",
-        "Work on creating a more impactful conclusion with a call-to-action",
-        "Consider using more vocal variety to maintain engagement",
-      ],
-    },
-    {
-      id: "2",
-      title: "Why I Love Coffee",
-      date: "2023-11-02",
-      duration: "7:15",
-      score: 92,
-      emoji: <Mic size={24} color="#7c3aed" />,
-      category: "Informative",
-      improvement: "+18",
-      transcription:
-        "Today I want to convince you that investing in renewable energy is not just good for the environment...",
-      feedback: [
-        "🔥 Excellent use of persuasive techniques",
-        "📋 Well-structured with clear arguments",
-        "⏱️ Occasional pacing issues - spoke too quickly at times",
-        "⏸️ Effective use of pauses for emphasis",
-      ],
-      suggestions: [
-        "Work on consistent pacing throughout the speech",
-        "Consider adding more concrete examples and statistics",
-        "Practice smoother transitions between main points",
-      ],
-    },
-    {
-      id: "3",
-      title: "Dream Vacation Plans",
-      date: "2023-12-10",
-      duration: "2:45",
-      score: 78,
-      emoji: <Mic size={24} color="#7c3aed" />,
-      category: "Impromptu",
-      improvement: "+5",
-      transcription:
-        "When asked about leadership, I believe the most important quality is empathy...",
-      feedback: [
-        "🧠 Good thinking on your feet",
-        "🎯 Clear main point about empathy",
-        "📝 Limited supporting examples",
-        "😰 Some nervous gestures noticed",
-      ],
-      suggestions: [
-        "Practice more impromptu speaking scenarios daily",
-        "Work on body language awareness with video practice",
-        "Develop technique for quickly generating examples",
-      ],
-    },
-  ],
+  isLoading = false,
   onEditNotes = (id) => console.log(`Edit notes for speech ${id}`),
   onDeleteEntry = (id) => console.log(`Delete speech ${id}`),
+  onRefresh = () => {},
 }: SpeechLibraryProps) {
   const [selectedSpeech, setSelectedSpeech] = useState<SpeechEntry | null>(
     null,
   );
+  const [localSpeeches, setLocalSpeeches] = useState<Evaluation[]>(speeches);
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
+  const router = useRouter();
+
+  useEffect(() => {
+    setLocalSpeeches(speeches);
+  }, [speeches]);
+
+  // Helper: Parse duration string (e.g. "5m 30s") to total seconds
+  const parseDurationToSeconds = (duration: string): number => {
+    if (!duration || duration.toLowerCase() === "n/a") return 0;
+
+    // Check for "MM:SS" format
+    const mmssMatch = duration.match(/^(\d+):(\d{1,2})$/);
+    if (mmssMatch) {
+      const minutes = parseInt(mmssMatch[1], 10);
+      const seconds = parseInt(mmssMatch[2], 10);
+      return minutes * 60 + seconds;
+    }
+
+    // Fallback: try to parse as number (seconds)
+    const justNumber = parseInt(duration, 10);
+    if (!isNaN(justNumber)) return justNumber;
+
+    return 0;
+  };
+
+  // Calculate stats memoized for performance
+  const stats = useMemo(() => {
+    if (localSpeeches.length === 0) {
+      return {
+        count: 0,
+        avgScore: 0,
+        highestScore: 0,
+        totalPracticeSeconds: 0,
+        streak: 0,
+      };
+    }
+    const count = localSpeeches.length;
+    // Scores array
+    const scores = localSpeeches.map((s) => s.score);
+    const avgScore =
+      scores.reduce((sum, val) => sum + val, 0) / scores.length || 0;
+    const highestScore = Math.max(...scores);
+
+    // Total practice seconds
+    const totalPracticeSeconds = localSpeeches
+      .map((s) => parseDurationToSeconds(s.duration))
+      .reduce((sum, val) => sum + val, 0);
+
+    // Calculate streak (consecutive days with speeches)
+    // Get unique speech dates sorted ascending (in yyyy-mm-dd)
+    const datesSet = new Set(
+      localSpeeches.map((s) => new Date(s.date).toISOString().slice(0, 10)),
+    );
+    const uniqueDates = Array.from(datesSet).sort();
+
+    let streak = 1;
+    for (let i = uniqueDates.length - 1; i > 0; i--) {
+      const currDate = new Date(uniqueDates[i]);
+      const prevDate = new Date(uniqueDates[i - 1]);
+      const diffDays =
+        (currDate.getTime() - prevDate.getTime()) / (1000 * 3600 * 24);
+      if (diffDays === 1) {
+        streak++;
+      } else {
+        break; // streak broken
+      }
+    }
+
+    return {
+      count,
+      avgScore: Math.round(avgScore),
+      highestScore,
+      totalPracticeSeconds,
+      streak,
+    };
+  }, [localSpeeches]);
+
+  // Convert seconds to mm:ss or "Xm" format
+  const formatSecondsToDuration = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return secs === 0 ? `${mins}m` : `${mins}m ${secs}s`;
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -150,6 +171,38 @@ export default function SpeechLibrary({
     if (score >= 80) return { bg: "#dbeafe", text: "#1e40af", icon: "#3b82f6" };
     if (score >= 70) return { bg: "#fef3c7", text: "#92400e", icon: "#f59e0b" };
     return { bg: "#fee2e2", text: "#991b1b", icon: "#ef4444" };
+  };
+
+  const handleDeleteSpeech = async (speechId: string) => {
+    const confirmed = confirm("Are you sure you want to delete this speech?");
+    if (!confirmed) return;
+
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      const res = await fetch(`${BASE_URL}/speech/delete/${speechId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        alert(error.detail || "Failed to delete speech.");
+        return;
+      }
+
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        // fallback: update local
+        setLocalSpeeches((prev) =>
+          prev.filter((speech) => speech.id !== speechId),
+        );
+      }
+    } catch (error) {
+      console.error("Delete failed:", error);
+    }
   };
 
   const renderSpeechItem = ({ item }: { item: SpeechEntry }) => {
@@ -169,6 +222,7 @@ export default function SpeechLibrary({
           elevation: 8,
         }}
         onPress={() => setSelectedSpeech(item)}
+        onLongPress={() => handleDeleteSpeech(item.id)}
       >
         {/* Header Row */}
         <View className="flex-row items-start justify-between mb-3">
@@ -238,10 +292,35 @@ export default function SpeechLibrary({
             </View>
 
             <View className="flex-row items-center">
-              <TrendingUp size={14} color="#10b981" />
-              <Text className="text-sm ml-1 font-bold text-green-500">
-                {item.improvement}
-              </Text>
+              {item.improvement === "N/A" ? (
+                <>
+                  <TrendingUp size={14} color="#9ca3af" /> {/* Gray */}
+                  <Text className="text-sm ml-1 font-medium text-gray-400">
+                    New
+                  </Text>
+                </>
+              ) : parseInt(item.improvement) > 0 ? (
+                <>
+                  <TrendingUp size={14} color="#10b981" />
+                  <Text className="text-sm ml-1 font-bold text-green-500">
+                    {item.improvement}
+                  </Text>
+                </>
+              ) : parseInt(item.improvement) < 0 ? (
+                <>
+                  <TrendingDown size={14} color="#ef4444" />
+                  <Text className="text-sm ml-1 font-bold text-red-500">
+                    {item.improvement}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <TrendingUp size={14} color="#9ca3af" />
+                  <Text className="text-sm ml-1 font-medium text-gray-400">
+                    ±0
+                  </Text>
+                </>
+              )}
             </View>
           </View>
 
@@ -275,7 +354,7 @@ export default function SpeechLibrary({
     // Convert speech data to analysis results format
     const analysisResults = {
       overallScore: selectedSpeech.score,
-      pace: 85,
+      pace: selectedSpeech.pace,
       fillerWords: 8,
       emotionalDelivery: 89,
       clarity: 92,
@@ -284,27 +363,56 @@ export default function SpeechLibrary({
       improvement: selectedSpeech.improvement,
       duration: selectedSpeech.duration,
       wordCount: 425,
-      avgPause: "1.2s",
+      avgPause: selectedSpeech.pause,
     };
 
     const feedback = {
-      strengths: [
-        "Excellent vocal variety and tone modulation",
-        "Strong opening that captured attention immediately",
-        "Clear articulation throughout the speech",
-        "Good use of pauses for emphasis",
-      ],
-      improvements: [
-        "Reduce filler words like 'um' and 'uh' (8 instances)",
-        "Work on smoother transitions between main points",
-        "Consider adding more concrete examples",
-      ],
-      keyInsights: [
-        "Your confidence increased 23% from start to finish",
-        "Peak engagement occurred during storytelling segments",
-        "Speaking pace was optimal for audience comprehension",
-      ],
+      strengths: selectedSpeech.summary.Commendations,
+      improvements: selectedSpeech.summary.Recommendations,
+      keyInsights: selectedSpeech.summary.KeyInsights,
     };
+
+    const detailedFeedback = {
+      Introduction: selectedSpeech.detailed.Introduction,
+      Conclusion: selectedSpeech.detailed.Conclusion,
+      VocalVariety_commendations:
+        selectedSpeech.detailed.VocalVariety_commendations,
+      VocalVariety_recommendations:
+        selectedSpeech.detailed.VocalVariety_recommendations,
+      VocalVariety_score: selectedSpeech.detailed.VocalVariety_score,
+      SpeechStructure_commendations:
+        selectedSpeech.detailed.SpeechStructure_commendations,
+      SpeechStructure_recommendations:
+        selectedSpeech.detailed.SpeechStructure_recommendations,
+      SpeechStructure_score: selectedSpeech.detailed.SpeechStructure_score,
+      Storytelling_commendations:
+        selectedSpeech.detailed.Storytelling_commendations,
+      Storytelling_recommendations:
+        selectedSpeech.detailed.Storytelling_recommendations,
+      Storytelling_score: selectedSpeech.detailed.Storytelling_score,
+      Language_commendations: selectedSpeech.detailed.Language_commendations,
+      Language_recommendations:
+        selectedSpeech.detailed.Language_recommendations,
+      Language_score: selectedSpeech.detailed.Language_score,
+      QuestionResolution_commendations:
+        selectedSpeech.detailed.QuestionResolution_commendations,
+      QuestionResolution_recommendations:
+        selectedSpeech.detailed.QuestionResolution_recommendations,
+      QuestionResolution_score:
+        selectedSpeech.detailed.QuestionResolution_score,
+      StoryStages_commendations:
+        selectedSpeech.detailed.StoryStages_commendations,
+      StoryStages_recommendations:
+        selectedSpeech.detailed.StoryStages_recommendations,
+      StoryStages_score: selectedSpeech.detailed.StoryStages_score,
+      Connections_commendations:
+        selectedSpeech.detailed.Connections_commendations,
+      Connections_recommendations:
+        selectedSpeech.detailed.Connections_recommendations,
+      Connections_score: selectedSpeech.detailed.Connections_score,
+    };
+
+    console.log(detailedFeedback);
 
     return (
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -351,7 +459,13 @@ export default function SpeechLibrary({
             <QuickFeedback
               analysisResults={analysisResults}
               feedback={feedback}
-              onViewDetailedFeedback={onViewDetailedFeedback}
+              detailedFeedback={detailedFeedback}
+              onViewDetailedFeedback={(detailed) => {
+                const feedbackParam = encodeURIComponent(
+                  JSON.stringify(detailed),
+                );
+                router.push(`/detailed-feedback?feedback=${feedbackParam}`);
+              }}
               onRecordAnother={() => setCurrentStep("record")}
             />
           </View>
@@ -360,8 +474,74 @@ export default function SpeechLibrary({
     );
   };
 
+  if (isLoading) {
+    return (
+      <View className="flex-1 justify-center items-center">
+        <Text style={{ color: colors.text, fontSize: 18, marginBottom: 12 }}>
+          Loading your speeches...
+        </Text>
+        <Award size={48} color={colors.primary} />
+      </View>
+    );
+  }
+
   if (selectedSpeech) {
     return renderDetailView();
+  }
+
+  // Optional helper component for cleaner JSX
+  function StatCard({
+    colors,
+    bgColor,
+    icon,
+    title,
+    value,
+    subtitle,
+  }: {
+    colors: ReturnType<typeof getThemeColors>;
+    bgColor: string;
+    icon: React.ReactNode;
+    title: string;
+    value: string | number;
+    subtitle: string;
+  }) {
+    return (
+      <View
+        className="rounded-3xl p-5 mr-4 shadow-lg min-w-[140px]"
+        style={{
+          backgroundColor: colors.card,
+          shadowColor: "#000", // always black works better cross-theme
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.15,
+          shadowRadius: 6,
+          elevation: 4, // Android
+        }}
+      >
+        <View className="flex-row items-center justify-between mb-3">
+          <View
+            className="rounded-full p-2"
+            style={{ backgroundColor: bgColor }}
+          >
+            {icon}
+          </View>
+          <Text
+            className="text-xs font-medium"
+            style={{ color: colors.textSecondary }}
+          >
+            {title}
+          </Text>
+        </View>
+        <Text className="text-3xl font-bold" style={{ color: colors.text }}>
+          {value}
+        </Text>
+        <Text
+          className="text-sm font-medium"
+          style={{ color: colors.textSecondary }}
+        >
+          {subtitle}
+        </Text>
+      </View>
+    );
   }
 
   return (
@@ -369,170 +549,64 @@ export default function SpeechLibrary({
       {/* Enhanced Stats Overview */}
       <View className="px-6 py-4">
         <Text className="text-lg font-bold mb-3" style={{ color: colors.text }}>
-          Your Progress
+          Your Speeches
         </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row">
-            <View
-              className="rounded-3xl p-5 mr-4 shadow-lg min-w-[140px]"
-              style={{
-                backgroundColor: colors.card,
-                shadowColor: theme === "dark" ? "#000" : "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              <View className="flex-row items-center justify-between mb-3">
-                <View
-                  className="rounded-full p-2"
-                  style={{ backgroundColor: "#fef3c7" }}
-                >
-                  <Target size={20} color="#f59e0b" />
-                </View>
-                <Text
-                  className="text-xs font-medium"
-                  style={{ color: colors.textSecondary }}
-                >
-                  AVG
-                </Text>
-              </View>
-              <Text
-                className="text-3xl font-bold"
-                style={{ color: colors.text }}
-              >
-                85
-              </Text>
-              <Text
-                className="text-sm font-medium"
-                style={{ color: colors.textSecondary }}
-              >
-                Average Score
-              </Text>
-            </View>
+            {/* Count */}
+            <StatCard
+              colors={colors}
+              bgColor="#e0f2fe"
+              icon={<Mic size={20} color="#0284c7" />}
+              title="COUNT"
+              value={stats.count}
+              subtitle="Total Speeches"
+            />
 
-            <View
-              className="rounded-3xl p-5 mr-4 shadow-lg min-w-[140px]"
-              style={{
-                backgroundColor: colors.card,
-                shadowColor: theme === "dark" ? "#000" : "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              <View className="flex-row items-center justify-between mb-3">
-                <View
-                  className="rounded-full p-2"
-                  style={{ backgroundColor: "#dcfce7" }}
-                >
-                  <Star size={20} color="#10b981" />
-                </View>
-                <Text
-                  className="text-xs font-medium"
-                  style={{ color: colors.textSecondary }}
-                >
-                  BEST
-                </Text>
-              </View>
-              <Text
-                className="text-3xl font-bold"
-                style={{ color: colors.text }}
-              >
-                92
-              </Text>
-              <Text
-                className="text-sm font-medium"
-                style={{ color: colors.textSecondary }}
-              >
-                Highest Score
-              </Text>
-            </View>
+            {/* AVG Score */}
+            <StatCard
+              colors={colors}
+              bgColor="#fef3c7"
+              icon={<Target size={20} color="#f59e0b" />}
+              title="AVG"
+              value={stats.avgScore}
+              subtitle="Average Score"
+            />
 
-            <View
-              className="rounded-3xl p-5 mr-4 shadow-lg min-w-[140px]"
-              style={{
-                backgroundColor: colors.card,
-                shadowColor: theme === "dark" ? "#000" : "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              <View className="flex-row items-center justify-between mb-3">
-                <View
-                  className="rounded-full p-2"
-                  style={{ backgroundColor: "#dbeafe" }}
-                >
-                  <Clock size={20} color="#3b82f6" />
-                </View>
-                <Text
-                  className="text-xs font-medium"
-                  style={{ color: colors.textSecondary }}
-                >
-                  TIME
-                </Text>
-              </View>
-              <Text
-                className="text-3xl font-bold"
-                style={{ color: colors.text }}
-              >
-                15m
-              </Text>
-              <Text
-                className="text-sm font-medium"
-                style={{ color: colors.textSecondary }}
-              >
-                Total Practice
-              </Text>
-            </View>
+            {/* Highest Score */}
+            <StatCard
+              colors={colors}
+              bgColor="#dcfce7"
+              icon={<Star size={20} color="#10b981" />}
+              title="BEST"
+              value={stats.highestScore}
+              subtitle="Highest Score"
+            />
 
-            <View
-              className="rounded-3xl p-5 shadow-lg min-w-[140px]"
-              style={{
-                backgroundColor: colors.card,
-                shadowColor: theme === "dark" ? "#000" : "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              <View className="flex-row items-center justify-between mb-3">
-                <View
-                  className="rounded-full p-2"
-                  style={{ backgroundColor: "#f3e8ff" }}
-                >
-                  <Zap size={20} color="#8b5cf6" />
-                </View>
-                <Text
-                  className="text-xs font-medium"
-                  style={{ color: colors.textSecondary }}
-                >
-                  STREAK
-                </Text>
-              </View>
-              <Text
-                className="text-3xl font-bold"
-                style={{ color: colors.text }}
-              >
-                7
-              </Text>
-              <Text
-                className="text-sm font-medium"
-                style={{ color: colors.textSecondary }}
-              >
-                Day Streak
-              </Text>
-            </View>
+            {/* Total Practice Time */}
+            <StatCard
+              colors={colors}
+              bgColor="#dbeafe"
+              icon={<Clock size={20} color="#3b82f6" />}
+              title="TIME"
+              value={formatSecondsToDuration(stats.totalPracticeSeconds)}
+              subtitle="Total Practice"
+            />
+
+            {/* Streak */}
+            <StatCard
+              colors={colors}
+              bgColor="#f3e8ff"
+              icon={<Zap size={20} color="#8b5cf6" />}
+              title="STREAK"
+              value={stats.streak}
+              subtitle="Day Streak"
+            />
           </View>
         </ScrollView>
       </View>
 
-      {speeches.length > 0 ? (
+      {localSpeeches.length > 0 ? (
         <View className="flex-1">
           <View className="px-6 py-2">
             <Text
@@ -542,7 +616,7 @@ export default function SpeechLibrary({
               Recent Speeches
             </Text>
           </View>
-          {speeches.map((speech) => (
+          {localSpeeches.map((speech) => (
             <View key={speech.id} style={{ paddingHorizontal: 24 }}>
               {renderSpeechItem({ item: speech })}
             </View>
@@ -574,29 +648,29 @@ export default function SpeechLibrary({
               className="text-2xl font-bold mb-3 text-center"
               style={{ color: colors.text }}
             >
-              Ready to Begin?
+              Looks like you're new here!
             </Text>
 
             <Text
               className="text-center mb-8 text-base leading-6"
               style={{ color: colors.textSecondary }}
             >
-              Record your first speech to start tracking your progress and
-              unlock personalized feedback.
+              No past speeches yet. Time to grab that mic and show the world
+              what you've got. Your ToastSpeech journey starts now!
             </Text>
 
             <TouchableOpacity
               className="rounded-2xl px-8 py-4 w-full"
               style={{ backgroundColor: colors.primary }}
               onPress={() => {
-                // This would typically navigate to the speech recorder
-                alert("Navigate to speech recorder");
+                // Navigate to speaker-mode
+                alert("Navigating to Speaker Mode... 🎤");
               }}
             >
               <View className="flex-row items-center justify-center">
                 <Mic size={20} color="white" />
                 <Text className="text-white font-bold text-lg ml-2">
-                  Start Recording
+                  Start Your First Speech
                 </Text>
               </View>
             </TouchableOpacity>

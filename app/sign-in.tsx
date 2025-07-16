@@ -4,10 +4,12 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "./context/AuthContext";
 import { ArrowLeft, Eye, EyeOff, Mail, Lock, User } from "lucide-react-native";
+import GLogo from "../assets/images/glogo.webp";
+import { Image } from "react-native";
 
 export default function SignInScreen() {
   const router = useRouter();
-  const { signIn, resetPassword } = useAuth();
+  const { signIn, signInWithGoogle, resetPassword } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -24,6 +26,7 @@ export default function SignInScreen() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleSignIn = async () => {
     const newErrors = { email: "", password: "" };
@@ -82,6 +85,32 @@ export default function SignInScreen() {
         },
       },
     ]);
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const { error, user } = await signInWithGoogle();
+
+      if (error) {
+        Alert.alert(
+          "Google Sign In",
+          typeof error === "string"
+            ? error
+            : error.message || "Please try again",
+        );
+      } else {
+        setUser(user); // Set global user state
+        router.push("/"); // Redirect to home/dashboard
+      }
+    } catch {
+      Alert.alert(
+        "Error",
+        "Something went wrong with Google sign in. Try again.",
+      );
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   return (
@@ -175,14 +204,40 @@ export default function SignInScreen() {
 
         {/* Sign In Button */}
         <TouchableOpacity
-          className={`rounded-xl py-4 items-center justify-center mb-6 ${
+          className={`rounded-xl py-4 items-center justify-center mb-4 ${
             isLoading ? "bg-gray-400" : "bg-black"
           }`}
           onPress={handleSignIn}
-          disabled={isLoading}
+          disabled={isLoading || isGoogleLoading}
         >
           <Text className="text-white font-semibold text-lg">
             {isLoading ? "Signing in..." : "Sign In"}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Divider */}
+        <View className="flex-row items-center mb-4">
+          <View className="flex-1 h-px bg-gray-300" />
+          <Text className="mx-4 text-gray-500 text-sm">or</Text>
+          <View className="flex-1 h-px bg-gray-300" />
+        </View>
+
+        {/* Google Sign In Button */}
+        <TouchableOpacity
+          className={`rounded-xl py-4 items-center justify-center mb-6 border border-gray-300 flex-row ${
+            isGoogleLoading ? "bg-gray-100" : "bg-white"
+          }`}
+          onPress={handleGoogleSignIn}
+          disabled={isLoading || isGoogleLoading}
+        >
+          <Image
+            source={GLogo}
+            style={{ width: 20, height: 20, marginRight: 12 }}
+            resizeMode="contain"
+          />
+
+          <Text className="text-gray-700 font-semibold text-lg">
+            {isGoogleLoading ? "Signing in..." : "Continue with Google"}
           </Text>
         </TouchableOpacity>
 

@@ -6,6 +6,7 @@ import {
   TextInput,
   ScrollView,
   Animated,
+  Alert,
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { useRouter } from "expo-router";
@@ -20,10 +21,14 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react-native";
+import GLogo from "../assets/images/glogo.webp";
+import { Image } from "react-native";
+import { BASE_URL } from "./config/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, signUpWithGoogle, setUser } = useAuth(); // 👈 grab setUser
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     name: "",
@@ -39,6 +44,7 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [progressAnim] = useState(new Animated.Value(0));
   const [errors, setErrors] = useState({
     name: "",
@@ -52,6 +58,9 @@ export default function SignUpScreen() {
     customPurpose: "",
   });
   const scrollViewRef = useRef<ScrollView>(null);
+  const [signedUpUser, setSignedUpUser] = useState(null);
+  const [isGoogleSignUp, setIsGoogleSignUp] = useState(false);
+  const [isGoogleUser, setIsGoogleUser] = useState(false);
 
   const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"];
   const ageGroups = ["18-25", "26-35", "36-45", "46-55", "56-65", "65+"];
@@ -198,7 +207,7 @@ export default function SignUpScreen() {
   };
 
   const validateAllSteps = () => {
-    const step1Valid = validateStep1();
+    const step1Valid = isGoogleUser ? true : validateStep1();
     const step2Valid = validateStep2();
     const step3Valid = validateStep3();
 
@@ -232,6 +241,33 @@ export default function SignUpScreen() {
     }
   };
 
+  const handleGoogleSignUp = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const { error, user } = await signUpWithGoogle();
+
+      if (error) {
+        Alert.alert(
+          "Google Sign Up",
+          typeof error === "string"
+            ? error
+            : error.message || "Please try again",
+        );
+      } else {
+        setSignedUpUser(user); // we already have the user
+        setIsGoogleUser(true); // flag this as a Google signup
+        setCurrentStep(2);
+      }
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        "Something went wrong with Google sign up. Try again.",
+      );
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
@@ -239,34 +275,67 @@ export default function SignUpScreen() {
   };
 
   const handleSignUp = async () => {
-    // Validate all steps before proceeding
-    if (!validateAllSteps()) {
-      return;
-    }
+    if (!validateAllSteps()) return;
 
     setIsLoading(true);
 
     try {
-      const { error } = await signUp(
-        formData.email,
-        formData.password,
-        formData,
-      );
+      if (!isGoogleUser) {
+        // Normal signup
+        const { error, user } = await signUp(
+          formData.email,
+          formData.password,
+          formData,
+        );
 
-      if (error) {
-        Toast.show({
-          type: "error",
-          text1: "Sign Up Failed",
-          text2:
-            typeof error === "string"
-              ? error
-              : error.message || "Please try again",
-          position: "top",
-          visibilityTime: 4000,
-        });
-        setIsLoading(false);
-        return;
+        if (error) {
+          Toast.show({
+            type: "error",
+            text1: "Sign Up Failed",
+            text2:
+              typeof error === "string"
+                ? error
+                : error.message || "Please try again",
+            position: "top",
+            visibilityTime: 4000,
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        setSignedUpUser(user);
       }
+
+      // Common path (normal + Google): Complete profile
+      const token = await AsyncStorage.getItem("auth_token");
+
+      const res = await fetch(`${BASE_URL}/auth/complete-profile`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          gender: formData.gender,
+          age_group: formData.ageGroup,
+          profession: formData.profession,
+          purposes: formData.purposes,
+          custom_purpose: formData.customPurpose,
+        }),
+      });
+
+      const resJson = await res.json();
+      console.log("Response JSON:", resJson);
+
+      if (!res.ok) throw new Error("Failed to complete profile");
+      const meRes = await fetch(`${BASE_URL}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const userData = await meRes.json();
+      setUser(userData);
+      router.push("/");
     } catch (error) {
       Toast.show({
         type: "error",
@@ -275,6 +344,7 @@ export default function SignUpScreen() {
         position: "top",
         visibilityTime: 4000,
       });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -616,12 +686,42 @@ export default function SignUpScreen() {
         )}
 
         <View className="mt-10 space-y-4">
+          {currentStep === 1 && (
+            <>
+              {/* Google Sign Up Button */}
+              <TouchableOpacity
+                className={`rounded-xl py-4 items-center justify-center border border-gray-300 flex-row mb-4 ${
+                  isGoogleLoading ? "bg-gray-100" : "bg-white"
+                }`}
+                onPress={handleGoogleSignUp}
+                disabled={isLoading || isGoogleLoading}
+              >
+                <Image
+                  source={GLogo}
+                  style={{ width: 20, height: 20, marginRight: 12 }}
+                  resizeMode="contain"
+                />
+
+                <Text className="text-gray-700 font-semibold text-lg">
+                  {isGoogleLoading ? "Signing up..." : "Continue with Google"}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Divider */}
+              <View className="flex-row items-center mb-4">
+                <View className="flex-1 h-px bg-gray-300" />
+                <Text className="mx-4 text-gray-500 text-sm">or</Text>
+                <View className="flex-1 h-px bg-gray-300" />
+              </View>
+            </>
+          )}
+
           <TouchableOpacity
             className={`rounded-xl py-4 items-center justify-center ${
               isLoading ? "bg-gray-400" : "bg-black"
             }`}
             onPress={currentStep === 3 ? handleSignUp : nextStep}
-            disabled={isLoading}
+            disabled={isLoading || isGoogleLoading}
           >
             <Text className="text-white font-semibold text-lg">
               {isLoading

@@ -7,22 +7,29 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useSegments } from "expo-router";
+import { BASE_URL, GOOGLE_CLIENT_ID } from "../config/api";
+import * as AuthSession from "expo-auth-session";
+import * as WebBrowser from "expo-web-browser";
+
+WebBrowser.maybeCompleteAuthSession();
 
 interface AuthContextType {
   user: any;
   loading: boolean;
+  setUser: (user: any) => void;
   signUp: (
     email: string,
     password: string,
     userData: any,
   ) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<{ error: any }>;
+  signUpWithGoogle: (userData?: any) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const BASE_URL = "http://127.0.0.1:8000";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -33,6 +40,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const segments = useSegments();
+  const discovery = {
+    authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenEndpoint: "https://oauth2.googleapis.com/token",
+    userInfoEndpoint: "https://www.googleapis.com/oauth2/v2/userinfo",
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -175,11 +187,107 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return { error: "Reset password not supported yet." };
   };
 
+  const signInWithGoogle = async (): Promise<{ error: any }> => {
+    try {
+      console.log("Google sign-in initiated");
+
+      const redirectUri = AuthSession.makeRedirectUri({
+        useProxy: true,
+      });
+      console.log("Redirect URI:", redirectUri);
+
+      const request = new AuthSession.AuthRequest({
+        clientId: GOOGLE_CLIENT_ID,
+        scopes: ["openid", "profile", "email"],
+        redirectUri,
+        responseType: AuthSession.ResponseType.Code,
+        usePKCE: true,
+      });
+
+      await request.makeAuthUrlAsync(discovery);
+      console.log("Auth URL created");
+
+      const result = await request.promptAsync(discovery);
+
+      console.log("Google Auth Result:", result);
+
+      if (result.type === "success") {
+        const res = await fetch(`${BASE_URL}/auth/google-signin`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: result.params.code,
+            code_verifier: request.codeVerifier,
+            redirect_uri: redirectUri,
+          }),
+        });
+
+        const data = await res.json();
+        console.log("Backend response:", data);
+
+        if (!res.ok) return { error: data.detail || "Google sign in failed" };
+
+        await AsyncStorage.setItem("auth_token", data.access_token);
+
+        setUser(data.user); // optional here, but also return for explicit use
+        return { error: null, user: data.user };
+      }
+    } catch (error) {
+      console.log("Google sign-in error", error);
+      return { error };
+    }
+  };
+
+  const signUpWithGoogle = async (userData?: any): Promise<{ error: any }> => {
+    try {
+      const redirectUri = AuthSession.makeRedirectUri({
+        useProxy: true,
+      });
+
+      const request = new AuthSession.AuthRequest({
+        clientId: GOOGLE_CLIENT_ID,
+        scopes: ["openid", "profile", "email"],
+        redirectUri,
+        responseType: AuthSession.ResponseType.Code,
+        usePKCE: true,
+      });
+
+      await request.makeAuthUrlAsync(discovery);
+      const result = await request.promptAsync(discovery);
+
+      if (result.type === "success") {
+        const res = await fetch(`${BASE_URL}/auth/google-signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: result.params.code,
+            code_verifier: request.codeVerifier,
+            redirect_uri: redirectUri,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) return { error: data.detail || "Google sign up failed" };
+
+        await AsyncStorage.setItem("auth_token", data.access_token);
+        // setUser(data.user);
+        return { error: null, user: data.user };
+      } else {
+        return { error: "Google sign up was cancelled" };
+      }
+    } catch (error) {
+      return { error };
+    }
+  };
+
   const value: AuthContextType = {
     user,
     loading,
+    setUser,
     signUp,
     signIn,
+    signInWithGoogle,
+    signUpWithGoogle,
     signOut,
     resetPassword,
   };

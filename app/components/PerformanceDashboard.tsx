@@ -23,7 +23,6 @@ import { useTheme, getThemeColors } from "../context/ThemeContext";
 
 interface PerformanceDashboardProps {
   data?: {
-    pace: number[];
     fillerWords: number[];
     emotionalDelivery: number[];
     overallScore: number[];
@@ -32,7 +31,6 @@ interface PerformanceDashboardProps {
   };
   timeLabels?: string[];
   currentScore?: {
-    pace: number;
     fillerWords: number;
     emotionalDelivery: number;
     overallScore: number;
@@ -51,7 +49,6 @@ interface PerformanceDashboardProps {
 
 const PerformanceDashboard = ({
   data = {
-    pace: [65, 68, 75, 70, 72, 78, 80],
     fillerWords: [12, 10, 8, 9, 7, 6, 5],
     emotionalDelivery: [60, 65, 70, 68, 75, 78, 82],
     overallScore: [65, 68, 72, 70, 75, 80, 85],
@@ -60,7 +57,6 @@ const PerformanceDashboard = ({
   },
   timeLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
   currentScore = {
-    pace: 80,
     fillerWords: 5,
     emotionalDelivery: 82,
     overallScore: 85,
@@ -71,9 +67,20 @@ const PerformanceDashboard = ({
     labels: ["um", "like", "you know", "uh", "so"],
     data: [8, 12, 5, 3, 7],
   },
-  emotionalTonesBreakdown = {
-    labels: ["Confident", "Nervous", "Happy", "Calm", "Excited"],
-    data: [35, 15, 25, 20, 5],
+  pausesBreakdown = {
+    labels: [
+      "Intentional",
+      "Unintentional",
+      "Emotional",
+      "Rhetorical",
+      "Dramatic",
+      "Reflection",
+    ],
+    data: [3, 8, 2, 2, 5],
+  },
+  reactionBreakdown = {
+    labels: ["Applause", "Laughter"],
+    data: [4, 3],
   },
 }: PerformanceDashboardProps) => {
   const [selectedTimeFrame, setSelectedTimeFrame] = useState("Week");
@@ -85,31 +92,23 @@ const PerformanceDashboard = ({
 
   const timeFrames = ["Week", "Month", "Year"];
   const metrics = [
-    "Overall",
-    "Pace",
+    "Overall Score",
     "Filler Words",
-    "Emotion",
-    "Duration",
-    "Grammar",
+    "Pauses",
+    "Audience Reactions",
   ];
 
   const getChartData = () => {
     let chartData;
     switch (selectedMetric) {
-      case "Pace":
-        chartData = data.pace;
-        break;
       case "Filler Words":
         chartData = data.fillerWords;
         break;
-      case "Emotion":
-        chartData = data.emotionalDelivery;
+      case "Pauses":
+        chartData = data.pauses;
         break;
-      case "Duration":
-        chartData = data.speakingDuration;
-        break;
-      case "Grammar":
-        chartData = data.grammarAccuracy;
+      case "Audience Reactions":
+        chartData = data.audience;
         break;
       default:
         chartData = data.overallScore;
@@ -137,12 +136,21 @@ const PerformanceDashboard = ({
           },
         ],
       };
-    } else if (selectedMetric === "Emotion") {
+    } else if (selectedMetric === "Pauses") {
       return {
-        labels: emotionalTonesBreakdown.labels,
+        labels: pausesBreakdown.labels,
         datasets: [
           {
-            data: emotionalTonesBreakdown.data,
+            data: pausesBreakdown.data,
+          },
+        ],
+      };
+    } else if (selectedMetric === "Audience Reactions") {
+      return {
+        labels: reactionBreakdown.labels,
+        datasets: [
+          {
+            data: reactionBreakdown.data,
           },
         ],
       };
@@ -151,7 +159,11 @@ const PerformanceDashboard = ({
   };
 
   const shouldShowBarChart = () => {
-    return selectedMetric === "Filler Words" || selectedMetric === "Emotion";
+    return (
+      selectedMetric === "Filler Words" ||
+      selectedMetric === "Pauses" ||
+      selectedMetric === "Audience Reactions"
+    );
   };
 
   const chartConfig = {
@@ -378,7 +390,7 @@ const PerformanceDashboard = ({
                   className="text-xl font-bold"
                   style={{ color: colors.text }}
                 >
-                  {selectedMetric} Progress
+                  {selectedMetric}
                 </Text>
               </View>
               <View
@@ -526,14 +538,6 @@ const PerformanceDashboard = ({
                 "#fef3c7",
                 "#f59e0b",
                 "+12",
-              )}
-              {renderScoreCard(
-                "Pace",
-                currentScore.pace,
-                <Clock />,
-                "#dbeafe",
-                "#3b82f6",
-                "+8",
               )}
               {renderScoreCard(
                 "Filler Words",

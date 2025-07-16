@@ -35,6 +35,7 @@ import { useTheme, getThemeColors } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { useRouter } from "expo-router";
+import { BASE_URL } from "../config/api";
 
 interface SpeakerModeScreenProps {
   onBack?: () => void;
@@ -57,8 +58,6 @@ const stepKeys: CurrentStep[] = [
   "record",
   "results",
 ];
-
-const BASE_URL = "http://127.0.0.1:8000";
 
 export default function SpeakerModeScreen({
   onBack = () => {},
@@ -176,6 +175,7 @@ export default function SpeakerModeScreen({
       formData.append("task_type", taskType);
       formData.append("mode_type", modeType);
       formData.append("speech_type", speechType);
+      formData.append("speech_details", JSON.stringify(speechDetails));
 
       const response = await fetch(`${BASE_URL}/speech/process_file`, {
         method: "POST",
@@ -237,10 +237,7 @@ export default function SpeakerModeScreen({
       const mappedFeedback = {
         strengths: result.summary.Commendations ?? [],
         improvements: result.summary.Recommendations ?? [],
-        keyInsights: [
-          result.summary.Introduction,
-          result.summary.Conclusion,
-        ].filter(Boolean),
+        keyInsights: result.summary.KeyInsights ?? [],
       };
 
       const detailedFeedback = result.detailed;
@@ -760,7 +757,10 @@ export default function SpeakerModeScreen({
                 : colors.border,
               opacity: speechDetails.title.trim() ? 1 : 0.6,
             }}
-            onPress={() => setCurrentStep("recordingMethod")}
+            onPress={() => {
+              setCurrentStep("recordingMethod");
+              console.log(speechDetails);
+            }}
             disabled={!speechDetails.title.trim()}
           >
             <Text className="text-white font-bold text-lg text-center">

@@ -11,6 +11,10 @@ import SpeechRecorder from "../components/SpeechRecorder";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import QuickFeedbackEvaluations from "../components/QuickFeedbackEvaluations";
 import ProgressIndicator from "../components/ProgressIndicator";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BASE_URL } from "../config/api";
+import { Platform } from "react-native";
+import { useRouter } from "expo-router";
 
 interface EvaluatorModeScreenProps {
   onBack?: () => void;
@@ -27,7 +31,6 @@ export default function EvaluatorModeScreen({
     "upload" | "record" | "selectMode" | "evaluate" | "feedback"
   >("upload");
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
-  const [transcribedText, setTranscribedText] = useState("");
   const [evaluationRecordMode, setEvaluationRecordMode] = useState<
     "audio" | "video"
   >("audio");
@@ -39,6 +42,15 @@ export default function EvaluatorModeScreen({
     uri: string;
     type: "audio" | "video";
   } | null>(null);
+  const [analysisResults, setAnalysisResults] = useState(null);
+  const [feedback, setFeedback] = useState({
+    strengths: [],
+    improvements: [],
+    keyInsights: [],
+  });
+  const [detailedFeedback, setDetailedFeedback] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   // Upload step handlers
   const handleFileUpload = () => {
@@ -69,9 +81,140 @@ export default function EvaluatorModeScreen({
   };
 
   // Evaluation submit
-  const handleSubmitEvaluation = () => {
-    setCurrentStep("feedback");
+  const handleSubmitEvaluation = async () => {
+    if (!speakerFile || !evaluatorFile) {
+      alert("Both speaker and evaluator files must be recorded or uploaded.");
+      return;
+    }
+
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      const formData = new FormData();
+
+      // Prepare file extensions and MIME types
+      const speakerExt = speakerFile.fileType === "audio" ? "mp3" : "mp4";
+      const evaluatorExt = evaluatorFile.fileType === "audio" ? "mp3" : "mp4";
+
+      const speakerMime =
+        speakerFile.fileType === "audio" ? "audio/mpeg" : "video/mp4";
+      const evaluatorMime =
+        evaluatorFile.fileType === "audio" ? "audio/mpeg" : "video/mp4";
+
+      if (Platform.OS === "web") {
+        // Fetch blobs from URIs for browser
+        const speakerRes = await fetch(speakerFile.recordingUri);
+        const speakerBlob = await speakerRes.blob();
+        const speakerWebFile = new File(
+          [speakerBlob],
+          `speaker.${speakerExt}`,
+          {
+            type: speakerMime,
+          },
+        );
+        formData.append("speaker_file", speakerWebFile);
+
+        const evaluatorRes = await fetch(evaluatorFile.recordingUri);
+        const evaluatorBlob = await evaluatorRes.blob();
+        const evaluatorWebFile = new File(
+          [evaluatorBlob],
+          `evaluator.${evaluatorExt}`,
+          {
+            type: evaluatorMime,
+          },
+        );
+        formData.append("evaluator_file", evaluatorWebFile);
+      } else {
+        // React Native: use uri-based file object
+        formData.append("speaker_file", {
+          uri: speakerFile.recordingUri,
+          name: `speaker.${speakerExt}`,
+          type: speakerMime,
+        } as any);
+
+        formData.append("evaluator_file", {
+          uri: evaluatorFile.recordingUri,
+          name: `evaluator.${evaluatorExt}`,
+          type: evaluatorMime,
+        } as any);
+      }
+
+      // Add task types
+      formData.append(
+        "task_type_speaker",
+        `${speakerFile.fileType}_evaluation`,
+      );
+      formData.append(
+        "task_type_evaluator",
+        `${evaluatorFile.fileType}_evaluation`,
+      );
+
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
+
+      setIsLoading(true);
+
+      const response = await fetch(`${BASE_URL}/evaluator/process_evaluation`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Backend error:", data);
+        alert("Failed to process evaluation.");
+        return;
+      }
+
+      console.log("Evaluation Results:", data);
+
+      const mappedResults = {
+        overallScore: data.summary.Metadata?.overall_score ?? 0,
+        pace: data.summary.Metadata?.words_per_minute ?? 0,
+        fillerWords: 0, // Gemini may not return this yet
+        emotionalDelivery: 0,
+        clarity: 0,
+        confidence: 0,
+        engagement: 0,
+        improvement: "N/A", // Or calculate based on history
+        duration: data.summary.Metadata?.duration ?? "00:00",
+        avgPause: `${data.summary.Metadata?.average_pause_duration ?? 0}s`,
+      };
+
+      const mappedFeedback = {
+        strengths: data.summary.Commendations ?? [],
+        improvements: data.summary.Recommendations ?? [],
+        keyInsights: data.summary.KeyInsights ?? [],
+      };
+
+      const detailedFeedback = data.detailed;
+
+      setAnalysisResults(mappedResults);
+      setFeedback(mappedFeedback);
+      setDetailedFeedback(detailedFeedback);
+      setIsLoading(false);
+      setCurrentStep("feedback");
+    } catch (err) {
+      setIsLoading(false);
+      console.error("Error submitting evaluation:", err);
+      alert("An error occurred during evaluation submission.");
+    }
   };
+
+  const renderLoadingScreen = () => (
+    <View className="flex-1 justify-center items-center px-6">
+      <Text style={{ color: colors.text, fontSize: 20, marginBottom: 12 }}>
+        Processing Evaluation...
+      </Text>
+      <Text style={{ color: colors.textSecondary, textAlign: "center" }}>
+        Hang tight! We're analyzing your evaluation and the original speech.
+      </Text>
+    </View>
+  );
 
   // Navigation between steps (only backwards allowed except normal flow)
   const handleStepNavigation = (
@@ -416,20 +559,16 @@ export default function EvaluatorModeScreen({
             </Text>
           </TouchableOpacity>
 
-          {transcribedText && (
-            <TouchableOpacity
-              onPress={handleSubmitEvaluation}
-              className="flex-1 rounded-2xl py-4 px-6"
-              style={{ backgroundColor: colors.success }}
-            >
-              <View className="flex-row items-center justify-center">
-                <Send size={20} color="white" />
-                <Text className="text-white font-bold text-lg ml-2">
-                  Submit
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={handleSubmitEvaluation}
+            className="flex-1 rounded-2xl py-4 px-6"
+            style={{ backgroundColor: colors.success }}
+          >
+            <View className="flex-row items-center justify-center">
+              <Send size={20} color="white" />
+              <Text className="text-white font-bold text-lg ml-2">Submit</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -451,34 +590,18 @@ export default function EvaluatorModeScreen({
           Here's your feedback on the evaluation you just delivered
         </Text>
         <QuickFeedbackEvaluations
-          evaluationResults={{
-            overallScore: 87,
-            clarity: 78,
-            confidence: 85,
-            engagement: 82,
-            evaluationAccuracy: 90,
-            contentInsight: 75,
-            duration: "5:23",
-            wordCount: 180,
-            avgPause: "1.1s",
+          evaluationResults={analysisResults}
+          feedback={feedback}
+          detailedFeedback={detailedFeedback}
+          onViewDetailedFeedback={() => {
+            router.push({
+              pathname: "/detailed-feedback-eval",
+              params: {
+                feedback: JSON.stringify(detailedFeedback),
+              },
+            });
           }}
-          feedback={{
-            strengths: [
-              "You identified key moments in the speaker’s message accurately.",
-              "Your evaluation was confident and easy to follow.",
-            ],
-            improvements: [
-              "Dive deeper into the emotional tone of the speech.",
-              "Avoid repeating the speaker’s content word-for-word.",
-            ],
-            keyInsights: [
-              "You did well to highlight the call-to-action.",
-              "Clarity in delivery made your evaluation sound structured.",
-            ],
-          }}
-          onViewDetailedFeedback={onViewDetailedFeedback}
           onRecordAnother={() => {
-            setTranscribedText("");
             setCurrentStep("evaluate");
           }}
         />
@@ -487,6 +610,10 @@ export default function EvaluatorModeScreen({
   };
 
   const renderCurrentStep = () => {
+    if (isLoading) {
+      return renderLoadingScreen();
+    }
+
     switch (currentStep) {
       case "upload":
         return renderUploadStep();

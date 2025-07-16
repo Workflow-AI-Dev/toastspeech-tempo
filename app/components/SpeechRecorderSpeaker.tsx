@@ -37,27 +37,6 @@ interface SpeechRecorderSpeakerProps {
   recordingMethod?: "audio" | "video" | "upload" | null;
 }
 
-// Dynamic imports for VisionCamera (works only on native)
-let Camera: any = null;
-let useCameraDevices: any = null;
-let useCameraPermission: any = null;
-
-if (Platform.OS !== "web") {
-  const visionCamera = require("react-native-vision-camera");
-  Camera = visionCamera.Camera;
-  useCameraDevices = visionCamera.useCameraDevices;
-  useCameraPermission = visionCamera.useCameraPermission;
-}
-
-// Vision Camera hooks (conditionally used)
-const devices =
-  Platform.OS !== "web" && useCameraDevices ? useCameraDevices() : {};
-const device = devices?.front;
-const { hasPermission: hasVisionCameraPermission, requestPermission } =
-  Platform.OS !== "web" && useCameraPermission
-    ? useCameraPermission()
-    : { hasPermission: false, requestPermission: async () => false };
-
 const SpeechRecorderSpeaker = ({
   onRecordingComplete = () => {},
   isProcessing = false,
@@ -73,8 +52,9 @@ const SpeechRecorderSpeaker = ({
   const [hasAudioPermission, setHasAudioPermission] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const cameraRef = useRef<Camera>(null);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const expoCameraRef = useRef<ExpoCamera>(null);
+  const [recordedVideoUri, setRecordedVideoUri] = useState<string | null>(null);
   const processingMessages = [
     "Processing file...",
     "Hang tight...",
@@ -107,37 +87,26 @@ const SpeechRecorderSpeaker = ({
 
   const requestPermissions = async () => {
     try {
-      // Request audio permission
-      const audioStatus = await Audio.requestPermissionsAsync();
-      setHasAudioPermission(audioStatus.status === "granted");
+      const { status: audioStatus } = await Audio.requestPermissionsAsync();
+      setHasAudioPermission(audioStatus === "granted");
 
-      // Request camera permission if video recording is needed
       if (recordingMethod === "video") {
-        if (Platform.OS !== "web") {
-          if (!hasVisionCameraPermission) {
-            const visionCameraStatus = await requestPermission();
-            setHasCameraPermission(visionCameraStatus);
-          } else {
-            setHasCameraPermission(true);
-          }
+        const { status: cameraStatus } =
+          await ExpoCamera.requestCameraPermissionsAsync();
+        setHasCameraPermission(cameraStatus === "granted");
 
-          await MediaLibrary.requestPermissionsAsync();
-        } else {
-          setHasCameraPermission(false); // Web fallback
-        }
+        await MediaLibrary.requestPermissionsAsync();
       }
 
-      // Set audio mode for recording
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
-    } catch (error) {
-      console.error("Error requesting permissions:", error);
+    } catch (err) {
+      console.error("Permission error:", err);
       Alert.alert(
         "Permission Error",
-        "Unable to access camera/microphone. Please check your permissions in Settings.",
-        [{ text: "OK" }],
+        "Check camera/mic permissions in Settings.",
       );
     }
   };
@@ -270,23 +239,16 @@ const SpeechRecorderSpeaker = ({
         );
         setRecording(newRecording);
       } else if (recordingMethod === "video") {
-        // Start video recording with Vision Camera at 5fps
-        if (cameraRef.current && device) {
+        const video = await expoCameraRef.current?.recordAsync({
+          quality: ExpoCamera.Constants.VideoQuality["480p"],
+          maxDuration: 300,
+        });
+        if (video?.uri) {
           setIsRecordingVideo(true);
-          cameraRef.current.startRecording({
-            flash: "off",
-            onRecordingFinished: (video) => {
-              console.log("Video recorded:", video.path);
-              setIsRecordingVideo(false);
-            },
-            onRecordingError: (error) => {
-              console.error("Recording error:", error);
-              setIsRecordingVideo(false);
-            },
-            // Set video codec and quality for 5fps
-            videoCodec: "h264",
-            videoBitRate: "low",
-          });
+          setRecordedVideoUri(video.uri);
+        } else {
+          Alert.alert("Recording Error", "Could not start video recording.");
+          return;
         }
       }
 
@@ -308,35 +270,23 @@ const SpeechRecorderSpeaker = ({
       if (recordingState === "recording") {
         if (recording && recordingMethod === "audio") {
           await recording.pauseAsync();
-        } else if (
-          recordingMethod === "video" &&
-          cameraRef.current &&
-          isRecordingVideo
-        ) {
+        } else if (recordingMethod === "video" && isRecordingVideo) {
           // Vision Camera doesn't support pause/resume, so we stop and restart
-          await cameraRef.current.stopRecording();
+          await expoCameraRef.current?.stopRecording();
           setIsRecordingVideo(false);
         }
         setRecordingState("paused");
       } else if (recordingState === "paused") {
         if (recording && recordingMethod === "audio") {
           await recording.startAsync();
-        } else if (recordingMethod === "video" && cameraRef.current && device) {
+        } else if (recordingMethod === "video") {
           // Restart video recording
-          setIsRecordingVideo(true);
-          cameraRef.current.startRecording({
-            flash: "off",
-            onRecordingFinished: (video) => {
-              console.log("Video recorded:", video.path);
-              setIsRecordingVideo(false);
-            },
-            onRecordingError: (error) => {
-              console.error("Recording error:", error);
-              setIsRecordingVideo(false);
-            },
-            videoCodec: "h264",
-            videoBitRate: "low",
+          const video = await expoCameraRef.current?.recordAsync({
+            quality: ExpoCamera.Constants.VideoQuality["480p"],
+            maxDuration: 300,
           });
+          setIsRecordingVideo(true);
+          setRecordedVideoUri(video.uri);
         }
         setRecordingState("recording");
       }
@@ -355,14 +305,11 @@ const SpeechRecorderSpeaker = ({
         await recording.stopAndUnloadAsync();
         recordingUri = recording.getURI();
         setRecording(null);
-      } else if (
-        recordingMethod === "video" &&
-        cameraRef.current &&
-        isRecordingVideo
-      ) {
+      } else if (recordingMethod === "video" && isRecordingVideo) {
         // Stop video recording with Vision Camera
-        await cameraRef.current.stopRecording();
+        await expoCameraRef.current?.stopRecording();
         setIsRecordingVideo(false);
+
         // The recordingUri will be set in the onRecordingFinished callback
         // For now, we'll use a placeholder and handle it in the processing
       }
@@ -720,26 +667,13 @@ const SpeechRecorderSpeaker = ({
             {Platform.OS !== "web" &&
             recordingMethod === "video" &&
             hasCameraPermission &&
-            device ? (
+            Platform.OS !== "web" ? (
               <View className="h-48 w-full rounded-2xl overflow-hidden mb-8">
-                <Camera
-                  ref={cameraRef}
+                <ExpoCamera
+                  ref={expoCameraRef}
                   style={{ flex: 1 }}
-                  device={device}
-                  isActive={
-                    recordingState === "recording" ||
-                    recordingState === "paused"
-                  }
-                  video={true}
-                  audio={true}
-                  fps={5}
-                  videoStabilizationMode="auto"
-                  format={device.formats.find(
-                    (f) =>
-                      f.videoWidth <= 640 &&
-                      f.videoHeight <= 480 &&
-                      f.maxFps >= 5,
-                  )}
+                  type={ExpoCamera.Constants.Type.front}
+                  ratio="16:9"
                 />
               </View>
             ) : recordingMethod === "video" && Platform.OS === "web" ? (
