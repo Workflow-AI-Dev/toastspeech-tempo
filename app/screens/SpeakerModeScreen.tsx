@@ -852,7 +852,7 @@ export default function SpeakerModeScreen({
                   className="text-xl font-bold"
                   style={{ color: colors.text }}
                 >
-                  Audio Only
+                  Record Audio
                 </Text>
                 <Text
                   className="text-base"
@@ -924,7 +924,7 @@ export default function SpeakerModeScreen({
                   className="text-xl font-bold"
                   style={{ color: colors.text }}
                 >
-                  Video + Audio
+                  Record Video
                 </Text>
                 <Text
                   className="text-base"
@@ -1073,113 +1073,6 @@ export default function SpeakerModeScreen({
 
       <ScrollView className="flex-1">
         <View className="p-6">
-          <Text
-            className="text-2xl font-bold mb-2 text-center"
-            style={{ color: colors.text }}
-          >
-            Record Your Speech
-          </Text>
-          <Text
-            className="text-center mb-8 text-base"
-            style={{ color: colors.textSecondary }}
-          >
-            Ready to speak? Let's record your speech for AI analysis
-          </Text>
-
-          <View
-            className="rounded-3xl p-6 mb-6 shadow-lg"
-            style={{
-              backgroundColor: colors.card,
-              shadowColor: theme === "dark" ? "#000" : "#000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-              shadowRadius: 12,
-              elevation: 8,
-            }}
-          >
-            <View className="flex-row items-center mb-4">
-              <View
-                className="rounded-2xl p-4 mr-4"
-                style={{
-                  backgroundColor:
-                    theme === "dark" ? colors.surface : "#f3e8ff",
-                }}
-              >
-                <Target size={24} color={colors.accent} />
-              </View>
-              <View className="flex-1">
-                <Text
-                  className="text-xl font-bold"
-                  style={{ color: colors.text }}
-                >
-                  Speaker Session
-                </Text>
-                <Text
-                  className="text-base"
-                  style={{ color: colors.textSecondary }}
-                >
-                  Record your speech for AI analysis
-                </Text>
-              </View>
-            </View>
-
-            {speechDetails.title && (
-              <View
-                className="rounded-2xl p-4 mb-4 border"
-                style={{
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                }}
-              >
-                <Text className="font-bold mb-1" style={{ color: colors.text }}>
-                  {speechDetails.title}
-                </Text>
-                {speechDetails.purpose && (
-                  <Text
-                    className="text-sm"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    {speechDetails.purpose}
-                  </Text>
-                )}
-                {speechDetails.criteria.length > 0 && (
-                  <View className="flex-row flex-wrap mt-2">
-                    {speechDetails.criteria.slice(0, 3).map((criterion) => (
-                      <View
-                        key={criterion}
-                        className="rounded-full px-2 py-1 mr-2 mb-1"
-                        style={{
-                          backgroundColor:
-                            theme === "dark" ? colors.surface : "#dbeafe",
-                        }}
-                      >
-                        <Text
-                          className="text-xs font-semibold"
-                          style={{ color: colors.primary }}
-                        >
-                          {criterion}
-                        </Text>
-                      </View>
-                    ))}
-                    {speechDetails.criteria.length > 3 && (
-                      <View
-                        className="rounded-full px-2 py-1"
-                        style={{ backgroundColor: colors.border }}
-                      >
-                        <Text
-                          className="text-xs font-semibold"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          +{speechDetails.criteria.length - 3} more
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-
           <SpeechRecorder
             onRecordingComplete={handleRecordingComplete}
             isProcessing={isProcessing}

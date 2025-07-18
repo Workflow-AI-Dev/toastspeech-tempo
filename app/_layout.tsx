@@ -85,6 +85,10 @@ export default function RootLayout() {
               options={{ headerShown: false }}
             />
             <Stack.Screen
+              name="practice-mode"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
               name="profile-settings"
               options={{ headerShown: false }}
             />
