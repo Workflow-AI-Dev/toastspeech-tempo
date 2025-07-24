@@ -89,39 +89,6 @@ export default function SpeakerModeScreen({
   const [detailedFeedback, setDetailedFeedback] = useState(null);
   const router = useRouter();
 
-  // const analysisResults = {
-  //   overallScore: 87,
-  //   pace: 85,
-  //   fillerWords: 8,
-  //   emotionalDelivery: 89,
-  //   clarity: 92,
-  //   confidence: 84,
-  //   engagement: 88,
-  //   improvement: "+15",
-  //   duration: "4:32",
-  //   wordCount: 425,
-  //   avgPause: "1.2s",
-  // };
-
-  // const feedback = {
-  //   strengths: [
-  //     "Excellent vocal variety and tone modulation",
-  //     "Strong opening that captured attention immediately",
-  //     "Clear articulation throughout the speech",
-  //     "Good use of pauses for emphasis",
-  //   ],
-  //   improvements: [
-  //     "Reduce filler words like 'um' and 'uh' (8 instances)",
-  //     "Work on smoother transitions between main points",
-  //     "Consider adding more concrete examples",
-  //   ],
-  //   keyInsights: [
-  //     "Your confidence increased 23% from start to finish",
-  //     "Peak engagement occurred during storytelling segments",
-  //     "Speaking pace was optimal for audience comprehension",
-  //   ],
-  // };
-
   const handleRecordingComplete = (data) => {
     setRecordingData(data); // Save recording file info
     console.log(data);
@@ -223,15 +190,27 @@ export default function SpeakerModeScreen({
 
       const mappedResults = {
         overallScore: result.summary.Metadata?.overall_score ?? 0,
-        pace: result.summary.Metadata?.words_per_minute ?? 0,
+        pace: result.analytics?.speaker_analysis?.[0]?.words_per_minute || 0,
         fillerWords: 0, // Gemini may not return this yet
         emotionalDelivery: 0,
         clarity: 0,
         confidence: 0,
         engagement: 0,
         improvement: "N/A", // Or calculate based on history
-        duration: result.summary.Metadata?.duration ?? "00:00",
-        avgPause: `${result.summary.Metadata?.average_pause_duration ?? 0}s`,
+        duration: (() => {
+          const totalSpeakingSeconds =
+            result.analytics?.speaker_analysis?.[0]
+              ?.total_speaking_time_seconds || 0;
+          const minutes = Math.floor(totalSpeakingSeconds / 60);
+          const seconds = totalSpeakingSeconds % 60;
+          return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+        })(),
+        avgPause: result.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
+        pausesData: result.analytics?.pauses || [],
+        fillerData: result.analytics?.filler_words || [],
+        crutchData: result.analytics?.crutch_phrases || [],
+        grammarData: result.analytics?.grammar_mistakes || [],
+        environData: result.analytics?.environmental_elements || [],
       };
 
       const mappedFeedback = {

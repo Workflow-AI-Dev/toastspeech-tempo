@@ -154,7 +154,7 @@ export default function SpeechLibrary({
     if (seconds < 60) return `${seconds}s`;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return secs === 0 ? `${mins}m` : `${mins}m ${secs}s`;
+    return `${mins}m`;
   };
 
   const formatDate = (dateString: string) => {
@@ -364,6 +364,11 @@ export default function SpeechLibrary({
       duration: selectedSpeech.duration,
       wordCount: 425,
       avgPause: selectedSpeech.pause,
+      pausesData: selectedSpeech.pausesData,
+      fillerData: selectedSpeech.fillerData,
+      crutchData: selectedSpeech.crutchData,
+      grammarData: selectedSpeech.grammarData,
+      environData: selectedSpeech.environData,
     };
 
     const feedback = {

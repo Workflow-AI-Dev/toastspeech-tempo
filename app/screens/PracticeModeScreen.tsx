@@ -88,39 +88,6 @@ export default function PracticeModeScreen({
   const [detailedFeedback, setDetailedFeedback] = useState(null);
   const router = useRouter();
 
-  // const analysisResults = {
-  //   overallScore: 87,
-  //   pace: 85,
-  //   fillerWords: 8,
-  //   emotionalDelivery: 89,
-  //   clarity: 92,
-  //   confidence: 84,
-  //   engagement: 88,
-  //   improvement: "+15",
-  //   duration: "4:32",
-  //   wordCount: 425,
-  //   avgPause: "1.2s",
-  // };
-
-  // const feedback = {
-  //   strengths: [
-  //     "Excellent vocal variety and tone modulation",
-  //     "Strong opening that captured attention immediately",
-  //     "Clear articulation throughout the speech",
-  //     "Good use of pauses for emphasis",
-  //   ],
-  //   improvements: [
-  //     "Reduce filler words like 'um' and 'uh' (8 instances)",
-  //     "Work on smoother transitions between main points",
-  //     "Consider adding more concrete examples",
-  //   ],
-  //   keyInsights: [
-  //     "Your confidence increased 23% from start to finish",
-  //     "Peak engagement occurred during storytelling segments",
-  //     "Speaking pace was optimal for audience comprehension",
-  //   ],
-  // };
-
   const handleRecordingComplete = (data) => {
     setRecordingData(data); // Save recording file info
     console.log(data);
@@ -148,7 +115,6 @@ export default function PracticeModeScreen({
     fileName,
     mimeType,
     taskType,
-    modeType,
     speechType,
     token,
   }) => {
@@ -161,10 +127,10 @@ export default function PracticeModeScreen({
         const blob = await res.blob();
 
         const file = new File([blob], fileName, { type: mimeType });
-        formData.append("file", file);
+        formData.append("speaker_file", file);
       } else {
         // React Native FormData expects this format
-        formData.append("file", {
+        formData.append("speaker_file", {
           uri: fileUri,
           name: fileName,
           type: mimeType,
@@ -172,11 +138,10 @@ export default function PracticeModeScreen({
       }
 
       formData.append("task_type", taskType);
-      formData.append("mode_type", modeType);
       formData.append("speech_type", speechType);
       formData.append("speech_details", JSON.stringify(speechDetails));
 
-      const response = await fetch(`${BASE_URL}/speech/process_file`, {
+      const response = await fetch(`${BASE_URL}/practice/process_file`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -215,35 +180,32 @@ export default function PracticeModeScreen({
         fileName: recordingData.fileName || "recording.mp4",
         mimeType: recordingData.mimeType || "application/octet-stream",
         taskType: taskType,
-        modeType: "speaker",
         speechType: speechType || "custom", // pulled from earlier step
         token,
       });
 
+      console.log(result);
+
       const mappedResults = {
-        overallScore: result.summary.Metadata?.overall_score ?? 0,
-        pace: result.summary.Metadata?.words_per_minute ?? 0,
+        overallScore: result.evaluation.OverallScore,
+        pace: 0,
         fillerWords: 0, // Gemini may not return this yet
         emotionalDelivery: 0,
         clarity: 0,
         confidence: 0,
         engagement: 0,
         improvement: "N/A", // Or calculate based on history
-        duration: result.summary.Metadata?.duration ?? "00:00",
-        avgPause: `${result.summary.Metadata?.average_pause_duration ?? 0}s`,
+        duration: "00:00",
+        avgPause: 0,
       };
 
       const mappedFeedback = {
-        strengths: result.summary.Commendations ?? [],
-        improvements: result.summary.Recommendations ?? [],
-        keyInsights: result.summary.KeyInsights ?? [],
+        strengths: result.evaluation.Commendations ?? [],
+        improvements: result.evaluation.Recommendations ?? [],
       };
-
-      const detailedFeedback = result.detailed;
 
       setAnalysisResults(mappedResults);
       setFeedback(mappedFeedback);
-      setDetailedFeedback(detailedFeedback);
 
       console.log(mappedResults);
 
@@ -851,7 +813,7 @@ export default function PracticeModeScreen({
                   className="text-xl font-bold"
                   style={{ color: colors.text }}
                 >
-                  Audio Only
+                  Record Audio
                 </Text>
                 <Text
                   className="text-base"
@@ -923,7 +885,7 @@ export default function PracticeModeScreen({
                   className="text-xl font-bold"
                   style={{ color: colors.text }}
                 >
-                  Video + Audio
+                  Record Video
                 </Text>
                 <Text
                   className="text-base"
@@ -1072,113 +1034,6 @@ export default function PracticeModeScreen({
 
       <ScrollView className="flex-1">
         <View className="p-6">
-          <Text
-            className="text-2xl font-bold mb-2 text-center"
-            style={{ color: colors.text }}
-          >
-            Record Your Speech
-          </Text>
-          <Text
-            className="text-center mb-8 text-base"
-            style={{ color: colors.textSecondary }}
-          >
-            Ready to speak? Let's record your speech for AI analysis
-          </Text>
-
-          <View
-            className="rounded-3xl p-6 mb-6 shadow-lg"
-            style={{
-              backgroundColor: colors.card,
-              shadowColor: theme === "dark" ? "#000" : "#000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-              shadowRadius: 12,
-              elevation: 8,
-            }}
-          >
-            <View className="flex-row items-center mb-4">
-              <View
-                className="rounded-2xl p-4 mr-4"
-                style={{
-                  backgroundColor:
-                    theme === "dark" ? colors.surface : "#f3e8ff",
-                }}
-              >
-                <Target size={24} color={colors.accent} />
-              </View>
-              <View className="flex-1">
-                <Text
-                  className="text-xl font-bold"
-                  style={{ color: colors.text }}
-                >
-                  Speaker Session
-                </Text>
-                <Text
-                  className="text-base"
-                  style={{ color: colors.textSecondary }}
-                >
-                  Record your speech for AI analysis
-                </Text>
-              </View>
-            </View>
-
-            {speechDetails.title && (
-              <View
-                className="rounded-2xl p-4 mb-4 border"
-                style={{
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                }}
-              >
-                <Text className="font-bold mb-1" style={{ color: colors.text }}>
-                  {speechDetails.title}
-                </Text>
-                {speechDetails.purpose && (
-                  <Text
-                    className="text-sm"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    {speechDetails.purpose}
-                  </Text>
-                )}
-                {speechDetails.criteria.length > 0 && (
-                  <View className="flex-row flex-wrap mt-2">
-                    {speechDetails.criteria.slice(0, 3).map((criterion) => (
-                      <View
-                        key={criterion}
-                        className="rounded-full px-2 py-1 mr-2 mb-1"
-                        style={{
-                          backgroundColor:
-                            theme === "dark" ? colors.surface : "#dbeafe",
-                        }}
-                      >
-                        <Text
-                          className="text-xs font-semibold"
-                          style={{ color: colors.primary }}
-                        >
-                          {criterion}
-                        </Text>
-                      </View>
-                    ))}
-                    {speechDetails.criteria.length > 3 && (
-                      <View
-                        className="rounded-full px-2 py-1"
-                        style={{ backgroundColor: colors.border }}
-                      >
-                        <Text
-                          className="text-xs font-semibold"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          +{speechDetails.criteria.length - 3} more
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-
           <SpeechRecorder
             onRecordingComplete={handleRecordingComplete}
             isProcessing={isProcessing}

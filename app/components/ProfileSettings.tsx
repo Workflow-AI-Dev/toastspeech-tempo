@@ -332,14 +332,6 @@ export default function ProfileSettings({
           value: dailyReminders,
           onToggle: setDailyReminders,
         },
-        {
-          icon: Mail,
-          title: "Weekly Reports",
-          description: "Email summary of your progress",
-          hasSwitch: true,
-          value: weeklyReports,
-          onToggle: setWeeklyReports,
-        },
       ],
     },
     {
@@ -350,15 +342,6 @@ export default function ProfileSettings({
           title: "Help & Support",
           description: "Get help and contact support",
           onPress: () => {},
-        },
-        {
-          icon: Trophy,
-          title: "Get Progress Report",
-          description: "Email your full progess report",
-          onPress: () => {
-            // TODO: trigger progress report export/email
-            alert("Progress report sent to your email!");
-          },
         },
 
         {

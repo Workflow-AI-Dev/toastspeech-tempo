@@ -37,7 +37,6 @@ interface QuickFeedbackPracticeProps {
       action: string;
       suggestion: string;
     }[];
-    keyInsights: string[];
   };
   onRecordAnother: () => void;
 }
@@ -195,53 +194,6 @@ const QuickFeedbackPractice = ({
           ))}
         </View>
       </View>*/}
-
-      <View
-        className="rounded-3xl p-6 mb-6 shadow-lg"
-        style={{
-          backgroundColor: colors.card,
-          shadowColor: theme === "dark" ? "#000" : "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-          shadowRadius: 12,
-          elevation: 8,
-        }}
-      >
-        <View className="flex-row items-center mb-4">
-          <Lightbulb size={24} color={colors.warning} />
-          <Text
-            className="text-xl font-bold ml-2"
-            style={{ color: colors.text }}
-          >
-            Key Insights
-          </Text>
-        </View>
-        <View className="space-y-3">
-          {[
-            "Opening with a personal story significantly increased audience attention.",
-            "Clear transitions between sections helped maintain logical flow.",
-            "A powerful conclusion left a lasting impression on the audience.",
-          ].map((insight, index) => (
-            <View key={index} className="flex-row items-start">
-              <View
-                className="rounded-full p-1 mr-3 mt-1"
-                style={{
-                  backgroundColor:
-                    theme === "dark" ? colors.surface : "#fef3c7",
-                }}
-              >
-                <Star size={12} color={colors.warning} />
-              </View>
-              <Text
-                className="flex-1 text-base"
-                style={{ color: colors.textSecondary }}
-              >
-                {insight}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
 
       {/* Commendations Section */}
       <View

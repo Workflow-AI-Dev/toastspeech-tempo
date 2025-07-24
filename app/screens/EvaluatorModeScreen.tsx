@@ -214,15 +214,27 @@ export default function EvaluatorModeScreen({
 
       const mappedResults = {
         overallScore: data.summary.Metadata?.overall_score ?? 0,
-        pace: data.summary.Metadata?.words_per_minute ?? 0,
+        pace: data.analytics?.speaker_analysis?.[0]?.words_per_minute || 0,
         fillerWords: 0, // Gemini may not return this yet
         emotionalDelivery: 0,
         clarity: 0,
         confidence: 0,
         engagement: 0,
         improvement: "N/A", // Or calculate based on history
-        duration: data.summary.Metadata?.duration ?? "00:00",
-        avgPause: `${data.summary.Metadata?.average_pause_duration ?? 0}s`,
+        duration: (() => {
+          const totalSpeakingSeconds =
+            data.analytics?.speaker_analysis?.[0]
+              ?.total_speaking_time_seconds || 0;
+          const minutes = Math.floor(totalSpeakingSeconds / 60);
+          const seconds = totalSpeakingSeconds % 60;
+          return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+        })(),
+        avgPause: data.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
+        pausesData: data.analytics?.pauses || [],
+        fillerData: data.analytics?.filler_words || [],
+        crutchData: data.analytics?.crutch_phrases || [],
+        grammarData: data.analytics?.grammar_mistakes || [],
+        environData: data.analytics?.environmental_elements || [],
       };
 
       const mappedFeedback = {

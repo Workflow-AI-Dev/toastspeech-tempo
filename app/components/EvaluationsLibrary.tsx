@@ -24,6 +24,7 @@ import { Alert } from "react-native";
 interface Evaluation {
   id: string;
   score: number;
+  speechTitle: string;
   strengths: string[];
   improvements: string[];
   keyInsights: string[];
@@ -141,7 +142,7 @@ export default function EvaluationsLibrary({
     if (seconds < 60) return `${seconds}s`;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return secs === 0 ? `${mins}m` : `${mins}m ${secs}s`;
+    return `${mins}m`;
   };
 
   const formatDate = (dateString: string) => {
@@ -220,7 +221,7 @@ export default function EvaluationsLibrary({
               className="text-xl font-bold mb-1"
               style={{ color: colors.text }}
             >
-              Evaluation
+              Evaluation: {item.speechTitle}
             </Text>
             <View className="flex-row items-center">
               <Calendar size={12} color={colors.textSecondary} />
@@ -328,10 +329,21 @@ export default function EvaluationsLibrary({
 
     const evaluationResults = {
       overallScore: selectedEvaluation.score,
+      pace: selectedEvaluation.pace,
+      fillerWords: 8,
+      emotionalDelivery: 89,
+      clarity: 92,
+      confidence: 84,
+      engagement: 88,
       improvement: selectedEvaluation.improvement,
       duration: selectedEvaluation.duration,
-      pace: selectedEvaluation.pace,
-      avgPause: selectedEvaluation.avgPause,
+      wordCount: 425,
+      avgPause: selectedEvaluation.pause,
+      pausesData: selectedEvaluation.pausesData,
+      fillerData: selectedEvaluation.fillerData,
+      crutchData: selectedEvaluation.crutchData,
+      grammarData: selectedEvaluation.grammarData,
+      environData: selectedEvaluation.environData,
     };
 
     const feedback = {

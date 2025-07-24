@@ -625,16 +625,6 @@ const SpeechRecorderSpeaker = ({
             {getRecordingTitle()}
           </Text>
         </View>
-        {recordingState !== "idle" && (
-          <View className="flex-row items-center mt-2">
-            <Text className="text-white text-2xl font-bold">
-              {formatTime(timer)}
-            </Text>
-            <View className="bg-white/20 rounded-full px-2 py-1 ml-3">
-              <Text className="text-white text-sm font-semibold">LIVE</Text>
-            </View>
-          </View>
-        )}
       </View>
 
       {/* Main Content */}

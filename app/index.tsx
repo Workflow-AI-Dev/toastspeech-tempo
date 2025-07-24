@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,6 +30,16 @@ export default function HomeScreen() {
   const [isFirstTime, setIsFirstTime] = useState(true);
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
+
+  const getTimeBasedGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Good morning!";
+    if (hour >= 12 && hour < 17) return "Good afternoon!";
+    if (hour >= 17 && hour < 21) return "Good evening!";
+    return "Hey there!";
+  };
+
+  const greeting = useMemo(() => getTimeBasedGreeting(), []);
 
   // Show loading state while checking authentication
   if (loading) {
@@ -262,8 +272,9 @@ export default function HomeScreen() {
               className="text-3xl font-bold mb-1"
               style={{ color: colors.text }}
             >
-              Good morning!
+              {greeting}
             </Text>
+
             <View className="flex-row items-center">
               <View className="bg-amber-100 rounded-full px-3 py-1 mr-3">
                 <View className="flex-row items-center">
@@ -485,7 +496,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Daily Challenge */}
-        <View className="px-6 mb-8">
+        {/*<View className="px-6 mb-8">
           <View className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100">
             <View className="flex-row items-center mb-3">
               <View className="bg-indigo-100 rounded-full p-2 mr-3">
@@ -506,7 +517,7 @@ export default function HomeScreen() {
               <Text className="text-white font-bold">Start Challenge</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </View> */}
       </ScrollView>
 
       {/* Bottom Navigation */}

@@ -21,6 +21,7 @@ import {
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import SpeechLibrary from "./SpeechLibrary";
 import EvaluationsLibrary from "./EvaluationsLibrary";
+import PracticeLibrary from "./PracticeLibrary";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../config/api";
 
@@ -58,6 +59,7 @@ export default function FeedbackLibrary({
   >("speech");
   const [speeches, setSpeeches] = useState([]);
   const [evaluations, setEvaluations] = useState([]);
+  const [practices, setPractices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -73,6 +75,11 @@ export default function FeedbackLibrary({
   const [dateRange, setDateRange] = useState<
     "yesterday" | "last7days" | "last30days" | null
   >(null);
+
+  useEffect(() => {
+    setSearchQuery("");
+    setIsSearchActive(false);
+  }, [activeTab]);
 
   const fetchSpeeches = async () => {
     try {
@@ -119,10 +126,24 @@ export default function FeedbackLibrary({
               month: "short",
               day: "numeric",
             }),
-            duration: metadata.duration || speech.target_duration || "N/A",
+            duration: (() => {
+              const totalSpeakingSeconds =
+                speech.analytics?.speaker_analysis?.[0]
+                  ?.total_speaking_time_seconds || 0;
+              const minutes = Math.floor(totalSpeakingSeconds / 60);
+              const seconds = totalSpeakingSeconds % 60;
+              return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+            })(),
             score: currentScore,
-            pace: metadata.words_per_minute || 0,
-            pause: metadata.average_pause_duration || 0,
+            pace:
+              speech.analytics?.speaker_analysis?.[0]?.words_per_minute || 0,
+            pause:
+              speech.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
+            pausesData: speech.analytics?.pauses || [],
+            fillerData: speech.analytics?.filler_words || [],
+            crutchData: speech.analytics?.crutch_phrases || [],
+            grammarData: speech.analytics?.grammar_mistakes || [],
+            environData: speech.analytics?.environmental_elements || [],
             emoji: <Mic size={24} color="#7c3aed" />,
             category: speech.speech_type || "General",
             improvement,
@@ -186,10 +207,26 @@ export default function FeedbackLibrary({
               month: "short",
               day: "numeric",
             }),
-            duration: metadata.duration || "N/A",
+            speechTitle: evaluation.speech_title,
+            duration: (() => {
+              const totalSpeakingSeconds =
+                evaluation.analytics?.speaker_analysis?.[0]
+                  ?.total_speaking_time_seconds || 0;
+              const minutes = Math.floor(totalSpeakingSeconds / 60);
+              const seconds = totalSpeakingSeconds % 60;
+              return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+            })(),
             score: metadata.overall_score || 0,
-            pace: metadata.words_per_minute || 0,
-            pause: metadata.average_pause_duration || 0,
+            pace:
+              evaluation.analytics?.speaker_analysis?.[0]?.words_per_minute ||
+              0,
+            pause:
+              evaluation.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
+            pausesData: evaluation.analytics?.pauses || [],
+            fillerData: evaluation.analytics?.filler_words || [],
+            crutchData: evaluation.analytics?.crutch_phrases || [],
+            grammarData: evaluation.analytics?.grammar_mistakes || [],
+            environData: evaluation.analytics?.environmental_elements || [],
             emoji: <Mic size={24} color="#7c3aed" />,
             improvement,
             summary: evaluation.summary,
@@ -208,6 +245,73 @@ export default function FeedbackLibrary({
   // then just call it inside useEffect
   useEffect(() => {
     fetchEvaluations();
+  }, []);
+
+  const fetchPractices = async () => {
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+
+      const response = await fetch(`${BASE_URL}/practice/all`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch evaluations");
+      }
+
+      const data = await response.json();
+      console.log("✅ Loaded practice records from Supabase", data.practices);
+
+      const transformed = data.practices
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(), // 🧠 Newest first
+        )
+        .map((practice, idx, arr) => {
+          const currentScore = practice.evaluation.OverallScore || 0;
+          const previousScore =
+            idx < arr.length - 1
+              ? arr[idx + 1].evaluation.OverallScore || 0
+              : null;
+
+          const improvement =
+            previousScore !== null
+              ? `${currentScore - previousScore > 0 ? "+" : ""}${currentScore - previousScore}`
+              : "first practice session";
+
+          return {
+            id: practice.id || `practice-${idx}`,
+            date: new Date(practice.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }),
+            title: practice.speech_title,
+            category: practice.speech_type,
+            duration: practice.speech_target_duration || "N/A",
+            score: practice.evaluation.OverallScore || 0,
+            pace: 0,
+            pause: 0,
+            emoji: <Mic size={24} color="#7c3aed" />,
+            improvement,
+            evaluation: practice.evaluation,
+          };
+        });
+
+      setPractices(transformed);
+    } catch (err) {
+      console.error("❌ Failed to load evaluation:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // then just call it inside useEffect
+  useEffect(() => {
+    fetchPractices();
   }, []);
 
   // Helper function to check if duration matches filter
@@ -323,6 +427,16 @@ export default function FeedbackLibrary({
   // Filter evaluations based on filters
   const filteredEvaluations = useMemo(() => {
     return evaluations.filter((evaluation) => {
+      if (searchQuery) {
+        if (
+          !evaluation.speechTitle
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())
+        ) {
+          return false;
+        }
+      }
+
       // Duration filter
       if (!matchesDurationFilter(evaluation.duration, durationFilter)) {
         return false;
@@ -341,6 +455,51 @@ export default function FeedbackLibrary({
       return true;
     });
   }, [evaluations, durationFilter, scoreRange, dateRange]);
+
+  // Filter speeches based on search and filters
+  const filteredPractices = useMemo(() => {
+    return practices.filter((practice) => {
+      if (activeTab === "practice" && searchQuery) {
+        if (!practice.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // Speech type filter
+      if (activeTab === "practice" && speechTypeFilter) {
+        if (
+          practice.category.toLowerCase() !== speechTypeFilter.toLowerCase()
+        ) {
+          return false;
+        }
+      }
+
+      // Duration filter
+      if (!matchesDurationFilter(practice.duration, durationFilter)) {
+        return false;
+      }
+
+      // Score range filter
+      if (!matchesScoreRange(practice.score, scoreRange)) {
+        return false;
+      }
+
+      // Date range filter
+      if (!matchesDateRange(practice.date, dateRange)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    speeches,
+    searchQuery,
+    speechTypeFilter,
+    durationFilter,
+    scoreRange,
+    dateRange,
+    activeTab,
+  ]);
 
   // Clear all filters
   const clearFilters = () => {
@@ -395,8 +554,7 @@ export default function FeedbackLibrary({
           </View>
 
           <ScrollView className="flex-1 px-6 py-4">
-            {/* Speech Type Filter - Only for Speech tab */}
-            {activeTab === "speech" && (
+            {["speech", "practice", "evaluation"].includes(activeTab) && (
               <View className="mb-6">
                 <Text
                   className="text-lg font-semibold mb-3"
@@ -588,7 +746,10 @@ export default function FeedbackLibrary({
               <TouchableOpacity
                 className="flex-1 rounded-2xl px-4 py-3 mr-2 border"
                 style={{ borderColor: colors.border }}
-                onPress={clearFilters}
+                onPress={() => {
+                  clearFilters();
+                  setIsFilterModalVisible(false);
+                }}
               >
                 <Text
                   className="text-center font-medium"
@@ -657,7 +818,7 @@ export default function FeedbackLibrary({
           </View>
 
           {/* Search and Filter Section */}
-          {isSearchActive && activeTab === "speech" ? (
+          {isSearchActive ? (
             <View className="flex-row items-center">
               <View
                 className="flex-1 flex-row items-center rounded-2xl px-4 py-3 mr-2 border"
@@ -669,7 +830,13 @@ export default function FeedbackLibrary({
                 <Search size={18} color={colors.textSecondary} />
                 <TextInput
                   className="flex-1 ml-2"
-                  placeholder="Search speech titles..."
+                  placeholder={
+                    activeTab === "speech"
+                      ? "Search speeches..."
+                      : activeTab === "evaluation"
+                        ? "Search evaluations..."
+                        : "Search practice sessions..."
+                  }
                   placeholderTextColor={colors.textSecondary}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -692,36 +859,19 @@ export default function FeedbackLibrary({
           ) : (
             <View className="flex-row justify-between">
               <TouchableOpacity
-                className={`flex-row items-center rounded-2xl px-4 py-3 flex-1 mr-2 ${activeTab === "evaluation" ? "opacity-50" : ""}`}
+                className={`flex-row items-center rounded-2xl px-4 py-3 flex-1 mr-2`}
                 style={{
                   backgroundColor:
                     theme === "dark" ? colors.surface : "#ebedf0",
                 }}
-                onPress={() => {
-                  if (activeTab === "speech") {
-                    setIsSearchActive(true);
-                  }
-                }}
-                disabled={activeTab === "evaluation"}
+                onPress={() => setIsSearchActive(true)}
               >
-                <Search
-                  size={18}
-                  color={
-                    activeTab === "evaluation"
-                      ? colors.textSecondary + "80"
-                      : colors.textSecondary
-                  }
-                />
+                <Search size={18} color={colors.textSecondary} />
                 <Text
                   className="ml-2 font-medium"
-                  style={{
-                    color:
-                      activeTab === "evaluation"
-                        ? colors.textSecondary + "80"
-                        : colors.textSecondary,
-                  }}
+                  style={{ color: colors.textSecondary }}
                 >
-                  {activeTab === "evaluation" ? "Search disabled" : "Search"}
+                  Search
                 </Text>
               </TouchableOpacity>
 
@@ -836,11 +986,10 @@ export default function FeedbackLibrary({
             onRefresh={fetchSpeeches}
           />
         ) : activeTab === "practice" ? (
-          <View className="flex-1 justify-center items-center px-6">
-            <Text className="text-base text-center text-gray-500">
-              Looks like you haven't started any practice sessions yet.
-            </Text>
-          </View>
+          <PracticeLibrary
+            practices={filteredPractices}
+            onRefresh={fetchPractices}
+          />
         ) : (
           <EvaluationsLibrary
             evaluations={filteredEvaluations}
