@@ -39,3 +39,7 @@ app-example
 
 **/tempobook/dynamic/
 **/tempobook/storyboards/
+
+
+/android/
+/ios/
