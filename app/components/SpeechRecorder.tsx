@@ -20,7 +20,6 @@ import * as Haptics from "expo-haptics";
 import * as DocumentPicker from "expo-document-picker";
 import { Audio } from "expo-av";
 import { Camera as ExpoCamera } from "expo-camera";
-import { FFmpegKit, ReturnCode } from "ffmpeg-kit-react-native";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -456,83 +455,6 @@ const SpeechRecorder = ({
     }
   };
 
-  // Video compression function using FFmpeg
-  const compressVideo = async (videoUri: string): Promise<string> => {
-    try {
-      console.log("Starting FFmpeg video compression for:", videoUri);
-
-      // Get file info to check size
-      const fileInfo = await FileSystem.getInfoAsync(videoUri);
-      const fileSizeInMB = fileInfo.size ? fileInfo.size / (1024 * 1024) : 0;
-
-      console.log(`Original file size: ${fileSizeInMB.toFixed(2)} MB`);
-
-      // Create compressed file path
-      const compressedUri = `${FileSystem.cacheDirectory}compressed_video_${Date.now()}.mp4`;
-
-      // FFmpeg command to compress video with 5fps, lower resolution, and aggressive compression
-      const ffmpegCommand = `-i "${videoUri}" -vf "fps=5,scale=640:480" -c:v libx264 -preset ultrafast -crf 28 -c:a aac -b:a 64k -movflags +faststart "${compressedUri}"`;
-
-      console.log("Running FFmpeg command:", ffmpegCommand);
-
-      // Execute FFmpeg command
-      const session = await FFmpegKit.execute(ffmpegCommand);
-      const returnCode = await session.getReturnCode();
-
-      if (ReturnCode.isSuccess(returnCode)) {
-        console.log("FFmpeg compression successful");
-
-        // Check compressed file size
-        const compressedFileInfo = await FileSystem.getInfoAsync(compressedUri);
-        const compressedSizeInMB = compressedFileInfo.size
-          ? compressedFileInfo.size / (1024 * 1024)
-          : 0;
-
-        console.log(
-          `Compressed file size: ${compressedSizeInMB.toFixed(2)} MB`,
-        );
-
-        // If still too large, try more aggressive compression
-        if (compressedSizeInMB > 20) {
-          const ultraCompressedUri = `${FileSystem.cacheDirectory}ultra_compressed_video_${Date.now()}.mp4`;
-          const ultraCommand = `-i "${videoUri}" -vf "fps=3,scale=480:360" -c:v libx264 -preset ultrafast -crf 32 -c:a aac -b:a 32k -movflags +faststart "${ultraCompressedUri}"`;
-
-          const ultraSession = await FFmpegKit.execute(ultraCommand);
-          const ultraReturnCode = await ultraSession.getReturnCode();
-
-          if (ReturnCode.isSuccess(ultraReturnCode)) {
-            const ultraFileInfo =
-              await FileSystem.getInfoAsync(ultraCompressedUri);
-            const ultraSizeInMB = ultraFileInfo.size
-              ? ultraFileInfo.size / (1024 * 1024)
-              : 0;
-            console.log(
-              `Ultra compressed file size: ${ultraSizeInMB.toFixed(2)} MB`,
-            );
-            return ultraCompressedUri;
-          }
-        }
-
-        return compressedUri;
-      } else {
-        console.error(
-          "FFmpeg compression failed with return code:",
-          returnCode,
-        );
-        const logs = await session.getAllLogs();
-        console.error(
-          "FFmpeg logs:",
-          logs.map((log) => log.getMessage()).join("\n"),
-        );
-        return videoUri; // Return original if compression fails
-      }
-    } catch (error) {
-      console.error("Error compressing video with FFmpeg:", error);
-      // Return original URI if compression fails
-      return videoUri;
-    }
-  };
-
   // Function to process and compress files
   const processVideoFile = async (
     fileUri: string,
@@ -559,7 +481,7 @@ const SpeechRecorder = ({
       }
 
       // ✅ Native only — compress video
-      const compressedUri = await compressVideo(fileUri);
+      const compressedUri = fileUri;
       const fileInfo = await FileSystem.getInfoAsync(compressedUri);
 
       return { uri: compressedUri, size: fileInfo.size || 0 };
