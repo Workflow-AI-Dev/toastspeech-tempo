@@ -10,6 +10,7 @@ import { useRouter, useSegments } from "expo-router";
 import { BASE_URL, GOOGLE_CLIENT_ID } from "../config/api";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
+import { supabase } from "../../lib/supabase";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -27,6 +28,7 @@ interface AuthContextType {
   signUpWithGoogle: (userData?: any) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
+  updatePassword: (email: string, password: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,15 +74,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup =
-      segments[0] === "(auth)" ||
-      segments[0] === "onboarding" ||
-      segments[0] === "sign-in" ||
-      segments[0] === "sign-up";
+    // These are routes that an unauthenticated user should be able to access.
+    // Once authenticated, a user should generally not be sent back to these.
+    const unauthenticatedRoutes = [
+      "(auth)",
+      "onboarding",
+      "sign-in",
+      "sign-up",
+      "reset-password",
+    ];
 
-    if (!user && !inAuthGroup) {
+    const currentSegment = segments[0];
+    const isInUnauthenticatedGroup =
+      unauthenticatedRoutes.includes(currentSegment);
+
+    // If there's no user and the current route is not an unauthenticated route, redirect to onboarding.
+    if (!user && !isInUnauthenticatedGroup) {
       router.replace("/onboarding");
-    } else if (user && inAuthGroup) {
+    }
+    // If there's a user and the current route *is* an unauthenticated route, redirect to the main app.
+    // We specifically allow "/subscription" here so the user isn't redirected if they just signed up.
+    else if (
+      user &&
+      isInUnauthenticatedGroup &&
+      currentSegment !== "subscription"
+    ) {
       router.replace("/");
     }
   }, [user, segments, loading]);
@@ -183,8 +201,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const resetPassword = async (email: string) => {
-    return { error: "Reset password not supported yet." };
+  const resetPassword = async (email: string): Promise<{ error: any }> => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/verify-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.detail || "Email verification failed" };
+      }
+
+      return { error: null };
+    } catch (error) {
+      return { error: "Failed to verify email. Please try again." };
+    }
+  };
+
+  const updatePassword = async (
+    email: string,
+    password: string,
+  ): Promise<{ error: any }> => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/update-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.detail || "Password update failed" };
+      }
+
+      return { error: null };
+    } catch (error) {
+      return { error: "Failed to update password. Please try again." };
+    }
   };
 
   const signInWithGoogle = async (): Promise<{ error: any }> => {
@@ -290,6 +345,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signUpWithGoogle,
     signOut,
     resetPassword,
+    updatePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

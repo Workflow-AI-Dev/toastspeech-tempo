@@ -26,12 +26,17 @@ export default function SubscriptionScreen() {
     ? from.includes("profile-settings")
     : from === "profile-settings";
 
-  const [selectedPlan, setSelectedPlan] = useState("free"); // Highlight Try & Taste by default
+  // Default to 'aspiring' to highlight the trial, as per the requirement
+  const [selectedPlan, setSelectedPlan] = useState("aspiring");
   const [planAnimations] = useState([
     new Animated.Value(0),
     new Animated.Value(0),
     new Animated.Value(0),
+    new Animated.Value(0), // Added for the 4th plan
   ]);
+
+  // State to manage showing the trial message (could be set based on user's signup status)
+  const [showTrialMessage, setShowTrialMessage] = useState(true); // Assuming new signups see this
 
   useEffect(() => {
     planAnimations.forEach((anim, index) => {
@@ -46,56 +51,67 @@ export default function SubscriptionScreen() {
 
   const plans = [
     {
-      id: "free",
-      name: "Try & Taste",
-      price: "$0",
-      usage: "1 evaluation/month",
+      id: "casual",
+      name: "Casual Speaker",
+      price: "Free",
+      description: "Perfect for light practice",
       features: [
-        "Basic voice-only AI evaluation",
-        "Sandwich summary only",
-        "Limited dashboard: filler words + pace",
-        "Watermarked reports",
+        "2 AI Speech Feedbacks (audio only)",
+        "3 Practice sessions (audio only)",
       ],
-      limitations: [
-        "No video uploads",
-        "No evaluator tools",
-        "No downloadable reports",
-      ],
+      limitations: ["No progress tracker or analytics", "Not storing speeches"],
+      tag: null, // No special tag for this plan
     },
     {
-      id: "essential",
-      name: "Practice & Improve",
+      id: "aspiring",
+      name: "Aspiring Speaker",
       price: "$5/month",
-      usage: "2 evaluations/month",
+      description: "Boost your foundational skills",
       features: [
-        "Voice + video AI evaluations",
-        "Full evaluation breakdown (grammar, tone, etc.)",
-        "Improvement history",
-        "Clean downloadable reports",
-        "Email insights after each speech",
+        "3 AI Speech Feedbacks (audio or video)",
+        "7 Practice sessions (audio or video)",
+        "Progress tracker and store speech audio",
       ],
       limitations: [],
+      tag: "14-Day Free Trial", // Special tag for the trial
     },
     {
-      id: "pro",
-      name: "Coach & Analyze",
-      price: "$20/month",
-      usage: "10 evaluations/month",
+      id: "committed",
+      name: "Committed Speaker",
+      price: "$12/month",
+      description: "For serious growth and in-depth analysis",
       features: [
-        "Everything in Essential",
-        "Evaluator Mode (record your own eval)",
-        "AI feedback on evaluations",
-        "Long-term analytics history",
-        "Team collaboration tools",
+        "6 AI Speech Feedback (audio or video)",
+        "2 AI Evaluation Feedback",
+        "15 Practice sessions",
+        "Progress tracker and store speech video",
       ],
       limitations: [],
+      tag: "Most Popular",
+    },
+    {
+      id: "coach",
+      name: "Speech Coach",
+      price: "$25/month",
+      description: "Unleash your full speaking potential",
+      features: [
+        "10 AI Speech Feedbacks (audio or video)",
+        "5 AI Evaluation Feedback",
+        "30 Practice sessions",
+        "Progress tracker and store speech video",
+      ],
+      limitations: [],
+      tag: "Best Value",
     },
   ];
 
   const handlePlanSelect = (planId) => {
     setSelectedPlan(planId);
+    // In a real application, you would typically initiate a payment flow here
+    // or set up the trial in your backend.
+    // For now, we'll simulate going to the next screen.
     setTimeout(() => {
-      router.push("/");
+      router.push("/"); // Or to a confirmation/payment screen
     }, 800);
   };
 
@@ -124,6 +140,17 @@ export default function SubscriptionScreen() {
           <Text className="text-base text-gray-500 mt-2 text-center">
             Flexible pricing to support your speaking goals.
           </Text>
+
+          {/* Trial Information Banner */}
+          {showTrialMessage && (
+            <View className="bg-blue-100 border-l-4 border-blue-500 p-4 rounded-lg mt-6 w-full">
+              <Text className="text-blue-800 text-sm font-semibold">
+                New users get a 14-day free trial of the "Aspiring Speaker"
+                plan, automatically downgrading to "Casual Speaker" (Free) after
+                the trial period.
+              </Text>
+            </View>
+          )}
         </View>
 
         <View className="space-y-8">
@@ -147,7 +174,8 @@ export default function SubscriptionScreen() {
                   selectedPlan === plan.id
                     ? "border-black bg-white shadow-xl"
                     : "border-neutral-200 bg-neutral-100"
-                }`}
+                } ${plan.tag === "Most Popular" ? "border-purple-500" : ""}
+                ${plan.tag === "Best Value" ? "border-green-500" : ""}`}
                 onPress={() => handlePlanSelect(plan.id)}
               >
                 <View className="flex-row justify-between items-center mb-2">
@@ -158,9 +186,27 @@ export default function SubscriptionScreen() {
                     {plan.price}
                   </Text>
                 </View>
-                <Text className="text-sm text-gray-500 mb-4">{plan.usage}</Text>
+                <Text className="text-sm text-gray-500 mb-4">
+                  {plan.description}
+                </Text>
 
-                <View className="space-y-2">
+                {plan.tag && (
+                  <View
+                    className={`absolute -top-3 -right-3 px-3 py-1 rounded-full ${
+                      plan.tag === "Most Popular"
+                        ? "bg-purple-500"
+                        : plan.tag === "Best Value"
+                          ? "bg-green-500"
+                          : "bg-blue-500"
+                    }`}
+                  >
+                    <Text className="text-white text-xs font-bold uppercase">
+                      {plan.tag}
+                    </Text>
+                  </View>
+                )}
+
+                <View className="space-y-2 mt-4">
                   {plan.features.map((feat, idx) => (
                     <View key={idx} className="flex-row items-center">
                       <Check size={18} color="#22c55e" className="mr-2" />
@@ -185,7 +231,7 @@ export default function SubscriptionScreen() {
           <Benefit
             icon={BarChart2}
             title="Progress Analytics"
-            desc="Track clarity, pacing, and improvement trends over time."
+            desc="Track improvement trends over time."
           />
           <Divider />
           <Benefit
@@ -203,7 +249,7 @@ export default function SubscriptionScreen() {
           <Benefit
             icon={Users}
             title="Private, Growing Community"
-            desc="Join fellow speakers who care about leveling up — quietly."
+            desc="Join fellow speakers who care about leveling up."
           />
         </View>
 

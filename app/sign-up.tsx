@@ -335,7 +335,7 @@ export default function SignUpScreen() {
       });
       const userData = await meRes.json();
       setUser(userData);
-      router.push("/");
+      router.push("/subscription");
     } catch (error) {
       Toast.show({
         type: "error",

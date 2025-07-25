@@ -6,6 +6,7 @@ import { useAuth } from "./context/AuthContext";
 import { ArrowLeft, Eye, EyeOff, Mail, Lock, User } from "lucide-react-native";
 import GLogo from "../assets/images/glogo.webp";
 import { Image } from "react-native";
+import Toast from "react-native-toast-message";
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function SignInScreen() {
     email: "",
     password: "",
   });
+  const [signInError, setSignInError] = useState("");
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -49,42 +51,81 @@ export default function SignInScreen() {
 
     if (!isValid) return;
 
+    setSignInError("");
     setIsLoading(true);
 
     try {
       const { error } = await signIn(formData.email, formData.password);
 
       if (error) {
-        Alert.alert("Sign In Failed", error.message);
+        setSignInError(
+          typeof error === "string"
+            ? error
+            : error.message || "Invalid credentials",
+        );
         setIsLoading(false);
         return;
       }
+
+      setSignInError("");
     } catch (error) {
-      Alert.alert("Error", "Something went wrong. Try again.");
+      setSignInError("Something went wrong. Please try again.");
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const handleForgotPassword = () => {
-    if (!formData.email) {
-      Alert.alert("Email Required", "Please enter your email address.");
+  const handleForgotPassword = async () => {
+    if (!formData.email.trim()) {
+      Toast.show({
+        type: "error",
+        text1: "Email Required",
+        text2: "Please enter your email address.",
+        position: "top",
+        visibilityTime: 4000,
+      });
       return;
     }
 
-    Alert.alert("Reset Password", "We'll send a reset link to your email.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Send Link",
-        onPress: async () => {
-          const { error } = await resetPassword(formData.email);
-          if (error) {
-            Alert.alert("Error", error.message);
-          } else {
-            Alert.alert("Check Email", "Password reset link sent.");
-          }
-        },
-      },
-    ]);
+    if (!validateEmail(formData.email)) {
+      Toast.show({
+        type: "error",
+        text1: "Invalid Email",
+        text2: "Please enter a valid email address.",
+        position: "top",
+        visibilityTime: 4000,
+      });
+      return;
+    }
+
+    try {
+      const { error } = await resetPassword(formData.email);
+      if (error) {
+        Toast.show({
+          type: "error",
+          text1: "Email Not Found",
+          text2:
+            typeof error === "string"
+              ? error
+              : error.message || "This email is not registered with us.",
+          position: "top",
+          visibilityTime: 4000,
+        });
+      } else {
+        // Email exists, redirect to reset password screen
+        router.push(
+          `/reset-password?email=${encodeURIComponent(formData.email)}`,
+        );
+      }
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Something went wrong. Please try again.",
+        position: "top",
+        visibilityTime: 4000,
+      });
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -195,8 +236,17 @@ export default function SignInScreen() {
 
         {/* Forgot Password */}
         <View className="items-end mb-10">
-          <TouchableOpacity onPress={handleForgotPassword}>
-            <Text className="text-sm text-indigo-600 font-semibold">
+          <TouchableOpacity
+            onPress={handleForgotPassword}
+            disabled={isLoading || isGoogleLoading}
+          >
+            <Text
+              className={`text-sm font-semibold ${
+                isLoading || isGoogleLoading
+                  ? "text-gray-400"
+                  : "text-indigo-600"
+              }`}
+            >
               Forgot Password?
             </Text>
           </TouchableOpacity>
@@ -214,6 +264,11 @@ export default function SignInScreen() {
             {isLoading ? "Signing in..." : "Sign In"}
           </Text>
         </TouchableOpacity>
+
+        {/* Inline error message */}
+        {signInError ? (
+          <Text className="text-red-500 text-center mb-4">{signInError}</Text>
+        ) : null}
 
         {/* Divider */}
         <View className="flex-row items-center mb-4">

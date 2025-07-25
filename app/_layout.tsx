@@ -108,6 +108,10 @@ export default function RootLayout() {
               name="evaluator-complete"
               options={{ headerShown: false }}
             />
+            <Stack.Screen
+              name="reset-password"
+              options={{ headerShown: false }}
+            />
           </Stack>
           <StatusBar style="auto" />
         </NavigationThemeProvider>
