@@ -131,7 +131,7 @@ export default function FeedbackLibrary({
                 speech.analytics?.speaker_analysis?.[0]
                   ?.total_speaking_time_seconds || 0;
               const minutes = Math.floor(totalSpeakingSeconds / 60);
-              const seconds = totalSpeakingSeconds % 60;
+              const seconds = Math.floor(totalSpeakingSeconds % 60);
               return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
             })(),
             score: currentScore,

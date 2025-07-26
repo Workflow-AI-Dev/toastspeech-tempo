@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { View, Text, TouchableOpacity, ScrollView, Modal, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "./context/AuthContext";
@@ -22,36 +22,80 @@ import {
   House,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "./context/ThemeContext";
+import { BASE_URL } from "./config/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState(""); 
+  const [modalTitle, setModalTitle] = useState("");
   const [isFirstTime, setIsFirstTime] = useState(true);
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
+  const [plan, setPlan] = useState<string | null>(null);
+  const [limits, setLimits] = useState<any>(null);
 
-  const getTimeBasedGreeting = () => {
+  const greeting = useMemo(() => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) return "Good morning!";
     if (hour >= 12 && hour < 17) return "Good afternoon!";
     if (hour >= 17 && hour < 21) return "Good evening!";
     return "Hey there!";
-  };
+  }, []);
 
-  const greeting = useMemo(() => getTimeBasedGreeting(), []);
+  const fetchPlan = useCallback(async () => {
+      try {
+          const token = await AsyncStorage.getItem("auth_token");
+          if (!token) {
+              console.warn("No auth token found. User might not be authenticated.");
+              return;
+          }
+          const res = await fetch(`${BASE_URL}/subscription/plan`, { 
+              headers: {
+                  Authorization: `Bearer ${token}`,
+              },
+          });
+          const data = await res.json();
+          if (res.ok) {
+              setPlan(data.id);
+          } else {
+              console.error("Plan fetch failed", data);
+              // Handle specific error codes if necessary, e.g., token expired
+          }
+      } catch (error) {
+          console.error("Error fetching subscription plan", error);
+      }
+  }, []);
 
-  // Show loading state while checking authentication
-  if (loading) {
-    return (
-      <SafeAreaView
-        className="flex-1 justify-center items-center"
-        style={{ backgroundColor: colors.background }}
-      >
-        <Text style={{ color: colors.text }}>Loading...</Text>
-      </SafeAreaView>
-    );
-  }
+  const fetchLimits = useCallback(async () => {
+      try {
+          const token = await AsyncStorage.getItem("auth_token");
+          if (!token) {
+              console.warn("No auth token found. User might not be authenticated.");
+              return;
+          }
+          const res = await fetch(`${BASE_URL}/subscription/check_limits`, { 
+              headers: {
+                  Authorization: `Bearer ${token}`,
+              },
+          });
+          const data = await res.json();
+          if (res.ok) {
+              setLimits(data);
+          } else {
+              console.error("Limits fetch failed", data);
+          }
+      } catch (error) {
+          console.error("Error fetching limits", error);
+      }
+  }, []);
+
+  useEffect(() => {
+      fetchPlan();
+      fetchLimits();
+  }, [fetchPlan, fetchLimits]);
 
   // This screen should only be accessible to authenticated users
   // The AuthContext will handle redirecting unauthenticated users
@@ -63,53 +107,127 @@ export default function HomeScreen() {
     streakDays: 12,
   };
 
-  const features = [
-    {
-      id: "performance-dashboard",
-      title: "Your Progress",
-      description: "Track stats & level up",
-      icon: BarChart2,
-      color: "#8b5cf6",
-      bgColor: "#faf5ff",
-      onPress: () => router.push("/performance-dashboard"),
-    },
-    {
-      id: "speech-recorder",
-      title: "Speaker Mode",
-      description: "AI-powered feedback in seconds",
-      icon: Mic,
-      color: "#6366f1",
-      bgColor: "#f0f9ff",
-      onPress: () => router.push("/speaker-mode"),
-    },
-    {
-      id: "evaluation-tools",
-      title: "Evaluator Mode",
-      description: "Test your evaluation skills",
-      icon: Award,
-      color: "#10b981",
-      bgColor: "#f0fdf4",
-      onPress: () => router.push("/evaluator-mode"),
-    },
-    {
-      id: "practice",
-      title: "Practice Mode",
-      description: "Warmup to sharpen your delivery skills",
-      icon: Zap,
-      color: "#f59e0b",
-      bgColor: "#fff7ed",
-      onPress: () => router.push("/practice-mode"),
-    },
-    {
-      id: "feedback-library",
-      title: "Library",
-      description: "Browse all your past sessions",
-      icon: BookOpen,
-      color: "#06b6d4",
-      bgColor: "#f0fdfa",
-      onPress: () => router.push("/feedback-library"),
-    },
-  ];
+  const handleFeaturePress = (featureId: string, currentOnPress: () => void, isLocked: boolean) => {
+    if (isLocked) {
+      setModalTitle("Feature Locked");
+      setModalMessage("This feature is locked. Upgrade your plan to unlock your full potential!");
+      setShowSubscriptionModal(true);
+      return;
+    }
+
+    if (!limits) {
+      // Limits not loaded yet, prevent action and maybe show a loading indicator or alert
+      console.log("Limits not yet loaded. Please wait.");
+      return;
+    }
+
+    let hasLimitReached = false;
+    let limitType = "";
+
+    switch (featureId) {
+      case "speech-recorder":
+        if (limits.total_remaining_speeches <= 0) {
+          hasLimitReached = true;
+          limitType = "speeches";
+        }
+        break;
+      case "evaluation-tools":
+        if (limits.total_remaining_eval <= 0) {
+          hasLimitReached = true;
+          limitType = "evaluations";
+        }
+        break;
+      case "practice":
+        if (limits.total_remaining_practice <= 0) {
+          hasLimitReached = true;
+          limitType = "practice sessions";
+        }
+        break;
+      default:
+        // For features without specific limits, proceed normally
+        break;
+    }
+
+    if (hasLimitReached) {
+      setModalTitle("Limit Reached");
+      setModalMessage(`You've reached your limit for ${limitType} this month. Upgrade your plan for more!`);
+      setShowSubscriptionModal(true);
+    } else {
+      currentOnPress(); // Proceed with the original navigation
+    }
+  };
+
+    const features = useMemo(() => {
+      const isAspiringOrCasual = plan === "aspiring" || plan === "casual";
+      const isCasual = plan === "casual";
+
+      return [
+          {
+              id: "performance-dashboard",
+              title: "Your Progress",
+              description: "Track stats & level up",
+              icon: BarChart2,
+              color: "#8b5cf6",
+              bgColor: "#faf5ff",
+              locked: isCasual, // casual users don't get dashboard
+              onPress: () => router.push("/performance-dashboard"),
+          },
+          {
+              id: "speech-recorder",
+              title: "Speaker Mode",
+              description: "AI-powered feedback in seconds",
+              icon: Mic,
+              color: "#6366f1",
+              bgColor: "#f0f9ff",
+              locked: false,
+              onPress: () => router.push("/speaker-mode"),
+          },
+          {
+              id: "evaluation-tools",
+              title: "Evaluator Mode",
+              description: "Test your evaluation skills",
+              icon: Award,
+              color: "#10b981",
+              bgColor: "#f0fdf4",
+              locked: isAspiringOrCasual, // disable for aspiring and casual
+              onPress: () => router.push("/evaluator-mode"),
+          },
+          {
+              id: "practice",
+              title: "Practice Mode",
+              description: "Warmup to sharpen your delivery skills",
+              icon: Zap,
+              color: "#f59e0b",
+              bgColor: "#fff7ed",
+              locked: false,
+              onPress: () => router.push("/practice-mode"),
+          },
+          {
+              id: "feedback-library",
+              title: "Library",
+              description: "Browse all your past sessions",
+              icon: BookOpen,
+              color: "#06b6d4",
+              bgColor: "#f0fdfa",
+              locked: false,
+              onPress: () => router.push("/feedback-library"),
+          },
+      ];
+    }, [plan, router]);
+
+
+// Show loading state while checking authentication
+  if (loading) {
+    return (
+      <SafeAreaView
+        className="flex-1 justify-center items-center"
+        style={{ backgroundColor: colors.background }}
+      >
+        <Text style={{ color: colors.text }}>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
 
   const achievements = [
     {
@@ -154,110 +272,6 @@ export default function HomeScreen() {
       emoji: <Mic size={24} color="#7c3aed" />,
     },
   ];
-
-  const SubscriptionModal = () => (
-    <View className="absolute inset-0 bg-black/50 flex-1 justify-center items-center z-50">
-      <View
-        className="rounded-3xl mx-4 p-6 max-w-sm w-full"
-        style={{ backgroundColor: colors.card }}
-      >
-        <TouchableOpacity
-          className="absolute top-4 right-4 z-10"
-          onPress={() => setShowSubscriptionModal(false)}
-        >
-          <X size={24} color="#666" />
-        </TouchableOpacity>
-
-        <View className="items-center mb-6">
-          <Text className="text-2xl mb-2">🚀</Text>
-          <Text className="text-xl font-bold text-center">
-            Unlock Your Speaking Potential!
-          </Text>
-          <Text className="text-gray-600 text-center mt-2">
-            You've used your free evaluation this month
-          </Text>
-        </View>
-
-        {/* Free Plan */}
-        <View
-          className="rounded-2xl p-4 mb-3"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="font-bold text-lg">Try & Taste</Text>
-            <Text className="text-2xl font-bold text-gray-800">FREE</Text>
-          </View>
-          <Text className="text-sm text-gray-600 mb-3">
-            Perfect for getting started
-          </Text>
-          <View className="space-y-1">
-            <Text className="text-sm">✅ 1 evaluation per month</Text>
-            <Text className="text-sm">✅ Basic AI feedback</Text>
-            <Text className="text-sm">❌ Video analysis</Text>
-            <Text className="text-sm">❌ Detailed reports</Text>
-          </View>
-        </View>
-
-        {/* Essential Plan */}
-        <View className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4 mb-3 border-2 border-blue-200">
-          <View className="flex-row justify-between items-center mb-2">
-            <View>
-              <Text className="font-bold text-lg">Practice & Improve</Text>
-              <View className="bg-blue-500 rounded-full px-2 py-1">
-                <Text className="text-white text-xs font-bold">POPULAR</Text>
-              </View>
-            </View>
-            <View className="items-end">
-              <Text className="text-2xl font-bold text-blue-600">$5</Text>
-              <Text className="text-sm text-gray-600">/month</Text>
-            </View>
-          </View>
-          <Text className="text-sm text-gray-600 mb-3">
-            For regular speakers
-          </Text>
-          <View className="space-y-1">
-            <Text className="text-sm">✅ 2 evaluations per month</Text>
-            <Text className="text-sm">✅ Video + voice analysis</Text>
-            <Text className="text-sm">✅ Detailed feedback</Text>
-            <Text className="text-sm">✅ Progress tracking</Text>
-          </View>
-          <TouchableOpacity className="bg-blue-500 rounded-xl py-3 mt-4">
-            <Text className="text-white font-bold text-center">
-              Choose Essential
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Pro Plan */}
-        <View className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-4 border-2 border-purple-200">
-          <View className="flex-row justify-between items-center mb-2">
-            <View>
-              <Text className="font-bold text-lg">Coach & Analyze</Text>
-              <View className="bg-purple-500 rounded-full px-2 py-1">
-                <Text className="text-white text-xs font-bold">PRO</Text>
-              </View>
-            </View>
-            <View className="items-end">
-              <Text className="text-2xl font-bold text-purple-600">$20</Text>
-              <Text className="text-sm text-gray-600">/month</Text>
-            </View>
-          </View>
-          <Text className="text-sm text-gray-600 mb-3">
-            For serious speakers
-          </Text>
-          <View className="space-y-1">
-            <Text className="text-sm">✅ 10 evaluations per month</Text>
-            <Text className="text-sm">✅ Evaluator mode</Text>
-            <Text className="text-sm">✅ Advanced analytics</Text>
-            <Text className="text-sm">✅ Priority support</Text>
-          </View>
-          <TouchableOpacity className="bg-purple-500 rounded-xl py-3 mt-4">
-            <Text className="text-white font-bold text-center">Choose Pro</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
 
   return (
     <SafeAreaView
@@ -351,11 +365,7 @@ export default function HomeScreen() {
                     borderColor: colors.border,
                     borderWidth: 1,
                   }}
-                  onPress={
-                    feature.locked
-                      ? () => router.push("/subscription")
-                      : feature.onPress
-                  }
+                  onPress={() => handleFeaturePress(feature.id, feature.onPress, feature.locked)}
                 >
                   <View className="flex-row items-center flex-1">
                     <View
@@ -382,7 +392,7 @@ export default function HomeScreen() {
                         {feature.locked && (
                           <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
                             <Text className="text-xs font-bold text-gray-600">
-                              PRO
+                              LOCKED
                             </Text>
                           </View>
                         )}
@@ -592,7 +602,93 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {showSubscriptionModal && <SubscriptionModal />}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showSubscriptionModal}
+        onRequestClose={() => setShowSubscriptionModal(false)}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowSubscriptionModal(false)}
+            >
+              <X size={24} color="#333" />
+            </TouchableOpacity>
+            <Crown size={60} color="#f97316" style={{ marginBottom: 20 }} />
+            <Text style={styles.modalTitle}>{modalTitle}</Text>
+            <Text style={styles.modalText}>
+              {modalMessage} {/* This will display the specific message */}
+            </Text>
+            <TouchableOpacity
+              style={styles.upgradeButton}
+              onPress={() => {
+                setShowSubscriptionModal(false);
+                router.push("/subscription"); // Navigate to your subscription page
+              }}
+            >
+              <Text style={styles.upgradeButtonText}>Upgrade Plan</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+    centeredView: {
+        flex: 1,
+        justifyContent: "flex-end", // Align to bottom
+        alignItems: "center",
+        backgroundColor: "rgba(0,0,0,0.5)",
+    },
+    modalView: {
+        backgroundColor: "white",
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 35,
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+        width: "100%", // Take full width
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 15,
+        right: 15,
+        padding: 5,
+    },
+    modalTitle: {
+        fontSize: 24,
+        fontWeight: "bold",
+        marginBottom: 15,
+        color: "#333",
+    },
+    modalText: {
+        marginBottom: 25,
+        textAlign: "center",
+        fontSize: 16,
+        color: "#666",
+        lineHeight: 24,
+    },
+    upgradeButton: {
+        backgroundColor: "#f97316", // Orange color for upgrade button
+        borderRadius: 10,
+        paddingVertical: 14,
+        paddingHorizontal: 30,
+        elevation: 2,
+    },
+    upgradeButtonText: {
+        color: "white",
+        fontWeight: "bold",
+        fontSize: 18,
+    },
+});

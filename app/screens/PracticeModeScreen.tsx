@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -87,6 +87,29 @@ export default function PracticeModeScreen({
   });
   const [detailedFeedback, setDetailedFeedback] = useState(null);
   const router = useRouter();
+  const [plan, setPlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPlan = async () => {
+      try {
+        const token = await AsyncStorage.getItem("auth_token");
+        const res = await fetch(`${BASE_URL}/subscription/plan`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setPlan(data.id); 
+        } else {
+          console.error("Plan fetch failed", data);
+        }
+      } catch (error) {
+        console.error("Error fetching subscription plan", error);
+      }
+    };
+    fetchPlan();
+  }, []);
 
   const handleRecordingComplete = (data) => {
     setRecordingData(data); // Save recording file info
@@ -854,6 +877,7 @@ export default function PracticeModeScreen({
 
           {/* Video + Audio Option */}
           <TouchableOpacity
+            disabled={plan === "casual"}
             className="rounded-3xl p-6 mb-6 shadow-lg"
             style={{
               backgroundColor: colors.card,
@@ -864,11 +888,16 @@ export default function PracticeModeScreen({
               shadowOpacity: theme === "dark" ? 0.3 : 0.1,
               shadowRadius: 12,
               elevation: 8,
+              opacity: plan === "casual" ? 0.4 : 1,
             }}
-            onPress={() => {
-              setRecordingMethod("video");
-              setCurrentStep("record");
-            }}
+            onPress={
+              plan === "casual"
+                ? undefined
+                : () => {
+                    setRecordingMethod("video");
+                    setCurrentStep("record");
+                  }
+            }
           >
             <View className="flex-row items-center mb-4">
               <View
@@ -881,16 +910,20 @@ export default function PracticeModeScreen({
                 <Video size={28} color={colors.accent} />
               </View>
               <View className="flex-1">
-                <Text
-                  className="text-xl font-bold"
-                  style={{ color: colors.text }}
-                >
-                  Record Video
-                </Text>
-                <Text
-                  className="text-base"
-                  style={{ color: colors.textSecondary }}
-                >
+                <View className="flex-row items-center">
+                  <Text className="text-xl font-bold" style={{ color: colors.text }}>
+                    Record Video
+                  </Text>
+
+                  {/* 🔒 LOCKED badge for casual users */}
+                  {plan === "casual" && (
+                    <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
+                      <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
+                    </View>
+                  )}
+                </View>
+
+                <Text className="text-base" style={{ color: colors.textSecondary }}>
                   Record with camera and microphone
                 </Text>
               </View>
@@ -963,7 +996,7 @@ export default function PracticeModeScreen({
                   className="text-base"
                   style={{ color: colors.textSecondary }}
                 >
-                  Select a pre-recorded file (audio/video) from device
+                  Select a pre-recorded file from device
                 </Text>
               </View>
               <ChevronRight size={24} color={colors.textSecondary} />
@@ -1039,6 +1072,7 @@ export default function PracticeModeScreen({
             isProcessing={isProcessing}
             analysisResults={analysisResults}
             recordingMethod={recordingMethod}
+            plan={plan}
           />
 
           {/* Confirmation Modal */}

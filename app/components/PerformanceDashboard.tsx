@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { LineChart, BarChart } from "react-native-chart-kit";
 import { Dimensions } from "react-native";
@@ -19,6 +18,7 @@ import {
   Timer,
   CheckCircle,
 } from "lucide-react-native";
+import { useRouter } from "expo-router";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../config/api";
@@ -92,6 +92,7 @@ const PerformanceDashboard = ({
   const [selectedMetric, setSelectedMetric] = useState("Overall Score");
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
+  const router = useRouter();
 
   const screenWidth = Dimensions.get("window").width - 32; // Accounting for padding
   const [avgScore, setAvgScore] = useState<number>(0);
@@ -154,6 +155,29 @@ const PerformanceDashboard = ({
     "Pauses",
     "Environment",
   ];
+  const [plan, setPlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPlan = async () => {
+      try {
+        const token = await AsyncStorage.getItem("auth_token");
+        const res = await fetch(`${BASE_URL}/subscription/plan`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setPlan(data.id); 
+        } else {
+          console.error("Plan fetch failed", data);
+        }
+      } catch (error) {
+        console.error("Error fetching subscription plan", error);
+      }
+    };
+    fetchPlan();
+  }, []);
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -701,6 +725,45 @@ const PerformanceDashboard = ({
       </View>
     );
   };
+
+  if (plan === "casual") {
+  return (
+    <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: colors.background }}>
+      <Text className="text-2xl font-bold mb-4 text-center" style={{ color: colors.text }}>
+        🚫 Feature Locked
+      </Text>
+      <Text className="text-base text-center mb-8" style={{ color: colors.textSecondary }}>
+        This feature is only available on premium plans. Upgrade your subscription to unlock performance analytics and insights.
+      </Text>
+
+      <View className="flex-row space-x-4">
+        <TouchableOpacity
+          className="px-6 py-3 rounded-xl mr-2"
+          style={{ backgroundColor: colors.card }}
+          onPress={() => {
+            // navigate to Home
+            router.push("/")
+          }}
+        >
+          <Text className="font-semibold" style={{ color: colors.text }}>
+            Go Home
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className="px-6 py-3 rounded-xl"
+          style={{ backgroundColor: colors.primary }}
+          onPress={() => {
+            router.push("/subscription")
+          }}
+        >
+          <Text className="text-white font-semibold">Upgrade</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView className="flex-1">

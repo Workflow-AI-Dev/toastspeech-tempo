@@ -20,7 +20,7 @@ import * as Haptics from "expo-haptics";
 import * as DocumentPicker from "expo-document-picker";
 import { Audio } from "expo-av";
 import { Camera as ExpoCamera } from "expo-camera";
-import { FFmpegKit, ReturnCode } from "ffmpeg-kit-react-native";
+import { FFmpegKit } from "ffmpeg-kit-react-native";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -35,12 +35,14 @@ interface SpeechRecorderSpeakerProps {
     overallScore: number;
   };
   recordingMethod?: "audio" | "video" | "upload" | null;
+  plan: string;
 }
 
 const SpeechRecorderSpeaker = ({
   onRecordingComplete = () => {},
   isProcessing = false,
   recordingMethod = "audio",
+  plan,
 }: SpeechRecorderSpeakerProps) => {
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "paused" | "completed" | "uploading"
@@ -378,21 +380,44 @@ const SpeechRecorderSpeaker = ({
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+      const allowedTypes =
+      plan === "casual"
+        ? ["audio/mpeg", "audio/wav"]
+        : [
+            "audio/mpeg",
+            "audio/wav",
+            "audio/m4a",
+            "audio/mp4",
+            "video/mp4",
+            "video/mov",
+            "video/avi",
+          ];
+
+      const allowedExtensions = plan === "casual"
+      ? ["mp3", "wav"]
+      : ["mp3", "wav", "m4a", "mp4", "mov", "avi"];
+          
+
       const result = await DocumentPicker.getDocumentAsync({
-        type: [
-          "audio/mpeg",
-          "audio/wav",
-          "audio/m4a",
-          "audio/mp4",
-          "video/mp4",
-          "video/mov",
-          "video/avi",
-        ],
+        type: allowedTypes,
         copyToCacheDirectory: true,
       });
 
+
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
+
+        const fileExtension = file.name.split(".").pop()?.toLowerCase() || "";
+        if (!allowedTypes.includes(file.mimeType || "") && !allowedExtensions.includes(fileExtension)) {
+          Alert.alert(
+            "Unsupported File",
+            `This file type is not supported.\nPlease upload a valid audio/video file.`,
+            [{ text: "OK" }]
+          );
+          console.log('unsupported file')
+          return;
+        }
+
         setSelectedFile(file);
         setRecordingState("uploading");
 
@@ -448,79 +473,19 @@ const SpeechRecorderSpeaker = ({
 
   // Video compression function using FFmpeg
   const compressVideo = async (videoUri: string): Promise<string> => {
-    try {
-      console.log("Starting FFmpeg video compression for:", videoUri);
+    const outputUri = videoUri.replace(/\.mp4$/, '_compressed.mp4');
 
-      // Get file info to check size
-      const fileInfo = await FileSystem.getInfoAsync(videoUri);
-      const fileSizeInMB = fileInfo.size ? fileInfo.size / (1024 * 1024) : 0;
+  const ffmpegCommand = `-i "${videoUri}" -vf fps=1 -c:v libx264 -preset ultrafast -crf 32 -movflags +faststart "${outputUri}"`;
 
-      console.log(`Original file size: ${fileSizeInMB.toFixed(2)} MB`);
+  const session = await FFmpegKit.execute(ffmpegCommand);
+  const returnCode = await session.getReturnCode();
 
-      // Create compressed file path
-      const compressedUri = `${FileSystem.cacheDirectory}compressed_video_${Date.now()}.mp4`;
-
-      // FFmpeg command to compress video with 5fps, lower resolution, and aggressive compression
-      const ffmpegCommand = `-i "${videoUri}" -vf "fps=5,scale=640:480" -c:v libx264 -preset ultrafast -crf 28 -c:a aac -b:a 64k -movflags +faststart "${compressedUri}"`;
-
-      console.log("Running FFmpeg command:", ffmpegCommand);
-
-      // Execute FFmpeg command
-      const session = await FFmpegKit.execute(ffmpegCommand);
-      const returnCode = await session.getReturnCode();
-
-      if (ReturnCode.isSuccess(returnCode)) {
-        console.log("FFmpeg compression successful");
-
-        // Check compressed file size
-        const compressedFileInfo = await FileSystem.getInfoAsync(compressedUri);
-        const compressedSizeInMB = compressedFileInfo.size
-          ? compressedFileInfo.size / (1024 * 1024)
-          : 0;
-
-        console.log(
-          `Compressed file size: ${compressedSizeInMB.toFixed(2)} MB`,
-        );
-
-        // If still too large, try more aggressive compression
-        if (compressedSizeInMB > 20) {
-          const ultraCompressedUri = `${FileSystem.cacheDirectory}ultra_compressed_video_${Date.now()}.mp4`;
-          const ultraCommand = `-i "${videoUri}" -vf "fps=3,scale=480:360" -c:v libx264 -preset ultrafast -crf 32 -c:a aac -b:a 32k -movflags +faststart "${ultraCompressedUri}"`;
-
-          const ultraSession = await FFmpegKit.execute(ultraCommand);
-          const ultraReturnCode = await ultraSession.getReturnCode();
-
-          if (ReturnCode.isSuccess(ultraReturnCode)) {
-            const ultraFileInfo =
-              await FileSystem.getInfoAsync(ultraCompressedUri);
-            const ultraSizeInMB = ultraFileInfo.size
-              ? ultraFileInfo.size / (1024 * 1024)
-              : 0;
-            console.log(
-              `Ultra compressed file size: ${ultraSizeInMB.toFixed(2)} MB`,
-            );
-            return ultraCompressedUri;
-          }
-        }
-
-        return compressedUri;
-      } else {
-        console.error(
-          "FFmpeg compression failed with return code:",
-          returnCode,
-        );
-        const logs = await session.getAllLogs();
-        console.error(
-          "FFmpeg logs:",
-          logs.map((log) => log.getMessage()).join("\n"),
-        );
-        return videoUri; // Return original if compression fails
-      }
-    } catch (error) {
-      console.error("Error compressing video with FFmpeg:", error);
-      // Return original URI if compression fails
-      return videoUri;
-    }
+  if (returnCode.isSuccess()) {
+    console.log('Compression successful:', outputUri);
+    return outputUri;
+  } else {
+    throw new Error('Compression failed');
+  }
   };
 
   // Function to process and compress files
@@ -598,16 +563,19 @@ const SpeechRecorderSpeaker = ({
     }
   };
 
-  const getRecordingDescription = () => {
-    switch (recordingMethod) {
-      case "video":
-        return "Tap to start recording with camera and microphone";
-      case "upload":
-        return "Tap to select a file from your device\nSupported: MP3, WAV, M4A, MP4, MOV, AVI";
-      default:
-        return "Tap the mic to start recording";
-    }
-  };
+const getRecordingDescription = () => {
+  switch (recordingMethod) {
+    case "video":
+      return "Tap to start recording with camera and microphone";
+    case "upload":
+      return plan === "casual"
+        ? "Tap to select a file from your device\nSupported: MP3, WAV"
+        : "Tap to select a file from your device\nSupported: MP3, WAV, M4A, MP4, MOV, AVI";
+    default:
+      return "Tap the mic to start recording";
+  }
+};
+
 
   return (
     <View className="bg-gradient-to-b from-purple-50 to-indigo-50 w-full h-[500px] rounded-2xl overflow-hidden">
