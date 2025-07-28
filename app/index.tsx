@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Modal, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Modal, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "./context/AuthContext";
@@ -219,13 +219,14 @@ export default function HomeScreen() {
 // Show loading state while checking authentication
   if (loading) {
     return (
-      <SafeAreaView
-        className="flex-1 justify-center items-center"
-        style={{ backgroundColor: colors.background }}
-      >
-        <Text style={{ color: colors.text }}>Loading...</Text>
-      </SafeAreaView>
-    );
+    <SafeAreaView
+      className="flex-1 justify-center items-center"
+      style={{ backgroundColor: colors.background }}
+    >
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={{ color: colors.text, marginTop: 10 }}>Just a moment...</Text>
+    </SafeAreaView>
+  );
   }
 
 

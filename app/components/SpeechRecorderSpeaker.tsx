@@ -21,9 +21,9 @@ import * as DocumentPicker from "expo-document-picker";
 import { Audio } from "expo-av";
 import { Camera as ExpoCamera } from "expo-camera";
 import { FFmpegKit } from "ffmpeg-kit-react-native";
+import { Video as VideoCompressor } from 'react-native-compressor'; 
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface SpeechRecorderSpeakerProps {
   onRecordingComplete?: (recordingData: any) => void;
@@ -77,7 +77,6 @@ const SpeechRecorderSpeaker = ({
     }
   }, [isProcessing, recordingState]);
 
-  const BASE_URL = "http://127.0.0.1:8000";
 
   // Animation value for audio visualization
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
@@ -159,57 +158,6 @@ const SpeechRecorderSpeaker = ({
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const uploadFileToBackend = async ({
-    fileUri,
-    fileName = "recording.mp4",
-    mimeType = "application/octet-stream",
-    taskType = "audio_evaluation",
-    modeType = "speaker",
-    token,
-  }) => {
-    try {
-      const formData = new FormData();
-
-      if (Platform.OS === "web") {
-        // Fetch actual file blob from URI for web
-        const res = await fetch(fileUri);
-        const blob = await res.blob();
-
-        const file = new File([blob], fileName, { type: mimeType });
-        formData.append("file", file);
-      } else {
-        // React Native FormData expects this format
-        formData.append("file", {
-          uri: fileUri,
-          name: fileName,
-          type: mimeType,
-        });
-      }
-
-      formData.append("task_type", taskType);
-      formData.append("mode_type", modeType);
-
-      const response = await fetch(`${BASE_URL}/speech/process_file`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const err = await response.text();
-        throw new Error(err || "Upload failed");
-      }
-
-      const data = await response.json();
-      console.log("✅ Upload success:", data);
-      return data;
-    } catch (err) {
-      console.error("❌ Upload error:", err);
-      throw err;
-    }
-  };
 
   const handleStartRecording = async () => {
     try {
@@ -308,12 +256,9 @@ const SpeechRecorderSpeaker = ({
         recordingUri = recording.getURI();
         setRecording(null);
       } else if (recordingMethod === "video" && isRecordingVideo) {
-        // Stop video recording with Vision Camera
         await expoCameraRef.current?.stopRecording();
         setIsRecordingVideo(false);
-
-        // The recordingUri will be set in the onRecordingFinished callback
-        // For now, we'll use a placeholder and handle it in the processing
+        recordingUri = recordedVideoUri; // Use the URI captured when recording started
       }
 
       setRecordingState("uploading"); // Show processing state
@@ -471,21 +416,48 @@ const SpeechRecorderSpeaker = ({
     }
   };
 
-  // Video compression function using FFmpeg
+  // Video compression function using react-native-compressor
   const compressVideo = async (videoUri: string): Promise<string> => {
-    const outputUri = videoUri.replace(/\.mp4$/, '_compressed.mp4');
+    console.log("Starting video compression...");
+    const originalFileInfo = await FileSystem.getInfoAsync(videoUri);
+    console.log(`Original video size: ${ (originalFileInfo.size / (1024 * 1024)).toFixed(2)} MB`);
 
-  const ffmpegCommand = `-i "${videoUri}" -vf fps=1 -c:v libx264 -preset ultrafast -crf 32 -movflags +faststart "${outputUri}"`;
+    const outputUri = `${FileSystem.cacheDirectory}compressed_video_${Date.now()}.mp4`;
 
-  const session = await FFmpegKit.execute(ffmpegCommand);
-  const returnCode = await session.getReturnCode();
+    try {
+      const result = await VideoCompressor.compress(
+        videoUri,
+        {
+          bitrate: 500, // Target bitrate in kbps
+          maxSize: 720, // Max dimension (width or height)
+          minimumFileSizeForCompress: 0, // Compress even small files
+          // The next two options help control file size but aren't direct "max size" in MB
+          // quality: 'low', // You can try 'low', 'medium', 'high'
+          compressionMethod: 'auto', // 'auto', 'fast', 'manual'
+        },
+        (progress) => {
+          console.log(`Compression progress: ${Math.round(progress * 100)}%`);
+        }
+      );
 
-  if (returnCode.isSuccess()) {
-    console.log('Compression successful:', outputUri);
-    return outputUri;
-  } else {
-    throw new Error('Compression failed');
-  }
+      const compressedFileInfo = await FileSystem.getInfoAsync(result);
+      const compressedSizeMB = (compressedFileInfo.size / (1024 * 1024));
+
+      console.log(`Compression successful!`);
+      console.log(`Compressed video URI: ${result}`);
+      console.log(`Compressed video size: ${compressedSizeMB.toFixed(2)} MB`);
+
+      if (compressedSizeMB > 20) {
+        console.warn(`Compressed file size (${compressedSizeMB.toFixed(2)} MB) is over 20MB.`);
+        // You might want to handle this case, e.g., re-compress with stricter settings or alert the user.
+        // For now, we'll proceed with the larger file.
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Video compression failed:", error);
+      throw new Error("Video compression failed");
+    }
   };
 
   // Function to process and compress files
@@ -497,13 +469,20 @@ const SpeechRecorderSpeaker = ({
       const isWeb = Platform.OS === "web";
 
       // Detect if it's a video file
-      const isVideo = fileName
-        ? fileName.toLowerCase().includes(".mp4") ||
-          fileName.toLowerCase().includes(".mov") ||
-          fileName.toLowerCase().includes(".avi")
-        : fileUri.toLowerCase().includes(".mp4") ||
-          fileUri.toLowerCase().includes(".mov") ||
-          fileUri.toLowerCase().includes(".avi");
+      const isVideoFile = (mimeType?: string, name?: string) => {
+        const videoMimeTypes = ["video/mp4", "video/mov", "video/avi"];
+        const videoExtensions = ["mp4", "mov", "avi"];
+
+        const hasVideoMime = mimeType ? videoMimeTypes.includes(mimeType.toLowerCase()) : false;
+        const hasVideoExtension = name ? videoExtensions.includes(name.split(".").pop()?.toLowerCase() || "") : false;
+
+        // Also ensure it's not specifically an audio MIME type
+        const audioMimeTypes = ["audio/mpeg", "audio/wav", "audio/m4a", "audio/mp4"];
+        const isAudioMime = mimeType ? audioMimeTypes.includes(mimeType.toLowerCase()) : false;
+
+        return (hasVideoMime || hasVideoExtension) && !isAudioMime;
+      };
+      const isVideo = isVideoFile(selectedFile?.mimeType, fileName);
 
       if (!isVideo || isWeb) {
         // ✅ Skip compression and FileSystem if on web or audio file

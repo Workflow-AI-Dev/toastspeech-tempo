@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import {
   BarChart3,
   Star,
@@ -13,6 +13,7 @@ import {
   Award,
   Target,
   Zap,
+  Inbox,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import QuickFeedbackEvaluations from "./QuickFeedbackEvaluations";
@@ -20,6 +21,7 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../config/api";
 import { Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface Evaluation {
   id: string;
@@ -42,6 +44,8 @@ interface Evaluation {
 
 interface EvaluationsLibraryProps {
   evaluations: Evaluation[];
+  isLoading?: boolean;
+  noResults?: boolean;
   onViewDetailedFeedbackEval: (id: string) => void;
   onRefresh?: () => void;
 }
@@ -50,6 +54,7 @@ export default function EvaluationsLibrary({
   evaluations = [],
   onViewDetailedFeedbackEval = () => {},
   isLoading = false,
+  noResults = false,
   onRefresh = () => {},
 }: EvaluationsLibraryProps) {
   const { theme } = useTheme();
@@ -417,16 +422,56 @@ export default function EvaluationsLibrary({
     );
   };
 
-  if (isLoading) {
-    return (
-      <View className="flex-1 justify-center items-center">
-        <Text style={{ color: colors.text, fontSize: 18, marginBottom: 12 }}>
-          Loading your speeches...
-        </Text>
-        <Award size={48} color={colors.primary} />
-      </View>
-    );
-  }
+if (isLoading) {
+  return (
+    <SafeAreaView
+      className="flex-1 justify-center items-center mt-9" // Centers content both horizontally and vertically
+      style={{ backgroundColor: colors.background }}
+    >
+      <ActivityIndicator size="large" color={colors.primary} />
+      {/* Provides clear visual separation and emphasis for the loading message */}
+      <Text style={{ color: colors.text, marginTop: 16, fontSize: 16, fontWeight: '600' }}>
+        Loading your evaluations...
+      </Text>
+    </SafeAreaView>
+  );
+}
+
+if (noResults && !isLoading) {
+  return (
+    <SafeAreaView
+  className="flex-1 items-center px-6"
+  style={{ backgroundColor: colors.background, justifyContent: "flex-start" }}
+>
+  <View style={{ marginTop: 120, alignItems: "center" }}>
+    <Inbox size={64} color={colors.textSecondary} strokeWidth={1.5} />
+    <Text
+      style={{
+        color: colors.text,
+        marginTop: 16,
+        fontSize: 18,
+        fontWeight: "600",
+        textAlign: "center",
+      }}
+    >
+      No results found
+    </Text>
+    <Text
+      style={{
+        color: colors.textSecondary,
+        marginTop: 8,
+        fontSize: 14,
+        textAlign: "center",
+        maxWidth: 280,
+      }}
+    >
+      Try adjusting your filters or search terms to find what you need.
+    </Text>
+  </View>
+</SafeAreaView>
+
+  );
+}
 
   if (selectedEvaluation) {
     return renderDetailView();

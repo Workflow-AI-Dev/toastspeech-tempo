@@ -234,6 +234,7 @@ export default function SpeakerModeScreen({
         crutchData: result.analytics?.crutch_phrases || [],
         grammarData: result.analytics?.grammar_mistakes || [],
         environData: result.analytics?.environmental_elements || [],
+        pitchData: result.pitch_track || [],
       };
 
       const mappedFeedback = {

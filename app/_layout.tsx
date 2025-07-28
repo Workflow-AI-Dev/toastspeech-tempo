@@ -12,6 +12,8 @@ import "../global.css";
 import { Platform } from "react-native";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
+import OfflineScreen from "./components/OfflineScreen"; // 
+import { useNetworkStatus } from './hooks/useNetworkStatus';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -20,6 +22,8 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
+
+  const isConnected = useNetworkStatus();
 
   useEffect(() => {
     if (process.env.EXPO_PUBLIC_TEMPO && Platform.OS === "web" && __DEV__) {
@@ -45,6 +49,11 @@ export default function RootLayout() {
 
   if (!loaded) {
     return null;
+  }
+
+   // Show offline fallback if not connected
+  if (!isConnected) {
+    return <OfflineScreen />;
   }
 
   return (

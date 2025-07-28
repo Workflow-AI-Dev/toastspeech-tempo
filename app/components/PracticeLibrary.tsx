@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  ActivityIndicator
 } from "react-native";
 import {
   ChevronRight,
@@ -29,12 +30,14 @@ import {
   Zap,
   CheckCircle,
   AlertCircle,
+  Inbox
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import QuickFeedbackPractice from "./QuickFeedbackPractice";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../config/api";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface PracticeEntry {
   id: string;
@@ -52,12 +55,14 @@ interface PracticeEntry {
 interface PracticeLibraryProps {
   practices?: PracticeEntry[];
   isLoading?: boolean;
+  noResults?: boolean;
   onRefresh?: () => void;
 }
 
 export default function PracticeLibrary({
   practices = [],
   isLoading = false,
+  noResults = false,
   onRefresh = () => {},
 }: PracticeLibraryProps) {
   const [selectedPractice, setSelectedPractice] =
@@ -420,14 +425,54 @@ export default function PracticeLibrary({
 
   if (isLoading) {
     return (
-      <View className="flex-1 justify-center items-center">
-        <Text style={{ color: colors.text, fontSize: 18, marginBottom: 12 }}>
-          Loading your practices...
+      <SafeAreaView
+        className="flex-1 justify-center items-center mt-9" // Centers content both horizontally and vertically
+        style={{ backgroundColor: colors.background }}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+        {/* Provides clear visual separation and emphasis for the loading message */}
+        <Text style={{ color: colors.text, marginTop: 16, fontSize: 16, fontWeight: '600' }}>
+          Loading your practice sessions...
         </Text>
-        <Award size={48} color={colors.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
+
+  if (noResults && !isLoading) {
+  return (
+    <SafeAreaView
+  className="flex-1 items-center px-6"
+  style={{ backgroundColor: colors.background, justifyContent: "flex-start" }}
+>
+  <View style={{ marginTop: 120, alignItems: "center" }}>
+    <Inbox size={64} color={colors.textSecondary} strokeWidth={1.5} />
+    <Text
+      style={{
+        color: colors.text,
+        marginTop: 16,
+        fontSize: 18,
+        fontWeight: "600",
+        textAlign: "center",
+      }}
+    >
+      No results found
+    </Text>
+    <Text
+      style={{
+        color: colors.textSecondary,
+        marginTop: 8,
+        fontSize: 14,
+        textAlign: "center",
+        maxWidth: 280,
+      }}
+    >
+      Try adjusting your filters or search terms to find what you need.
+    </Text>
+  </View>
+</SafeAreaView>
+
+  );
+}
 
   if (selectedPractice) {
     return renderDetailView();

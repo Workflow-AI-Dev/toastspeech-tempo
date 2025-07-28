@@ -57,8 +57,6 @@ const SpeechRecorder = ({
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [pendingRecordingData, setPendingRecordingData] = useState<any>(null);
 
-  const BASE_URL = "http://127.0.0.1:8000";
-
   // Animation value for audio visualization
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
 

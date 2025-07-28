@@ -61,6 +61,7 @@ export default function FeedbackLibrary({
   const [evaluations, setEvaluations] = useState([]);
   const [practices, setPractices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [noResults, setNoResults] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -144,6 +145,7 @@ export default function FeedbackLibrary({
             crutchData: speech.analytics?.crutch_phrases || [],
             grammarData: speech.analytics?.grammar_mistakes || [],
             environData: speech.analytics?.environmental_elements || [],
+            pitchData: speech.pitch_track || [],
             emoji: <Mic size={24} color="#7c3aed" />,
             category: speech.speech_type || "General",
             improvement,
@@ -500,6 +502,17 @@ export default function FeedbackLibrary({
     dateRange,
     activeTab,
   ]);
+
+  useEffect(() => {
+  if (activeTab === "speech") {
+    setNoResults(!isLoading && filteredSpeeches.length === 0);
+  } else if (activeTab === "evaluation") {
+    setNoResults(!isLoading && filteredEvaluations.length === 0);
+  } else if (activeTab === "practice") {
+    setNoResults(!isLoading && filteredPractices.length === 0);
+  }
+}, [activeTab, isLoading, filteredSpeeches, filteredEvaluations, filteredPractices]);
+
 
   // Clear all filters
   const clearFilters = () => {
@@ -980,6 +993,8 @@ export default function FeedbackLibrary({
         {activeTab === "speech" ? (
           <SpeechLibrary
             speeches={filteredSpeeches}
+            isLoading={isLoading}
+            noResults={noResults}
             onEditNotes={onEditNotes}
             onDeleteEntry={onDeleteEntry}
             onViewDetailedFeedback={onViewDetailedFeedback}
@@ -988,11 +1003,15 @@ export default function FeedbackLibrary({
         ) : activeTab === "practice" ? (
           <PracticeLibrary
             practices={filteredPractices}
+            isLoading={isLoading}
+            noResults={noResults}
             onRefresh={fetchPractices}
           />
         ) : (
           <EvaluationsLibrary
             evaluations={filteredEvaluations}
+            isLoading={isLoading}
+            noResults={noResults}
             onViewDetailedFeedbackEval={onViewDetailedFeedbackEval}
             onRefresh={fetchEvaluations}
           />

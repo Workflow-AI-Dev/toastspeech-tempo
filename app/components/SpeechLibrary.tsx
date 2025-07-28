@@ -6,7 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronRight,
   Clock,
@@ -29,6 +31,7 @@ import {
   Zap,
   CheckCircle,
   AlertCircle,
+  Inbox
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import QuickFeedback from "./QuickFeedback";
@@ -52,6 +55,7 @@ interface SpeechEntry {
 interface SpeechLibraryProps {
   speeches?: SpeechEntry[];
   isLoading?: boolean;
+  noResults?: boolean;
   onEditNotes?: (id: string) => void;
   onDeleteEntry?: (id: string) => void;
   onViewDetailedFeedback?: () => void;
@@ -62,6 +66,7 @@ export default function SpeechLibrary({
   speeches = [],
   onViewDetailedFeedback = () => {},
   isLoading = false,
+  noResults = false,
   onEditNotes = (id) => console.log(`Edit notes for speech ${id}`),
   onDeleteEntry = (id) => console.log(`Delete speech ${id}`),
   onRefresh = () => {},
@@ -369,6 +374,7 @@ export default function SpeechLibrary({
       crutchData: selectedSpeech.crutchData,
       grammarData: selectedSpeech.grammarData,
       environData: selectedSpeech.environData,
+      pitchData: selectedSpeech.pitchData
     };
 
     const feedback = {
@@ -479,16 +485,57 @@ export default function SpeechLibrary({
     );
   };
 
-  if (isLoading) {
-    return (
-      <View className="flex-1 justify-center items-center">
-        <Text style={{ color: colors.text, fontSize: 18, marginBottom: 12 }}>
-          Loading your speeches...
-        </Text>
-        <Award size={48} color={colors.primary} />
-      </View>
-    );
-  }
+if (isLoading) {
+  return (
+    <SafeAreaView
+      className="flex-1 justify-center items-center mt-9" // Centers content both horizontally and vertically
+      style={{ backgroundColor: colors.background }}
+    >
+      <ActivityIndicator size="large" color={colors.primary} />
+      {/* Provides clear visual separation and emphasis for the loading message */}
+      <Text style={{ color: colors.text, marginTop: 16, fontSize: 16, fontWeight: '600' }}>
+        Loading your speeches...
+      </Text>
+    </SafeAreaView>
+  );
+}
+
+if (noResults && !isLoading) {
+  return (
+    <SafeAreaView
+  className="flex-1 items-center px-6"
+  style={{ backgroundColor: colors.background, justifyContent: "flex-start" }}
+>
+  <View style={{ marginTop: 120, alignItems: "center" }}>
+    <Inbox size={64} color={colors.textSecondary} strokeWidth={1.5} />
+    <Text
+      style={{
+        color: colors.text,
+        marginTop: 16,
+        fontSize: 18,
+        fontWeight: "600",
+        textAlign: "center",
+      }}
+    >
+      No results found
+    </Text>
+    <Text
+      style={{
+        color: colors.textSecondary,
+        marginTop: 8,
+        fontSize: 14,
+        textAlign: "center",
+        maxWidth: 280,
+      }}
+    >
+      Try adjusting your filters or search terms to find what you need.
+    </Text>
+  </View>
+</SafeAreaView>
+
+  );
+}
+
 
   if (selectedSpeech) {
     return renderDetailView();
@@ -660,16 +707,14 @@ export default function SpeechLibrary({
               className="text-center mb-8 text-base leading-6"
               style={{ color: colors.textSecondary }}
             >
-              No past speeches yet. Time to grab that mic and show the world
-              what you've got. Your ToastSpeech journey starts now!
+              No past sessions yet. Time to grab that mic and start yout ToastSpeech journey!
             </Text>
 
             <TouchableOpacity
               className="rounded-2xl px-8 py-4 w-full"
               style={{ backgroundColor: colors.primary }}
               onPress={() => {
-                // Navigate to speaker-mode
-                alert("Navigating to Speaker Mode... 🎤");
+                router.push(`/speaker-mode`);
               }}
             >
               <View className="flex-row items-center justify-center">
