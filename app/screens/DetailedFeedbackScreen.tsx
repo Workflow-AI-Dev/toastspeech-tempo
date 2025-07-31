@@ -155,32 +155,26 @@ const DetailedFeedbackScreen = ({
     ]),
   );
 
-  const overallInsights = [
-    {
-      type: "strength",
-      icon: CheckCircle,
-      color: "#10b981",
-      title: "Natural Storyteller",
-      description:
-        "Your personal anecdotes created strong emotional connections with the audience.",
-    },
-    {
-      type: "improvement",
-      icon: AlertTriangle,
-      color: "#f59e0b",
-      title: "Filler Word Awareness",
-      description:
-        "Focus on eliminating filler words to sound more polished and confident.",
-    },
-    {
-      type: "tip",
-      icon: Lightbulb,
-      color: "#8b5cf6",
-      title: "Practice Recommendation",
-      description:
-        "Record yourself daily for 2 minutes to build awareness of speaking patterns.",
-    },
-  ];
+  const overallInsights = detailed?.OverallInsights?.map((item: any) => {
+      const iconMap = {
+        strength: CheckCircle,
+        improvement: AlertTriangle,
+        tip: Lightbulb,
+      };
+
+      const colorMap = {
+        strength: "#10b981", // green
+        improvement: "#f59e0b", // yellow
+        tip: "#8b5cf6", // purple
+      };
+
+      return {
+        ...item,
+        icon: iconMap[item.type] || Lightbulb,
+        color: colorMap[item.type] || "#6b7280",
+      };
+    }) || [];
+
 
   const renderCategoryContent = (categoryId: string) => {
     if (categoryId === "all") {

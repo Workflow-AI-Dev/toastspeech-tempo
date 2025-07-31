@@ -21,7 +21,6 @@ export default function FeedbackLibraryPage() {
           router.push("/detailed-feedback-eval")
         }
       />
-      ;{/* Bottom Navigation */}
       <View
         className="flex-row justify-around items-center py-4 border-t"
         style={{ backgroundColor: colors.card, borderTopColor: colors.border }}

@@ -232,6 +232,7 @@ export default function SpeakerModeScreen({
         pausesData: result.analytics?.pauses || [],
         fillerData: result.analytics?.filler_words || [],
         crutchData: result.analytics?.crutch_phrases || [],
+        repeatedPhrases: result.analytics?.repeated_words || [],
         grammarData: result.analytics?.grammar_mistakes || [],
         environData: result.analytics?.environmental_elements || [],
         pitchData: result.pitch_track || [],

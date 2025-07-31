@@ -114,29 +114,25 @@ const DetailedFeedbackEvalScreen = ({
     ]),
   );
 
-  const overallInsights = [
-    {
-      type: "strength",
-      icon: CheckCircle,
-      color: "#10b981",
-      title: "Supportive Evaluator",
-      description: "Your praise was meaningful and specific, boosting morale.",
-    },
-    {
-      type: "improvement",
-      icon: AlertTriangle,
-      color: "#f59e0b",
-      title: "Structural Completeness",
-      description: "Try to include all parts of the speech in your critique.",
-    },
-    {
-      type: "tip",
-      icon: Lightbulb,
-      color: "#8b5cf6",
-      title: "Balance is Key",
-      description: "Equal focus on praise and suggestions builds credibility.",
-    },
-  ];
+  const overallInsights = detailed?.OverallInsights?.map((item: any) => {
+      const iconMap = {
+        strength: CheckCircle,
+        improvement: AlertTriangle,
+        tip: Lightbulb,
+      };
+
+      const colorMap = {
+        strength: "#10b981", // green
+        improvement: "#f59e0b", // yellow
+        tip: "#8b5cf6", // purple
+      };
+
+      return {
+        ...item,
+        icon: iconMap[item.type] || Lightbulb,
+        color: colorMap[item.type] || "#6b7280",
+      };
+    }) || [];
 
   const renderCategoryContent = (categoryId: string) => {
     if (categoryId === "all") {

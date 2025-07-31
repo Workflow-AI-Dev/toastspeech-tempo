@@ -20,10 +20,17 @@ import {
   Settings,
   ChevronRight,
   House,
+  Annoyed,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "./context/ThemeContext";
 import { BASE_URL } from "./config/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import relativeTime from "dayjs/plugin/relativeTime";
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(relativeTime);
+dayjs.extend(utc);
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -36,6 +43,8 @@ export default function HomeScreen() {
   const colors = getThemeColors(theme);
   const [plan, setPlan] = useState<string | null>(null);
   const [limits, setLimits] = useState<any>(null);
+  const [recentSessions, setRecentSessions] = useState([]);
+  const [recentAchievements, setRecentAchievements] = useState([]);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -97,14 +106,68 @@ export default function HomeScreen() {
       fetchLimits();
   }, [fetchPlan, fetchLimits]);
 
-  // This screen should only be accessible to authenticated users
-  // The AuthContext will handle redirecting unauthenticated users
+  useEffect(() => {
+    const fetchSessions = async () => {
+      const token = await AsyncStorage.getItem("auth_token");
+      try {
+        const response = await fetch(`${BASE_URL}/dashboard/recent`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const { recent_sessions } = await response.json();
+        const sessions = recent_sessions || [];
+
+        setRecentSessions(sessions);
+
+        // ⬇️ Extract up to 3 achievement tags
+        const achievements = sessions
+          .slice(0, 3) // just last 3 sessions
+          .flatMap((s) => s.analytics?.achievement?.tag || [])
+          .filter((tag, index, self) => self.indexOf(tag) === index); // remove duplicates
+        
+        console.log(achievements)
+
+        setRecentAchievements(achievements);
+      } catch (err) {
+        console.error("Failed to fetch sessions:", err);
+      }
+    };
+
+    fetchSessions();
+  }, []);
+
+  const calculateStreak = (sessions: any[]) => {
+    const today = dayjs().startOf("day");
+
+    const datesSet = new Set(
+      sessions.map((s) =>
+        dayjs.utc(s.created_at).local().startOf("day").format("YYYY-MM-DD")
+      )
+    );
+
+    let streak = 0;
+    let currentDate = today;
+
+    while (datesSet.has(currentDate.format("YYYY-MM-DD"))) {
+      streak++;
+      currentDate = currentDate.subtract(1, "day");
+    }
+
+    return streak;
+  };
+
+
+  const streakDays = useMemo(() => calculateStreak(recentSessions), [recentSessions]);
+
 
   const userLevel = {
     current: 7,
     progress: 65,
     nextLevel: 8,
-    streakDays: 12,
+    streakDays: streakDays,
   };
 
   const handleFeaturePress = (featureId: string, currentOnPress: () => void, isLocked: boolean) => {
@@ -157,63 +220,63 @@ export default function HomeScreen() {
     }
   };
 
-    const features = useMemo(() => {
-      const isAspiringOrCasual = plan === "aspiring" || plan === "casual";
-      const isCasual = plan === "casual";
+  const features = useMemo(() => {
+    const isAspiringOrCasual = plan === "aspiring" || plan === "casual";
+    const isCasual = plan === "casual";
 
-      return [
-          {
-              id: "performance-dashboard",
-              title: "Your Progress",
-              description: "Track stats & level up",
-              icon: BarChart2,
-              color: "#8b5cf6",
-              bgColor: "#faf5ff",
-              locked: isCasual, // casual users don't get dashboard
-              onPress: () => router.push("/performance-dashboard"),
-          },
-          {
-              id: "speech-recorder",
-              title: "Speaker Mode",
-              description: "AI-powered feedback in seconds",
-              icon: Mic,
-              color: "#6366f1",
-              bgColor: "#f0f9ff",
-              locked: false,
-              onPress: () => router.push("/speaker-mode"),
-          },
-          {
-              id: "evaluation-tools",
-              title: "Evaluator Mode",
-              description: "Test your evaluation skills",
-              icon: Award,
-              color: "#10b981",
-              bgColor: "#f0fdf4",
-              locked: isAspiringOrCasual, // disable for aspiring and casual
-              onPress: () => router.push("/evaluator-mode"),
-          },
-          {
-              id: "practice",
-              title: "Practice Mode",
-              description: "Warmup to sharpen your delivery skills",
-              icon: Zap,
-              color: "#f59e0b",
-              bgColor: "#fff7ed",
-              locked: false,
-              onPress: () => router.push("/practice-mode"),
-          },
-          {
-              id: "feedback-library",
-              title: "Library",
-              description: "Browse all your past sessions",
-              icon: BookOpen,
-              color: "#06b6d4",
-              bgColor: "#f0fdfa",
-              locked: false,
-              onPress: () => router.push("/feedback-library"),
-          },
-      ];
-    }, [plan, router]);
+    return [
+        {
+            id: "performance-dashboard",
+            title: "Your Progress",
+            description: "Track stats & level up",
+            icon: BarChart2,
+            color: "#8b5cf6",
+            bgColor: "#faf5ff",
+            locked: isCasual, // casual users don't get dashboard
+            onPress: () => router.push("/performance-dashboard"),
+        },
+        {
+            id: "speech-recorder",
+            title: "Speaker Mode",
+            description: "AI-powered feedback in seconds",
+            icon: Mic,
+            color: "#6366f1",
+            bgColor: "#f0f9ff",
+            locked: false,
+            onPress: () => router.push("/speaker-mode"),
+        },
+        {
+            id: "evaluation-tools",
+            title: "Evaluator Mode",
+            description: "Test your evaluation skills",
+            icon: Award,
+            color: "#10b981",
+            bgColor: "#f0fdf4",
+            locked: isAspiringOrCasual, // disable for aspiring and casual
+            onPress: () => router.push("/evaluator-mode"),
+        },
+        {
+            id: "practice",
+            title: "Practice Mode",
+            description: "Warmup to sharpen your delivery skills",
+            icon: Zap,
+            color: "#f59e0b",
+            bgColor: "#fff7ed",
+            locked: false,
+            onPress: () => router.push("/practice-mode"),
+        },
+        {
+            id: "feedback-library",
+            title: "Library",
+            description: "Browse all your past sessions",
+            icon: BookOpen,
+            color: "#06b6d4",
+            bgColor: "#f0fdfa",
+            locked: false,
+            onPress: () => router.push("/feedback-library"),
+        },
+    ];
+  }, [plan, router]);
 
 
 // Show loading state while checking authentication
@@ -228,51 +291,6 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
   }
-
-
-  const achievements = [
-    {
-      icon: <Flame color="#fc5e03" />,
-      title: "12-day streak!",
-      color: "#ff6b6b",
-    },
-    {
-      icon: <Target color="#3dbf2c" />,
-      title: "Level 7 Speaker",
-      color: "#fc0303",
-    },
-    { icon: <Zap color="#0993d9" />, title: "Fast Improver", color: "#ffe66d" },
-  ];
-
-  const recentSpeeches = [
-    {
-      id: "1",
-      title: "My Leadership Story",
-      date: "2 days ago",
-      duration: "7:32",
-      score: 85,
-      improvement: "+12",
-      emoji: <Mic size={24} color="#7c3aed" />,
-    },
-    {
-      id: "2",
-      title: "Why I Love Coffee",
-      date: "1 week ago",
-      duration: "5:45",
-      score: 78,
-      improvement: "+5",
-      emoji: <Mic size={24} color="#7c3aed" />,
-    },
-    {
-      id: "3",
-      title: "My Dream Vacation",
-      date: "2 weeks ago",
-      duration: "6:15",
-      score: 92,
-      improvement: "+18",
-      emoji: <Mic size={24} color="#7c3aed" />,
-    },
-  ];
 
   return (
     <SafeAreaView
@@ -299,14 +317,24 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               </View>
-              <View className="bg-orange-100 rounded-full px-3 py-1">
+              <View className="rounded-full px-3 py-1" style={{ backgroundColor: userLevel.streakDays > 0 ? "#ffedd5" : "#f3f4f6" }}>
                 <View className="flex-row items-center">
-                  <Flame size={14} color="#ea580c" />
-                  <Text className="text-sm font-semibold text-orange-700 ml-1">
-                    {userLevel.streakDays} days
-                  </Text>
+                  {userLevel.streakDays > 0 ? (
+                    <>
+                      <Flame size={14} color="#ea580c" />
+                      <Text className="text-sm font-semibold text-orange-700 ml-1">
+                        {userLevel.streakDays} day{userLevel.streakDays > 1 ? "s" : ""}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text className="text-lg mr-1">😞</Text>
+                      <Text className="text-sm font-semibold text-gray-500">0 days</Text>
+                    </>
+                  )}
                 </View>
               </View>
+
             </View>
           </View>
           <TouchableOpacity
@@ -391,7 +419,7 @@ export default function HomeScreen() {
                           </View>
                         )}
                         {feature.locked && (
-                          <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
+                          <View className="bg-red-100 rounded-full px-2 py-1 ml-2">
                             <Text className="text-xs font-bold text-gray-600">
                               LOCKED
                             </Text>
@@ -426,7 +454,7 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             className="-mx-6 px-6"
           >
-            {achievements.map((achievement, index) => (
+            {recentAchievements.map((achievement, index) => (
               <View
                 key={index}
                 className="rounded-2xl p-4 mr-3 min-w-[140px] items-center"
@@ -437,13 +465,13 @@ export default function HomeScreen() {
                 }}
               >
                 <View className="bg-gray-50 rounded-full w-12 h-12 items-center justify-center mb-3">
-                  <Text className="text-2xl">{achievement.icon}</Text>
+                  <Text className="text-2xl"><Flame color="#fc5e03" /></Text>
                 </View>
                 <Text
                   className="font-semibold text-center text-sm"
                   style={{ color: colors.text }}
                 >
-                  {achievement.title.replace("!", "")}
+                  {achievement}
                 </Text>
               </View>
             ))}
@@ -454,7 +482,7 @@ export default function HomeScreen() {
         <View className="px-6 mb-8">
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-xl font-bold" style={{ color: colors.text }}>
-              Recent Speeches
+              Recent Sessions
             </Text>
             <TouchableOpacity onPress={() => router.push("/feedback-library")}>
               <Text className="text-sm text-indigo-600 font-semibold">
@@ -463,47 +491,56 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {recentSpeeches.map((speech) => (
+          {recentSessions.map((session) => {
+          const isSpeech = session.type === "speech";
+          return (
             <TouchableOpacity
-              key={speech.id}
+              key={session.id}
               className="rounded-2xl p-4 mb-3 flex-row items-center"
               style={{
                 backgroundColor: colors.card,
                 borderColor: colors.border,
                 borderWidth: 1,
               }}
-              onPress={() => router.push("/ai-evaluation-summary")}
             >
               <View className="bg-gray-50 rounded-2xl w-12 h-12 items-center justify-center mr-4">
-                <Text className="text-xl">{speech.emoji}</Text>
+                {isSpeech ? (
+                  <Mic size={24} color="#7c3aed" />
+                ) : (
+                  <Award size={24} color="#10b981" />
+                )}
               </View>
               <View className="flex-1">
                 <Text className="font-bold mb-1" style={{ color: colors.text }}>
-                  {speech.title}
+                  {session.title || (isSpeech ? "Untitled Speech" : "Evaluation")}
                 </Text>
                 <View className="flex-row items-center">
-                  <Text className="text-sm text-gray-500">{speech.date}</Text>
-                  <Text className="text-sm text-gray-400 mx-2">•</Text>
                   <Text className="text-sm text-gray-500">
-                    {speech.duration}
+                    {dayjs(session.created_at).fromNow()}  {/* e.g., "1 day ago" */}
                   </Text>
                 </View>
               </View>
               <View className="items-end">
-                <View className="bg-indigo-50 rounded-xl px-3 py-2 mb-2">
-                  <Text className="font-bold text-indigo-600 text-lg">
-                    {speech.score}
-                  </Text>
-                </View>
-                <View className="flex-row items-center">
-                  <TrendingUp size={12} color="#10b981" />
-                  <Text className="text-xs text-green-600 ml-1 font-semibold">
-                    {speech.improvement}
-                  </Text>
-                </View>
+                {session.summary.Metadata.overall_score && (
+                  <View className="bg-indigo-50 rounded-xl px-3 py-2 mb-2">
+                    <Text className="font-bold text-indigo-600 text-lg">
+                      {session.summary.Metadata.overall_score}
+                    </Text>
+                  </View>
+                )}
+                {session.improvement && (
+                  <View className="flex-row items-center">
+                    <TrendingUp size={12} color="#10b981" />
+                    <Text className="text-xs text-green-600 ml-1 font-semibold">
+                      {session.improvement}
+                    </Text>
+                  </View>
+                )}
               </View>
             </TouchableOpacity>
-          ))}
+          );
+        })}
+
         </View>
 
         {/* Daily Challenge */}

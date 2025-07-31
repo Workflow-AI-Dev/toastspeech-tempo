@@ -598,12 +598,12 @@ export default function PracticeLibrary({
       {localPractices.length > 0 ? (
         <View className="flex-1">
           <View className="px-6 py-2">
-            <Text
+            {/* <Text
               className="text-lg font-bold mb-3"
               style={{ color: colors.text }}
             >
               Recent Practice Sessions
-            </Text>
+            </Text> */}
           </View>
           {localPractices.map((practice) => (
             <View key={practice.id} style={{ paddingHorizontal: 24 }}>

@@ -103,10 +103,8 @@ export default function FeedbackLibrary({
       const transformed = data.speeches
         .sort(
           (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(), // 🧠 Newest first
-        )
-
-        .map((speech, idx, arr) => {
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(), 
+        ).map((speech, idx, arr) => {
           const metadata = speech.summary?.Metadata || {};
           const currentScore = metadata.overall_score || 0;
           const previousScore =
@@ -143,6 +141,7 @@ export default function FeedbackLibrary({
             pausesData: speech.analytics?.pauses || [],
             fillerData: speech.analytics?.filler_words || [],
             crutchData: speech.analytics?.crutch_phrases || [],
+            repeatedPhrases: speech.analytics?.repeated_words || [],
             grammarData: speech.analytics?.grammar_mistakes || [],
             environData: speech.analytics?.environmental_elements || [],
             pitchData: speech.pitch_track || [],
@@ -227,6 +226,7 @@ export default function FeedbackLibrary({
             pausesData: evaluation.analytics?.pauses || [],
             fillerData: evaluation.analytics?.filler_words || [],
             crutchData: evaluation.analytics?.crutch_phrases || [],
+            repeatedPhrases: evaluation.analytics?.repeated_words || [],
             grammarData: evaluation.analytics?.grammar_mistakes || [],
             environData: evaluation.analytics?.environmental_elements || [],
             emoji: <Mic size={24} color="#7c3aed" />,
@@ -271,8 +271,7 @@ export default function FeedbackLibrary({
         .sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(), // 🧠 Newest first
-        )
-        .map((practice, idx, arr) => {
+        ).map((practice, idx, arr) => {
           const currentScore = practice.evaluation.OverallScore || 0;
           const previousScore =
             idx < arr.length - 1

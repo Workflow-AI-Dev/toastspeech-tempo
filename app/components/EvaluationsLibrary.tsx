@@ -381,6 +381,7 @@ export default function EvaluationsLibrary({
       OverallImpact_recommendations:
         selectedEvaluation.detailed.OverallImpact_recommendations,
       OverallImpact_score: selectedEvaluation.detailed.OverallImpact_score,
+      OverallInsights: selectedSpeech.detailed.OverallInsights,
     };
 
     return (
@@ -594,12 +595,12 @@ if (noResults && !isLoading) {
       {localEvals.length > 0 ? (
         <View className="flex-1">
           <View className="px-6 py-2">
-            <Text
+            {/* <Text
               className="text-lg font-bold mb-3"
               style={{ color: colors.text }}
             >
               Recent Evaluations
-            </Text>
+            </Text> */}
           </View>
           {localEvals.map((evaluation) => (
             <View key={evaluation.id} style={{ paddingHorizontal: 24 }}>

@@ -372,6 +372,7 @@ export default function SpeechLibrary({
       pausesData: selectedSpeech.pausesData,
       fillerData: selectedSpeech.fillerData,
       crutchData: selectedSpeech.crutchData,
+      repeatedPhrases: selectedSpeech.repeatedPhrases,
       grammarData: selectedSpeech.grammarData,
       environData: selectedSpeech.environData,
       pitchData: selectedSpeech.pitchData
@@ -421,6 +422,7 @@ export default function SpeechLibrary({
       Connections_recommendations:
         selectedSpeech.detailed.Connections_recommendations,
       Connections_score: selectedSpeech.detailed.Connections_score,
+      OverallInsights: selectedSpeech.detailed.OverallInsights,
     };
 
     console.log(detailedFeedback);
@@ -661,12 +663,12 @@ if (noResults && !isLoading) {
       {localSpeeches.length > 0 ? (
         <View className="flex-1">
           <View className="px-6 py-2">
-            <Text
+            {/* <Text
               className="text-lg font-bold mb-3"
               style={{ color: colors.text }}
             >
               Recent Speeches
-            </Text>
+            </Text> */}
           </View>
           {localSpeeches.map((speech) => (
             <View key={speech.id} style={{ paddingHorizontal: 24 }}>

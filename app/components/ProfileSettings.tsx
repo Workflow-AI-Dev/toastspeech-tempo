@@ -9,6 +9,7 @@ import {
   Modal,
   Dimensions,
   Image,
+  Pressable
 } from "react-native";
 import {
   User,
@@ -39,6 +40,7 @@ import { supabase } from "../../lib/supabase";
 import { useRouter } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
+import { BASE_URL } from "../config/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface ProfileSettingsProps {
@@ -140,6 +142,10 @@ export default function ProfileSettings({
   const [editedAgeGroup, setEditedAgeGroup] = useState("");
   const [editedProfession, setEditedProfession] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [privacyVisible, setPrivacyVisible] = useState(false);
+  const [audioConsent, setAudioConsent] = useState(false);
+  const [videoConsent, setVideoConsent] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Initialize avatar seeds on component mount
   useEffect(() => {
@@ -278,6 +284,73 @@ export default function ProfileSettings({
     }
   };
 
+  const fetchPrivacySettings = async () => {
+    try {
+      setIsLoading(true);
+      const token = await AsyncStorage.getItem("auth_token");
+      const response = await fetch(`${BASE_URL}/user/privacy-settings`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`, 
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAudioConsent(data.store_audio);
+        setVideoConsent(data.store_video);
+      } else {
+        console.warn("Failed to load privacy settings", data.detail);
+      }
+    } catch (error) {
+      console.error("Error fetching privacy settings:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (privacyVisible) {
+      fetchPrivacySettings();
+    }
+  }, [privacyVisible]);
+
+
+  const handlePrivacySave = async (audioConsent: boolean, videoConsent: boolean) => {
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+
+      const response = await fetch(`${BASE_URL}/user/update-privacy`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json", 
+        },
+        body: JSON.stringify({
+          store_audio: audioConsent,
+          store_video: videoConsent,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Privacy update failed", data);
+        return;
+      }
+
+      await AsyncStorage.setItem("consent_audio", JSON.stringify(audioConsent));
+      await AsyncStorage.setItem("consent_video", JSON.stringify(videoConsent));
+
+      console.log("Privacy settings saved!");
+      setPrivacyVisible(false)
+    } catch (error) {
+      console.error("Error saving privacy settings:", error);
+    }
+  };
+
   const settingsGroups = [
     {
       title: "Account",
@@ -301,7 +374,7 @@ export default function ProfileSettings({
           icon: Shield,
           title: "Privacy & Security",
           description: "Manage your privacy settings",
-          onPress: () => {},
+          onPress: () => {setPrivacyVisible(true)},
         },
       ],
     },
@@ -951,6 +1024,81 @@ export default function ProfileSettings({
             </View>
           </View>
         ))}
+
+        {privacyVisible && (
+          <Modal animationType="slide" transparent>
+            <View
+              className="flex-1 justify-end"
+              style={{ backgroundColor: "rgba(0,0,0,0.6)" }} // Match backdrop style
+            >
+              <View
+                className="rounded-t-3xl p-6 pb-8"
+                style={{ backgroundColor: colors.card }} // Match modal background
+              >
+                {/* Close Button */}
+                <TouchableOpacity
+                  onPress={() => setPrivacyVisible(false)}
+                  className="self-end p-2 -mt-2 -mr-2"
+                >
+                  <Text className="text-2xl font-bold" style={{ color: colors.textSecondary }}>
+                    &times;
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Title + Icon (optional for aesthetics) */}
+                <View className="flex-row items-center mb-4">
+                  <View
+                    className="rounded-full p-3 mr-3"
+                    style={{ backgroundColor: colors.primary, opacity: 0.2 }}
+                  >
+                    <Shield size={24} color="#fff" />
+                  </View>
+                  <Text className="text-2xl font-bold" style={{ color: colors.text }}>
+                    Privacy & Security
+                  </Text>
+                </View>
+
+                {/* Description */}
+                <Text className="text-base mb-4" style={{ color: colors.textSecondary }}>
+                  Your data is safe with us. We do not save any speech audio or video files in our database without your consent.
+                  If you'd like to revisit speeches later from the library, you can allow storage below.
+                  For your privacy, saved files are automatically deleted after 30 days.
+                </Text>
+
+                {/* Toggles */}
+                <View className="flex-row justify-between items-center mb-4">
+                  <Text className="text-base" style={{ color: colors.text }}>Allow Audio Storage</Text>
+                  <Switch
+                    value={audioConsent}
+                    onValueChange={setAudioConsent}
+                    thumbColor={audioConsent ? colors.primary : "#ccc"}
+                  />
+                </View>
+
+                <View className="flex-row justify-between items-center mb-4">
+                  <Text className="text-base" style={{ color: colors.text }}>Allow Video Storage</Text>
+                  <Switch
+                    value={videoConsent}
+                    onValueChange={setVideoConsent}
+                    thumbColor={videoConsent ? colors.primary : "#ccc"}
+                  />
+                </View>
+
+                {/* Save Button */}
+                <TouchableOpacity
+                  onPress={() => handlePrivacySave(audioConsent, videoConsent)}
+                  className="mt-6 py-3 rounded-full items-center shadow-lg"
+                  style={{ backgroundColor: colors.primary }}
+                >
+                  <Text className="text-base font-bold" style={{ color: "#fff" }}>
+                    Save Preferences
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        )}
+
 
         {/* App Version */}
         <View className="px-6 py-6">

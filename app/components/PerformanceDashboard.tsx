@@ -17,6 +17,7 @@ import {
   TrendingDown,
   Timer,
   CheckCircle,
+  ThumbsUp
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
@@ -53,39 +54,9 @@ interface PerformanceDashboardProps {
 }
 
 const PerformanceDashboard = ({
-  data = {
-    fillerWords: [12, 10, 8, 9, 7, 6, 5],
-    emotionalDelivery: [60, 65, 70, 68, 75, 78, 82],
-    overallScore: [65, 68, 72, 70, 75, 80, 85],
-    speakingDuration: [180, 195, 210, 185, 220, 240, 255],
-    grammarAccuracy: [75, 78, 82, 80, 85, 88, 92],
-  },
-  timeLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-  currentScore = {
-    fillerWords: 5,
-    emotionalDelivery: 82,
-    overallScore: 85,
-    speakingDuration: 255,
-    grammarAccuracy: 92,
-  },
   fillerWordsBreakdown = {
     labels: ["um", "like", "you know", "uh", "so"],
     data: [8, 12, 5, 3, 7],
-  },
-  pausesBreakdown = {
-    labels: [
-      "Intentional",
-      "Unintentional",
-      "Emotional",
-      "Rhetorical",
-      "Dramatic",
-      "Reflection",
-    ],
-    data: [3, 8, 2, 2, 5],
-  },
-  reactionBreakdown = {
-    labels: ["Applause", "Laughter"],
-    data: [4, 3],
   },
 }: PerformanceDashboardProps) => {
   const [selectedTimeFrame, setSelectedTimeFrame] = useState("Week");
@@ -106,6 +77,17 @@ const PerformanceDashboard = ({
   const [last6MonthsFillerWords, setLast6MonthsFillerWords] = useState<
     number[]
   >([]);
+
+  const [recentAchievements, setRecentAchievements] = useState([]);
+
+  const achievementIcons = [
+    { Icon: Flame, color: "#f97316" },      // Orange
+    { Icon: TrendingUp, color: "#10b981" }, // Green
+    { Icon: Star, color: "#eab308" },       // Yellow
+    { Icon: Award, color: "#6366f1" },      // Indigo
+    { Icon: ThumbsUp, color: "#3b82f6" },   // Blue
+    { Icon: Trophy, color: "#d97706" },     // Amber
+  ];
 
   // New states for breakdown charts (dynamic based on fetched data)
   const [dynamicFillerWordsBreakdown, setDynamicFillerWordsBreakdown] =
@@ -153,7 +135,7 @@ const PerformanceDashboard = ({
     "Fillers",
     "Crutches",
     "Pauses",
-    "Environment",
+    "Engagement",
   ];
   const [plan, setPlan] = useState<string | null>(null);
 
@@ -499,6 +481,49 @@ const PerformanceDashboard = ({
     fetchSessions();
   }, [selectedTimeFrame]); // Re-fetch when time frame changes for breakdown charts
 
+  useEffect(() => {
+  const fetchSessions = async () => {
+    const token = await AsyncStorage.getItem("auth_token");
+    try {
+      const response = await fetch(`${BASE_URL}/dashboard/recent`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const { recent_sessions } = await response.json();
+      const sessions = recent_sessions || [];
+
+      // Extract up to 3 recent achievements (with tag + description)
+      const achievements = sessions
+      .slice(0, 3)
+      .flatMap((s) => {
+        const ach = s.analytics?.achievement;
+        return ach && ach.tag && ach.description
+          ? [{ 
+              tag: ach.tag, 
+              description: ach.description,
+              iconIndex: Math.floor(Math.random() * achievementIcons.length)
+            }]
+          : [];
+      })
+      .filter(
+        (item, index, self) =>
+          self.findIndex((a) => a.tag === item.tag) === index
+      );
+
+      console.log("Achievements →", achievements);
+      setRecentAchievements(achievements);
+    } catch (err) {
+      console.error("Failed to fetch sessions:", err);
+    }
+  };
+
+  fetchSessions();
+}, []);
+
+
   const getChartData = () => {
     let chartData: number[] = [];
     let labels: string[] = [];
@@ -548,7 +573,7 @@ const PerformanceDashboard = ({
     if (
       selectedMetric === "Crutches" ||
       selectedMetric === "Pauses" ||
-      selectedMetric === "Environment"
+      selectedMetric === "Engagement"
     ) {
       // You'll need to implement logic to get trend data for these metrics
       // Similar to how weeklyFillerWords are calculated, you'd calculate weeklyCrutchCounts, etc.
@@ -580,13 +605,9 @@ const PerformanceDashboard = ({
       breakdownData = dynamicCrutchPhrasesBreakdown;
     } else if (selectedMetric === "Pauses") {
       breakdownData = dynamicPausesBreakdown;
-    } else if (selectedMetric === "Environment") {
+    } else if (selectedMetric === "Engagement") {
       breakdownData = dynamicEnvironmentBreakdown;
     } else {
-      // If selectedMetric doesn't match a bar chart type,
-      // although shouldShowBarChart prevents this from being rendered,
-      // it's good to have a default or handle appropriately.
-      // For safety, ensure breakdownData is always valid.
       return {
         labels: [],
         datasets: [{ data: [] }],
@@ -608,7 +629,7 @@ const PerformanceDashboard = ({
     return (
       selectedMetric === "Fillers" ||
       selectedMetric === "Pauses" ||
-      selectedMetric === "Environment"
+      selectedMetric === "Engagement"
     );
   };
 
@@ -1025,12 +1046,6 @@ const PerformanceDashboard = ({
         </View>
         {/* Metric Selector */}
         <View className="px-6 py-4">
-          <Text
-            className="text-lg font-bold mb-3"
-            style={{ color: colors.text }}
-          >
-            Metrics
-          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View className="flex-row">
               {metrics.map((metric, index) => {
@@ -1147,99 +1162,36 @@ const PerformanceDashboard = ({
           </Text>
 
           <View className="space-y-1">
-            <TouchableOpacity
-              className="flex-row items-center justify-between py-3 px-4 rounded-2xl"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <View className="flex-row items-center flex-1">
-                <View
-                  className="rounded-xl p-2 mr-3"
-                  style={{ backgroundColor: colors.card }}
-                >
-                  <TrendingUp size={20} color={colors.success} />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="font-semibold"
-                    style={{ color: colors.text }}
-                  >
-                    Pace Mastery
-                  </Text>
-                  <Text
-                    className="text-sm mt-1"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    More consistent speaking rhythm
-                  </Text>
-                </View>
-              </View>
-              <View className="bg-green-100 rounded-full px-3 py-1">
-                <Text className="text-green-600 font-bold text-sm">+12%</Text>
-              </View>
-            </TouchableOpacity>
+            {recentAchievements.map((achievement, index) => {
+              const { Icon, color } = achievementIcons[achievement.iconIndex];
 
-            <TouchableOpacity
-              className="flex-row items-center justify-between py-3 px-4 rounded-2xl"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <View className="flex-row items-center flex-1">
-                <View
-                  className="rounded-xl p-2 mr-3"
-                  style={{ backgroundColor: colors.card }}
+              return (
+                <TouchableOpacity
+                  key={index}
+                  className="flex-row items-center justify-between py-3 px-4 rounded-2xl"
+                  style={{ backgroundColor: colors.surface }}
                 >
-                  <Mic size={20} color={colors.primary} />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="font-semibold"
-                    style={{ color: colors.text }}
-                  >
-                    Cleaner Speech
-                  </Text>
-                  <Text
-                    className="text-sm mt-1"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    Reduced filler words significantly
-                  </Text>
-                </View>
-              </View>
-              <View className="bg-blue-100 rounded-full px-3 py-1">
-                <Text className="text-blue-600 font-bold text-sm">-40%</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              className="flex-row items-center justify-between py-3 px-4 rounded-2xl"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <View className="flex-row items-center flex-1">
-                <View
-                  className="rounded-xl p-2 mr-3"
-                  style={{ backgroundColor: colors.card }}
-                >
-                  <Zap size={20} color={colors.accent} />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="font-semibold"
-                    style={{ color: colors.text }}
-                  >
-                    Confidence Boost
-                  </Text>
-                  <Text
-                    className="text-sm mt-1"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    More expressive delivery
-                  </Text>
-                </View>
-              </View>
-              <View className="bg-purple-100 rounded-full px-3 py-1">
-                <Text className="text-purple-600 font-bold text-sm">+18%</Text>
-              </View>
-            </TouchableOpacity>
+                  <View className="flex-row items-center flex-1">
+                    <View
+                      className="rounded-xl p-2 mr-3"
+                      style={{ backgroundColor: colors.card }}
+                    >
+                      <Icon size={20} color={color} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="font-semibold" style={{ color: colors.text }}>
+                        {achievement.tag}
+                      </Text>
+                      <Text className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                        {achievement.description}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
+
         </View>
         {/* Suggested Focus Areas */}
         <View className="px-6 py-6">
