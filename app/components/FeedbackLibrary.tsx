@@ -150,6 +150,7 @@ export default function FeedbackLibrary({
             improvement,
             summary: speech.summary,
             detailed: speech.detailed_evaluation,
+            url: speech.url,
           };
         });
 
@@ -199,7 +200,7 @@ export default function FeedbackLibrary({
           const improvement =
             previousScore !== null
               ? `${currentScore - previousScore > 0 ? "+" : ""}${currentScore - previousScore}`
-              : "first evaluation";
+              : "0";
 
           return {
             id: evaluation.id || `evaluation-${idx}`,
@@ -229,6 +230,7 @@ export default function FeedbackLibrary({
             repeatedPhrases: evaluation.analytics?.repeated_words || [],
             grammarData: evaluation.analytics?.grammar_mistakes || [],
             environData: evaluation.analytics?.environmental_elements || [],
+            pitchData: evaluation.pitch_track || [],
             emoji: <Mic size={24} color="#7c3aed" />,
             improvement,
             summary: evaluation.summary,
@@ -427,35 +429,32 @@ export default function FeedbackLibrary({
 
   // Filter evaluations based on filters
   const filteredEvaluations = useMemo(() => {
-    return evaluations.filter((evaluation) => {
-      if (searchQuery) {
-        if (
-          !evaluation.speechTitle
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
-        ) {
-          return false;
-        }
-      }
-
-      // Duration filter
-      if (!matchesDurationFilter(evaluation.duration, durationFilter)) {
+  return evaluations.filter((evaluation) => {
+    if (searchQuery) {
+      if (
+        !evaluation.speechTitle ||
+        !evaluation.speechTitle.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
         return false;
       }
+    }
 
-      // Score range filter
-      if (!matchesScoreRange(evaluation.score, scoreRange)) {
-        return false;
-      }
+    if (!matchesDurationFilter(evaluation.duration, durationFilter)) {
+      return false;
+    }
 
-      // Date range filter
-      if (!matchesDateRange(evaluation.date, dateRange)) {
-        return false;
-      }
+    if (!matchesScoreRange(evaluation.score, scoreRange)) {
+      return false;
+    }
 
-      return true;
-    });
-  }, [evaluations, durationFilter, scoreRange, dateRange]);
+    if (!matchesDateRange(evaluation.date, dateRange)) {
+      return false;
+    }
+
+    return true;
+  });
+}, [evaluations, searchQuery, durationFilter, scoreRange, dateRange]);
+
 
   // Filter speeches based on search and filters
   const filteredPractices = useMemo(() => {

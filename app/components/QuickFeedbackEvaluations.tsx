@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Modal,
+  StyleSheet, 
+  Animated, 
 } from "react-native";
 import {
   CheckCircle,
@@ -21,6 +24,18 @@ import {
   PauseCircle,
   Volume2,
   Type,
+  Info,
+  ScrollText,
+  Unplug, 
+  Megaphone, 
+  Smile,
+  VolumeX, 
+  MessageCircleQuestion, 
+  X,
+  Check,
+  ChevronDown, 
+  ChevronUp,
+  RefreshCcw
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import { BarChart, LineChart, PieChart } from "react-native-chart-kit";
@@ -47,10 +62,17 @@ interface QuickFeedbackEvaluationsProps {
     fillerData: {
       word: string;
       timestamp: string;
+      sentence: string;
     }[];
     crutchData: {
       phrase: string;
       category: string;
+      timestamp: string;
+      sentence: string;
+    }[];
+    repeatedPhrases: {
+      word: string;
+      sentence: string;
       timestamp: string;
     }[];
     grammarData: {
@@ -63,6 +85,11 @@ interface QuickFeedbackEvaluationsProps {
       timestamp: string;
       element_type: string;
       duration_seconds: string;
+      sentence: string;
+    }[];
+    pitchData: {
+      time: number;
+      pitch: number;
     }[];
   };
   feedback: {
@@ -110,6 +137,11 @@ interface QuickFeedbackEvaluationsProps {
       point: string;
     };
     OverallImpact_score: number;
+    OverallInsights:{
+      type: string;
+      title: string;
+      description: string;
+    }[];
   };
   onViewDetailedFeedback: (
     detailedFeedback: QuickFeedbackEvaluationsProps["detailedFeedback"],
@@ -126,14 +158,213 @@ const QuickFeedbackEvaluations = ({
   const colors = getThemeColors(theme);
   const [selectedTab, setSelectedTab] = useState("Key Insights");
 
-  const tabs = [
-    "Key Insights",
-    "Fillers & Crutches",
-    "Grammar",
-    // "Vocal Variety",
-    "Pauses & Variety",
-    "Environment",
-  ];
+  const [showInfoModal, setShowInfoModal] = useState(false);
+    const [infoContent, setInfoContent] = useState<
+      typeof infoModalContent[keyof typeof infoModalContent] | null
+    >(null);
+    // State for managing tooltip visibility and content
+    const [tooltipVisible, setTooltipVisible] = useState(false);
+    const [tooltipContent, setTooltipContent] = useState('');
+    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 }); // To position the tooltip
+    
+    const [showAllGrammarTypes, setShowAllGrammarTypes] = useState(false);
+    const [contentHeight, setContentHeight] = useState(0);
+    const [animationValue] = useState(new Animated.Value(0));
+  
+    useEffect(() => {
+        Animated.timing(animationValue, {
+          toValue: showAllGrammarTypes ? 1 : 0,
+          duration: 300,
+          useNativeDriver: false,
+        }).start();
+      }, [showAllGrammarTypes]);
+  
+      const height = animationValue.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, contentHeight],
+      });
+  
+    const [expandedWords, setExpandedWords] = useState<Record<string, boolean>>({});
+    const toggleExpand = (word: string) => {
+      setExpandedWords((prev) => ({
+        ...prev,
+        [word]: !prev[word],
+      }));
+    };
+  
+    const showTooltip = (content: string, event: any) => {
+            setTooltipContent(content);
+            setTooltipPosition({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY });
+            setTooltipVisible(true);
+          };
+  
+    const hideTooltip = () => {
+      setTooltipVisible(false);
+      setTooltipContent('');
+    };
+  
+    const infoModalContent = {
+      "Speech Patterns": {
+        title: "Speech Patterns",
+        description:
+          "Speech patterns include common verbal habits like filler words, crutch phrases, and repeated words. While often unintentional, these can dilute the strength of your message.",
+        bullets: [
+          {
+            icon: <PauseCircle size={18} color={colors.primary} />,
+            text: "Reduce fillers by practicing with intentional pauses.",
+          },
+          {
+            icon: <Mic size={18} color={colors.primary} />,
+            text: "Record and review speeches to become aware of crutch patterns.",
+          },
+          {
+            icon: <VolumeX size={18} color={colors.primary} />,
+            text: "Replace with silence – it's more powerful than you think.",
+          },
+          {
+            icon: <RefreshCcw size={18} color={colors.primary} />,
+            text: "Avoid repeating words or phrases in quick succession (e.g., 'so so', 'I I') — it signals nervousness.",
+          },
+        ],
+      },
+      Grammar: {
+        title: "Grammar Accuracy",
+        description:
+          "Grammar mistakes can distract your audience and reduce the effectiveness of your message.",
+        bullets: [
+          {
+            icon: <ScrollText size={18} color={colors.primary} />,
+            text: "Practice with scripts and grammar-checking tools.",
+          },
+          {
+            icon: <Type size={18} color={colors.primary} />,
+            text: "Keep sentence structures simple and clear.",
+          },
+          {
+            icon: <Volume2 size={18} color={colors.primary} />,
+            text: "Read out loud to catch errors in phrasing or tense.",
+          },
+        ],
+      },
+      Pauses: {
+        title: "Understanding Pauses",
+        description:
+          "Pauses are essential for pacing and emotional impact. Not all pauses are bad!",
+        sections: [
+          {
+            title: "Types of Pauses",
+            content: [
+              {
+                icon: <Zap size={18} color={colors.primary} />,
+                text: "Intentional – used for emphasis",
+              },
+              {
+                icon: <Lightbulb size={18} color={colors.primary} />,
+                text: "Reflective – to allow audience to absorb",
+              },
+              {
+                icon: <Flame size={18} color={colors.primary} />,
+                text: "Dramatic – creates suspense",
+              },
+              {
+                icon: <AlertCircle size={18} color={colors.primary} />,
+                text: "Unintentional – often from hesitation or lost thoughts",
+              },
+              {
+                icon: <MessageCircleQuestion size={18} color={colors.primary} />,
+                text: "Rhetorical – after a question to let it land",
+              },
+              {
+                icon: <Smile size={18} color={colors.primary} />,
+                text: "Emotional – natural in personal stories",
+              },
+            ],
+          },
+          {
+            title: "Tip",
+            content: [
+              {
+                icon: <Clock size={18} color={colors.primary} />,
+                text: "Try recording your speech and note where unintentional pauses disrupt the flow.",
+              },
+            ],
+          },
+        ],
+      },
+      "Vocal Variety": {
+        title: "Vocal Variety & Pitch Dynamics",
+        description:
+          "Using a varied tone keeps your speech engaging and expressive.",
+        sections: [
+          {
+            title: "Pitch Deviation Guide:",
+            content: [
+              {
+                icon: <TrendingDown size={18} color={colors.danger} />,
+                text: "< 25: Flat, monotone",
+              },
+              {
+                icon: <CheckCircle size={18} color={colors.success} />,
+                text: "25-60: Balanced, conversational",
+              },
+              {
+                icon: <TrendingUp size={18} color={colors.accent} />,
+                text: "> 60: Expressive, dynamic",
+              },
+            ],
+          },
+          {
+            title: "How It Helps",
+            content: [
+              {
+                icon: <Megaphone size={18} color={colors.primary} />,
+                text: "A dynamic voice conveys enthusiasm, emotion, and confidence — boosting listener engagement.",
+              },
+            ],
+          },
+        ],
+      },
+      Engagement: {
+        title: "Audience Engagement",
+        description:
+          "The environment you speak in reflects both audience engagement and your control over distractions.",
+        bullets: [
+          {
+            icon: <Smile size={18} color={colors.primary} />,
+            text: "Laughter or Applause shows impact.",
+          },
+          {
+            icon: <VolumeX size={18} color={colors.primary} />,
+            text: "Silence can be intentional or signal disinterest.",
+          },
+          {
+            icon: <Unplug size={18} color={colors.primary} />,
+            text: "Background noise or cross-talk may affect clarity.",
+          },
+        ],
+        sections: [
+          {
+            title: "Tip",
+            content: [
+              {
+                icon: <Lightbulb size={18} color={colors.primary} />,
+                text: "Try to acknowledge or incorporate spontaneous reactions gracefully.",
+              },
+            ],
+          },
+        ],
+      },
+    };
+  
+    const tabs = [
+      "Key Insights",
+      "Speech Patterns",
+      "Grammar",
+      "Pauses",
+      "Vocal Variety",
+      "Engagement",
+    ];
+    
 
   // Helper to get labels for LineChart to prevent overcrowding
   const getLineChartLabels = (pauses: { timestamp: string }[]) => {
@@ -148,6 +379,11 @@ const QuickFeedbackEvaluations = ({
     }
     labels.push(pauses[pauses.length - 1].timestamp); // Last timestamp
     return [...new Set(labels)]; // Remove duplicates
+  };
+
+  const handleInfoPress = (tabName: string) => {
+    setInfoContent(infoModalContent[tabName] || "No information available.");
+    setShowInfoModal(true);
   };
 
   const renderTabContent = () => {
@@ -181,11 +417,9 @@ const QuickFeedbackEvaluations = ({
               {feedback.keyInsights.map((insight, index) => (
                 <View
                   key={index}
-                  className="rounded-2xl p-4"
+                  className="rounded-2xl p-2"
                   style={{
                     backgroundColor: theme === "dark" ? "#1f2937" : "#f8fafc",
-                    borderLeftWidth: 4,
-                    borderLeftColor: colors.warning,
                   }}
                 >
                   <View className="flex-row items-start">
@@ -203,7 +437,7 @@ const QuickFeedbackEvaluations = ({
                     </View>
                     <View className="flex-1">
                       <Text
-                        className="text-base leading-6 font-medium"
+                        className="leading-6 font-medium"
                         style={{ color: colors.text }}
                       >
                         {insight}
@@ -215,7 +449,9 @@ const QuickFeedbackEvaluations = ({
             </View>
           </View>
         );
-      case "Pauses & Variety":
+            
+      case "Pauses":
+        //pause
         const pausesData = evaluationResults.pausesData || [];
 
         // Calculate summary statistics
@@ -228,19 +464,6 @@ const QuickFeedbackEvaluations = ({
           totalPauses > 0
             ? (totalPauseDuration / totalPauses).toFixed(2)
             : "0.00";
-
-        // Prepare data for Line Chart (Pause Duration Over Time)
-        const lineChartLabels = getLineChartLabels(pausesData);
-        const lineChartDataValues = pausesData.map((p) => p.duration_seconds);
-
-        const lineChartData = {
-          labels: lineChartLabels,
-          datasets: [
-            {
-              data: lineChartDataValues,
-            },
-          ],
-        };
 
         // Prepare data for Bar Chart (Pause Types Distribution - Count)
         const aggregatedPauseTypes = pausesData.reduce(
@@ -312,6 +535,17 @@ const QuickFeedbackEvaluations = ({
                   Pauses Analysis
                 </Text>
               </View>
+
+                <TouchableOpacity onPress={() => handleInfoPress("Pauses")}>
+                <View
+                  className="rounded-full p-2"
+                  style={{
+                    backgroundColor: theme === "dark" ? "#4b5563" : "#e5e7eb",
+                  }}
+                >
+                  <Info size={16} color={colors.textSecondary} />
+                </View>
+              </TouchableOpacity>
             </View>
 
             {pausesData.length === 0 ? (
@@ -451,6 +685,192 @@ const QuickFeedbackEvaluations = ({
                     </ScrollView>
                   </View>
                 )}
+              </>
+            )}
+          </View>
+        );
+            
+      case "Vocal Variety":
+        //pitch
+        const pitchData = evaluationResults.pitchData || [];
+
+        const labelInterval = 10; // in seconds
+        const shownLabels = new Set();
+
+        const pitchLabels = pitchData.map((p) => {
+          const roundedTime = Math.round(p.time);
+
+          if (roundedTime % labelInterval === 0 && !shownLabels.has(roundedTime)) {
+            shownLabels.add(roundedTime);
+            return `${roundedTime}s`;
+          } else {
+            return "";
+          }
+        });
+
+
+        const pitchValues = pitchData.map((p) => p.pitch); // just the pitch in Hz
+
+        // Chart configuration for both charts
+        const chartConfig2 = {
+          backgroundColor: colors.card, 
+          backgroundGradientFrom: colors.card,
+          backgroundGradientTo: colors.card,
+          decimalPlaces: 1, 
+          color: (opacity = 1) => colors.primary, // Default color for lines/bars
+          labelColor: (opacity = 1) => colors.textSecondary,
+          style: {
+            borderRadius: 16,
+          },
+          propsForDots: {
+            r: "6", // Radius of dots
+            strokeWidth: "2", // Stroke width of dots
+            stroke: colors.primary, // Stroke color of dots
+          },
+          // Custom axis styles
+          axisLabelColor: colors.textSecondary,
+          axisLineColor: colors.border,
+          gridLineColor: colors.border,
+        };
+
+        // Calculate pitch stats
+        const validPitches = pitchValues.filter((p) => p > 0); // sanity filter
+        const hasValidPitches = validPitches.length > 0;
+        const minPitch = hasValidPitches ? Math.min(...validPitches) : 0;
+        const maxPitch = hasValidPitches ? Math.max(...validPitches) : 0;
+        const meanPitch = hasValidPitches
+          ? validPitches.reduce((a, b) => a + b, 0) / validPitches.length
+          : 0;
+        const stdPitch = hasValidPitches
+          ? Math.sqrt(
+              validPitches.reduce((acc, p) => acc + Math.pow(p - meanPitch, 2), 0) / validPitches.length
+            )
+          : 0;
+
+        // Format values
+        const pitchRangeText = `${minPitch.toFixed(1)} – ${maxPitch.toFixed(1)}`;
+        const stdPitchText = `${stdPitch.toFixed(1)}`;
+
+        let vocalLabel = "";
+        let labelColor = "";
+
+        if (stdPitch < 25) {
+          vocalLabel = "😐 Flat";
+          labelColor = theme === "dark" ? "#f87171" : "#b91c1c"; // red-ish
+        } else if (stdPitch < 60) {
+          vocalLabel = "🙂 Balanced";
+          labelColor = theme === "dark" ? "#fbbf24" : "#b45309"; // amber-ish
+        } else {
+          vocalLabel = "🎭 Expressive";
+          labelColor = theme === "dark" ? "#34d399" : "#047857"; // green-ish
+        }
+
+
+        return (
+          <View>
+            <View className="flex-row items-center justify-between mb-6">
+              <View className="flex-row items-center">
+                <View
+                  className="rounded-full p-2 mr-3"
+                  style={{
+                    backgroundColor: theme === "dark" ? "#3b82f6" : "#dbeafe",
+                  }}
+                >
+                  <Star
+                    size={20}
+                    color={theme === "dark" ? "#fff" : "#1d4ed8"}
+                  />
+                </View>
+                <Text
+                  className="text-xl font-bold"
+                  style={{ color: colors.text }}
+                >
+                  Vocal Variety
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => handleInfoPress("Vocal Variety")}
+              >
+                <View
+                  className="rounded-full p-2"
+                  style={{
+                    backgroundColor: theme === "dark" ? "#4b5563" : "#e5e7eb",
+                  }}
+                >
+                  <Info size={16} color={colors.textSecondary} />
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {pitchData.length === 0 ? (
+              <View className="items-center py-8">
+                <View
+                  className="rounded-full p-4 mb-4"
+                  style={{
+                    backgroundColor: theme === "dark" ? "#374151" : "#f3f4f6",
+                  }}
+                >
+                  <PauseCircle size={32} color={colors.textSecondary} />
+                </View>
+                <Text
+                  className="text-lg font-medium mb-2"
+                  style={{ color: colors.text }}
+                >
+                  No Pitch Data
+                </Text>
+                <Text
+                  className="text-center"
+                  style={{ color: colors.textSecondary }}
+                >
+                  No pitch data available for this speech.
+                </Text>
+              </View>
+            ) : (
+              <>
+                {/* Statistics Cards */}
+                <View className="flex-row justify-between mb-6">
+                  <View
+                    className="flex-1 rounded-2xl p-4 mr-2"
+                    style={{
+                      backgroundColor: theme === "dark" ? "#1e40af" : "#eff6ff",
+                    }}
+                  >
+                    <Text
+                      className="text-lg font-bold mb-1"
+                      style={{
+                        color: theme === "dark" ? "#60a5fa" : "#1d4ed8",
+                      }}
+                    >
+                      {pitchRangeText}
+                    </Text>
+                    <Text
+                      className="text-sm font-medium"
+                      style={{
+                        color: theme === "dark" ? "#93c5fd" : "#3730a3",
+                      }}
+                    >
+                      Pitch Range(Hz)
+                    </Text>
+                  </View>
+
+                  <View className="flex-1 rounded-2xl p-4 mx-1"
+                    style={{ backgroundColor: theme === "dark" ? "#059669" : "#ecfdf5" }}>
+                    <Text className="text-lg font-bold mb-1"
+                      style={{ color: theme === "dark" ? "#34d399" : "#047857" }}>
+                      {stdPitchText}
+                    </Text>
+                    <Text className="text-sm font-medium"
+                      style={{ color: theme === "dark" ? "#6ee7b7" : "#065f46" }}>
+                      Pitch Deviation
+                    </Text>
+
+                    <Text className="text-sm font-semibold mt-2" style={{ color: labelColor }}>
+                      {vocalLabel}
+                    </Text>
+                  </View>
+
+
+                </View>
 
                 {/* Line Chart: Pause Duration Over Time */}
                 <View className="mb-6">
@@ -458,49 +878,83 @@ const QuickFeedbackEvaluations = ({
                     className="text-lg font-bold mb-3"
                     style={{ color: colors.text }}
                   >
-                    Vocal Variety
+                    Pitch Over Time (Hz)
                   </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <LineChart
-                      data={lineChartData}
-                      // Dynamically adjust width based on number of data points
-                      width={Math.max(
-                        screenWidth - 48,
-                        lineChartDataValues.length * 60,
-                      )}
-                      height={200}
-                      chartConfig={{
-                        ...chartConfig,
-                        color: (opacity = 1) =>
-                          `rgba(59, 130, 246, ${opacity})`, // Blue primary color for line
-                        propsForDots: {
-                          r: "5",
-                          strokeWidth: "2",
-                          stroke: `rgba(59, 130, 246, 1)`,
-                        },
-                        backgroundGradientFrom: colors.card,
-                        backgroundGradientTo: colors.card,
-                      }}
-                      bezier // Smooth line
-                      style={{
-                        marginVertical: 8,
-                        borderRadius: 16,
-                      }}
-                    />
-                  </ScrollView>
+                  <View className="flex-row"  style={{ marginLeft: -20 }}>
+                    {/* Fake Y-axis */}
+                    <View style={{ width: 40, justifyContent: 'space-between' }}>
+                      {[...Array(5)].map((_, i) => {
+                        const yVal = Math.round(maxPitch - (i * (maxPitch - minPitch) / 4));
+                        return (
+                          <Text
+                            key={i}
+                            style={{
+                              color: colors.textSecondary,
+                              fontSize: 12,
+                              height: 40,
+                              textAlign: "right",
+                            }}
+                          >
+                            {yVal}
+                          </Text>
+                        );
+                      })}
+                    </View>
+
+                    {/* Scrollable Chart */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View style={{ marginLeft: -55 }}>
+                        <LineChart
+                          data={{
+                            labels: pitchLabels,
+                            datasets: [
+                              {
+                                data: pitchData.map((p) => p.pitch),
+                                color: (opacity = 1) => `rgba(59,130,246,${opacity})`, // blue pitch line
+                                strokeWidth: 2,
+                              },
+                              {
+                                data: pitchData.map(() => meanPitch), // flat line
+                                color: (opacity = 1) => `rgba(234, 179, 8, ${opacity})`, // yellow
+                                strokeWidth: 2,
+                                withDots: false,
+                              },
+                            ],
+                          }}
+                          width={Math.max(screenWidth - 48 + 40, pitchData.length * 12)} // add back what you clipped
+                          height={200}
+                          chartConfig={{
+                            ...chartConfig2,
+                            color: (opacity = 1) => `rgba(59,130,246,${opacity})`,
+                            propsForDots: {
+                              r: "2",
+                              strokeWidth: "1",
+                              stroke: `rgba(59,130,246,1)`,
+                            },
+                            formatYLabel: () => "", // hide text
+                          }}
+                          bezier
+                          style={{
+                            marginVertical: 8,
+                            borderRadius: 16,
+                          }}
+                        />
+                      </View>
+                    </ScrollView>
+                  </View>
+
                 </View>
               </>
             )}
           </View>
         );
-      case "Fillers & Crutches":
+ 
+      case "Speech Patterns":
         // Merge data
-        const fillerWords = evaluationResults.fillerData.map(
-          (item) => item.word,
-        );
-        const crutchWords = evaluationResults.crutchData.map(
-          (item) => item.phrase,
-        );
+        const fillerWords = (evaluationResults.fillerData ?? []).map((item) => item.word);
+        const crutchWords = (evaluationResults.crutchData ?? []).map((item) => item.phrase);
+        const repeatedPhrases = (evaluationResults.repeatedPhrases ?? []).map((item) => item.word);
+
 
         // Count occurrences
         const countOccurrences = (arr: string[]) =>
@@ -511,10 +965,12 @@ const QuickFeedbackEvaluations = ({
 
         const fillerCounts = countOccurrences(fillerWords);
         const crutchCounts = countOccurrences(crutchWords);
+        const repeatCounts = countOccurrences(repeatedPhrases);
 
         // Assign colors
         const fillerColorBase = "#60a5fa"; // Light Blue
         const crutchColorBase = "#c084fc"; // Light Purple
+        const repeatColorBase = "#fabbecff"; // Light Pink
 
         const lighten = (hex: string, factor: number) => {
           const f = parseInt(hex.slice(1), 16);
@@ -566,7 +1022,10 @@ const QuickFeedbackEvaluations = ({
           (a, b) => a + b,
           0,
         );
-        const totalWords = totalFillers + totalCrutch;
+        const totalRepeat = Object.values(repeatCounts).reduce(
+          (a, b) => a + b,
+          0,
+        );
 
         return (
           <View>
@@ -590,6 +1049,18 @@ const QuickFeedbackEvaluations = ({
                   Speech Patterns
                 </Text>
               </View>
+              <TouchableOpacity
+                onPress={() => handleInfoPress("Speech Patterns")}
+              >
+                <View
+                  className="rounded-full p-2"
+                  style={{
+                    backgroundColor: theme === "dark" ? "#4b5563" : "#e5e7eb",
+                  }}
+                >
+                  <Info size={16} color={colors.textSecondary} />
+                </View>
+              </TouchableOpacity>
             </View>
 
             {pieData.length === 0 ? (
@@ -617,184 +1088,6 @@ const QuickFeedbackEvaluations = ({
               </View>
             ) : (
               <>
-                {/* Summary Cards */}
-                {/*<View className="flex-row justify-between mb-6">
-                  <View
-                    className="flex-1 rounded-2xl p-4 mr-2"
-                    style={{
-                      backgroundColor: theme === "dark" ? "#1e3a8a" : "#dbeafe",
-                    }}
-                  >
-                    <Text
-                      className="text-2xl font-bold mb-1"
-                      style={{
-                        color: theme === "dark" ? "#60a5fa" : "#1d4ed8",
-                      }}
-                    >
-                      {totalFillers}
-                    </Text>
-                    <Text
-                      className="text-sm font-medium"
-                      style={{
-                        color: theme === "dark" ? "#93c5fd" : "#3730a3",
-                      }}
-                    >
-                      Filler Words
-                    </Text>
-                  </View>
-
-                  <View
-                    className="flex-1 rounded-2xl p-4 ml-2"
-                    style={{
-                      backgroundColor: theme === "dark" ? "#581c87" : "#faf5ff",
-                    }}
-                  >
-                    <Text
-                      className="text-2xl font-bold mb-1"
-                      style={{
-                        color: theme === "dark" ? "#c084fc" : "#7c3aed",
-                      }}
-                    >
-                      {totalCrutch}
-                    </Text>
-                    <Text
-                      className="text-sm font-medium"
-                      style={{
-                        color: theme === "dark" ? "#d8b4fe" : "#5b21b6",
-                      }}
-                    >
-                      Crutch Phrases
-                    </Text>
-                  </View>
-                </View>
-                */}
-                {/* Pie Chart */}
-                <View className="mb-4">
-                  {/*<View className="items-center mb-4">
-                    <PieChart
-                      data={pieData.map((entry) => ({
-                        name: entry.name,
-                        population: entry.count,
-                        color: entry.color,
-                        legendFontColor: entry.legendFontColor,
-                        legendFontSize: entry.legendFontSize,
-                      }))}
-                      width={screenWidth - 80}
-                      height={220}
-                      chartConfig={{
-                        backgroundColor: "transparent",
-                        backgroundGradientFrom: "transparent",
-                        backgroundGradientTo: "transparent",
-                        color: () => colors.primary,
-                        labelColor: () => colors.text,
-                      }}
-                      accessor="population"
-                      backgroundColor="transparent"
-                      paddingLeft="70"
-                      center={[10, 0]}
-                      absolute
-                      hasLegend={false}
-                    />
-                  </View>*/}
-
-                  {/*
-                  <View
-                    className="rounded-2xl p-4"
-                    style={{
-                      backgroundColor: theme === "dark" ? "#1f2937" : "#f8fafc",
-                      borderWidth: 1,
-                      borderColor: theme === "dark" ? "#374151" : "#e2e8f0",
-                    }}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        flexWrap: "wrap",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      {pieData.map((entry, index) => (
-                        <View
-                          key={entry.name}
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            minWidth: "45%",
-                            marginBottom: 8,
-                            paddingHorizontal: 8,
-                            paddingVertical: 6,
-                            borderRadius: 8,
-                            backgroundColor:
-                              theme === "dark" ? "#374151" : "#ffffff",
-                            shadowColor: theme === "dark" ? "#000" : "#000",
-                            shadowOffset: { width: 0, height: 1 },
-                            shadowOpacity: 0.1,
-                            shadowRadius: 2,
-                            elevation: 1,
-                          }}
-                        >
-                          <View
-                            style={{
-                              width: 14,
-                              height: 14,
-                              backgroundColor: entry.color,
-                              borderRadius: 7,
-                              marginRight: 8,
-                              borderWidth: 1,
-                              borderColor:
-                                theme === "dark" ? "#4b5563" : "#d1d5db",
-                            }}
-                          />
-                          <Text
-                            style={{
-                              color: colors.text,
-                              fontSize: 13,
-                              fontWeight: "500",
-                              flex: 1,
-                            }}
-                            numberOfLines={1}
-                          >
-                            {entry.name}
-                          </Text>
-                          <View
-                            className="rounded-full px-2 py-1 ml-2"
-                            style={{
-                              backgroundColor:
-                                entry.wordType === "filler"
-                                  ? theme === "dark"
-                                    ? "#1e3a8a"
-                                    : "#dbeafe"
-                                  : theme === "dark"
-                                    ? "#581c87"
-                                    : "#faf5ff",
-                            }}
-                          >
-                            <Text
-                              style={{
-                                color:
-                                  entry.wordType === "filler"
-                                    ? theme === "dark"
-                                      ? "#60a5fa"
-                                      : "#1d4ed8"
-                                    : theme === "dark"
-                                      ? "#c084fc"
-                                      : "#7c3aed",
-                                fontSize: 11,
-                                fontWeight: "600",
-                              }}
-                            >
-                              {entry.count}
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-
-                */}
-                </View>
-
                 {/* Word Lists */}
                 <View className="space-y-4">
                   {Object.keys(fillerCounts).length > 0 && (
@@ -806,7 +1099,7 @@ const QuickFeedbackEvaluations = ({
                       }}
                     >
                       <Text
-                        className="text-lg font-bold mb-3"
+                        className="text-base font-bold mb-3"
                         style={{
                           color: theme === "dark" ? "#60a5fa" : "#1d4ed8",
                         }}
@@ -814,25 +1107,55 @@ const QuickFeedbackEvaluations = ({
                         🔵 Filler Words ({totalFillers})
                       </Text>
                       <View className="flex-row flex-wrap">
-                        {Object.entries(fillerCounts).map(([word, count]) => (
-                          <View
-                            key={word}
-                            className="rounded-full px-3 py-1 mr-2 mb-2"
-                            style={{
-                              backgroundColor:
-                                theme === "dark" ? "#3b82f6" : "#dbeafe",
-                            }}
-                          >
-                            <Text
-                              className="text-sm font-medium"
-                              style={{
-                                color: theme === "dark" ? "#fff" : "#1e40af",
-                              }}
-                            >
-                              {word} ({count})
-                            </Text>
-                          </View>
-                        ))}
+                        {Object.entries(fillerCounts).map(([word, count]) => {
+                          const matchingEntries = evaluationResults.fillerData.filter((item) => item.word === word);
+                          const isExpanded = expandedWords[word];
+
+                          return (
+                            <View key={word} className="mb-2 max-w-full">
+                              {/* Word chip */}
+                              <TouchableOpacity
+                                onPress={() => toggleExpand(word)}
+                                className="rounded-full px-3 py-1 mr-2 mb-1 flex-row items-center"
+                                style={{
+                                  backgroundColor: theme === "dark" ? "#3b82f6" : "#dbeafe",
+                                  maxWidth: "100%",
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                <Text
+                                  className="text-sm font-medium mr-2 flex-shrink"
+                                  style={{ color: theme === "dark" ? "#fff" : "#1e40af" }}
+                                >
+                                  {word} ({count})
+                                </Text>
+                                {isExpanded ? (
+                                  <ChevronUp size={14} color={theme === "dark" ? "#fff" : "#1e40af"} />
+                                ) : (
+                                  <ChevronDown size={14} color={theme === "dark" ? "#fff" : "#1e40af"} />
+                                )}
+                              </TouchableOpacity>
+
+                              {/* Expanded detail */}
+                              {isExpanded && (
+                                <View className="ml-4 mt-1 space-y-1 pr-2" style={{ maxWidth: "95%" }}>
+                                  {matchingEntries.map((entry, idx) => (
+                                    <Text
+                                      key={idx}
+                                      style={{
+                                        color: colors.textSecondary,
+                                        fontSize: 12,
+                                        flexWrap: "wrap",
+                                      }}
+                                    >
+                                      ⏱ {entry.timestamp}: {entry.sentence}
+                                    </Text>
+                                  ))}
+                                </View>
+                              )}
+                            </View>
+                          );
+                        })}
                       </View>
                     </View>
                   )}
@@ -846,7 +1169,7 @@ const QuickFeedbackEvaluations = ({
                       }}
                     >
                       <Text
-                        className="text-lg font-bold mb-3"
+                        className="text-base font-bold mb-3"
                         style={{
                           color: theme === "dark" ? "#c084fc" : "#7c3aed",
                         }}
@@ -854,34 +1177,137 @@ const QuickFeedbackEvaluations = ({
                         🟣 Crutch Phrases ({totalCrutch})
                       </Text>
                       <View className="flex-row flex-wrap">
-                        {Object.entries(crutchCounts).map(([phrase, count]) => (
-                          <View
-                            key={phrase}
-                            className="rounded-full px-3 py-1 mr-2 mb-2"
-                            style={{
-                              backgroundColor:
-                                theme === "dark" ? "#8b5cf6" : "#ede9fe",
-                            }}
-                          >
-                            <Text
-                              className="text-sm font-medium"
-                              style={{
-                                color: theme === "dark" ? "#fff" : "#6b21a8",
-                              }}
-                            >
-                              {phrase} ({count})
-                            </Text>
-                          </View>
-                        ))}
+                        {Object.entries(crutchCounts).map(([phrase, count]) => {
+                          const matchingEntries = evaluationResults.crutchData.filter((item) => item.phrase === phrase);
+                          const isExpanded = expandedWords[phrase];
+
+                          return (
+                            <View key={phrase} className="mb-2 max-w-full">
+                              {/* Phrase chip */}
+                              <TouchableOpacity
+                                onPress={() => toggleExpand(phrase)}
+                                className="rounded-full px-3 py-1 mr-2 mb-1 flex-row items-center"
+                                style={{
+                                  backgroundColor: theme === "dark" ? "#8b5cf6" : "#ede9fe",
+                                  maxWidth: "100%",
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                <Text
+                                  className="text-sm font-medium mr-2"
+                                  style={{
+                                    color: theme === "dark" ? "#fff" : "#6b21a8",
+                                  }}
+                                >
+                                  {phrase} ({count})
+                                </Text>
+                                {isExpanded ? (
+                                  <ChevronUp size={14} color={theme === "dark" ? "#fff" : "#6b21a8"} />
+                                ) : (
+                                  <ChevronDown size={14} color={theme === "dark" ? "#fff" : "#6b21a8"} />
+                                )}
+                              </TouchableOpacity>
+
+                              {/* Expanded detail */}
+                              {isExpanded && (
+                                <View className="ml-4 mt-1 space-y-1 pr-2" style={{ maxWidth: "95%" }}>
+                                  {matchingEntries.map((entry, idx) => (
+                                    <Text
+                                      key={idx}
+                                      style={{
+                                        color: colors.textSecondary,
+                                        fontSize: 12,
+                                        flexWrap: "wrap",
+                                      }}
+                                    >
+                                      ⏱ {entry.timestamp}: {entry.sentence}
+                                    </Text>
+                                  ))}
+                                </View>
+                              )}
+                            </View>
+                          );
+                        })}
                       </View>
                     </View>
                   )}
+
+                  {Object.keys(fillerCounts).length > 0 && (
+                    <View
+                      className="rounded-2xl p-4"
+                      style={{
+                        backgroundColor:
+                          theme === "dark" ? "#1e3a8a" : "#eff6ff",
+                      }}
+                    >
+                      <Text
+                        className="text-base font-bold mb-3"
+                        style={{
+                          color: theme === "dark" ? "#60a5fa" : "#1d4ed8",
+                        }}
+                      >
+                        🔵 Repeated Phrases ({totalRepeat})
+                      </Text>
+                      <View className="flex-row flex-wrap">
+                        {Object.entries(repeatCounts).map(([word, count]) => {
+                          const matchingEntries = evaluationResults.repeatedPhrases.filter((item) => item.word === word);
+                          const isExpanded = expandedWords[word];
+
+                          return (
+                            <View key={word} className="mb-2 max-w-full">
+                              {/* Word chip */}
+                              <TouchableOpacity
+                                onPress={() => toggleExpand(word)}
+                                className="rounded-full px-3 py-1 mr-2 mb-1 flex-row items-center"
+                                style={{
+                                  backgroundColor: theme === "dark" ? "#3b82f6" : "#dbeafe",
+                                  maxWidth: "100%",
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                <Text
+                                  className="text-sm font-medium mr-2 flex-shrink"
+                                  style={{ color: theme === "dark" ? "#fff" : "#1e40af" }}
+                                >
+                                  {word} ({count})
+                                </Text>
+                                {isExpanded ? (
+                                  <ChevronUp size={14} color={theme === "dark" ? "#fff" : "#1e40af"} />
+                                ) : (
+                                  <ChevronDown size={14} color={theme === "dark" ? "#fff" : "#1e40af"} />
+                                )}
+                              </TouchableOpacity>
+
+                              {/* Expanded detail */}
+                              {isExpanded && (
+                                <View className="ml-4 mt-1 space-y-1 pr-2" style={{ maxWidth: "95%" }}>
+                                  {matchingEntries.map((entry, idx) => (
+                                    <Text
+                                      key={idx}
+                                      style={{
+                                        color: colors.textSecondary,
+                                        fontSize: 12,
+                                        flexWrap: "wrap",
+                                      }}
+                                    >
+                                      ⏱ {entry.timestamp}: {entry.sentence}
+                                    </Text>
+                                  ))}
+                                </View>
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+                  
                 </View>
               </>
             )}
           </View>
         );
-
+      
       case "Grammar":
         const grammarMistakes = evaluationResults.grammarData || [];
 
@@ -892,7 +1318,7 @@ const QuickFeedbackEvaluations = ({
             .join(" ");
         };
 
-        // Group by mistake_type
+        // Grouping logic is still useful for total counts, but not for direct rendering order here
         const groupedMistakes: Record<string, typeof grammarMistakes> = {};
         grammarMistakes.forEach((mistake) => {
           if (!groupedMistakes[mistake.mistake_type]) {
@@ -903,6 +1329,62 @@ const QuickFeedbackEvaluations = ({
 
         const totalMistakes = grammarMistakes.length;
         const mistakeTypes = Object.keys(groupedMistakes).length;
+
+        const renderMistakeTypeCard = (type: string, mistakes: typeof grammarMistakes) => (
+          <>
+            <Text
+              className="text-base font-bold mb-3"
+              style={{ color: colors.text }}
+            >
+              {formatMistakeType(type)}
+            </Text>
+
+            {mistakes.map((mistake, index) => (
+              <View
+                key={index}
+                className="rounded-2xl p-2 mb-4"
+                style={{
+                  backgroundColor: theme === "dark" ? "#1f2937" : "#f9fafb",
+                }}
+              >
+                <View style={{ marginRight: 20 }}>
+                  <View className="mb-3 flex-row items-start">
+                    <X
+                      size={16}
+                      color={colors.error}
+                      style={{ marginRight: 8, marginTop: 2 }}
+                    />
+                    <Text
+                      className="font-semibold text-sm flex-1"
+                      style={{ color: colors.error }}
+                      numberOfLines={0}
+                    >
+                      {mistake.incorrect_grammar}
+                    </Text>
+                  </View>
+
+                  <View className="mb-3 flex-row items-start">
+                    <Check
+                      size={16}
+                      color={colors.success}
+                      style={{ marginRight: 8, marginTop: 2 }}
+                    />
+                    <Text
+                      className="font-semibold text-sm flex-1"
+                      style={{
+                        color: theme === "dark" ? "#6ee7b7" : "#047857",
+                      }}
+                      numberOfLines={0}
+                    >
+                      {mistake.correct_grammar}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </>
+        );
+
 
         return (
           <View>
@@ -926,9 +1408,19 @@ const QuickFeedbackEvaluations = ({
                   Grammar Check
                 </Text>
               </View>
+              <TouchableOpacity onPress={() => handleInfoPress("Grammar")}>
+                <View
+                  className="rounded-full p-2"
+                  style={{
+                    backgroundColor: theme === "dark" ? "#4b5563" : "#e5e7eb",
+                  }}
+                >
+                  <Info size={16} color={colors.textSecondary} />
+                </View>
+              </TouchableOpacity>
             </View>
 
-            {grammarMistakes.length === 0 ? (
+            {totalMistakes === 0 ? ( // Use totalMistakes for the condition
               <View className="items-center py-8">
                 <View
                   className="rounded-full p-4 mb-4"
@@ -1004,315 +1496,364 @@ const QuickFeedbackEvaluations = ({
                   </View>
                 </View>
 
-                {/* Grammar Issues by Category */}
-                <ScrollView>
-                  {Object.entries(groupedMistakes).map(
-                    ([type, mistakes], idx) => (
-                      <View key={idx} className="mb-6">
-                        <View className="flex-row items-center mb-3">
-                          <View
-                            className="rounded-full p-2 mr-3"
-                            style={{
-                              backgroundColor:
-                                theme === "dark" ? "#dc2626" : "#fef2f2",
-                            }}
-                          >
-                            <AlertCircle
-                              size={16}
-                              color={theme === "dark" ? "#fff" : "#dc2626"}
-                            />
-                          </View>
-                          <Text
-                            className="text-lg font-bold flex-1"
-                            style={{ color: colors.text }}
-                          >
-                            {formatMistakeType(type)}
-                          </Text>
-                        </View>
+                {/* Grammar Issues as Cards */}
+                <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+                  {/* First 3 types (always visible) */}
+                {Object.entries(groupedMistakes)
+                  .slice(0, 3)
+                  .map(([type, mistakes], groupIndex) => (
+                    <View key={type} className="mb-2">
+                      {renderMistakeTypeCard(type, mistakes)}
+                    </View>
+                  ))}
 
-                        <View className="space-y-3">
-                          {mistakes.map((mistake, index) => (
-                            <View
-                              key={index}
-                              className="rounded-2xl p-4"
-                              style={{
-                                backgroundColor:
-                                  theme === "dark" ? "#1f2937" : "#f9fafb",
-                                borderLeftWidth: 4,
-                                borderLeftColor: colors.error,
-                              }}
-                            >
-                              <View className="mb-3">
-                                <View className="flex-row items-center mb-2">
-                                  <View
-                                    className="w-2 h-2 rounded-full mr-2"
-                                    style={{ backgroundColor: colors.error }}
-                                  />
-                                  <Text
-                                    className="text-sm font-bold"
-                                    style={{ color: colors.error }}
-                                  >
-                                    INCORRECT
-                                  </Text>
-                                </View>
-                                <Text
-                                  className="text-base font-medium"
-                                  style={{ color: colors.text }}
-                                >
-                                  {mistake.incorrect_grammar}
-                                </Text>
-                              </View>
-
-                              <View
-                                className="rounded-xl p-3"
-                                style={{
-                                  backgroundColor:
-                                    theme === "dark" ? "#065f46" : "#ecfdf5",
-                                }}
-                              >
-                                <View className="flex-row items-center mb-2">
-                                  <View
-                                    className="w-2 h-2 rounded-full mr-2"
-                                    style={{ backgroundColor: colors.success }}
-                                  />
-                                  <Text
-                                    className="text-sm font-bold"
-                                    style={{ color: colors.success }}
-                                  >
-                                    CORRECT
-                                  </Text>
-                                </View>
-                                <Text
-                                  className="text-base font-medium"
-                                  style={{
-                                    color:
-                                      theme === "dark" ? "#6ee7b7" : "#047857",
-                                  }}
-                                >
-                                  {mistake.correct_grammar}
-                                </Text>
-                              </View>
+                {/* Expandable section */}
+                {Object.entries(groupedMistakes).length > 3 && (
+                  <>
+                    <Animated.View style={{ height, overflow: "hidden" }}>
+                      <View
+                        onLayout={(e) => setContentHeight(e.nativeEvent.layout.height)}
+                      >
+                        {Object.entries(groupedMistakes)
+                          .slice(3)
+                          .map(([type, mistakes]) => (
+                            <View key={type} className="mb-2">
+                              {renderMistakeTypeCard(type, mistakes)}
                             </View>
                           ))}
-                        </View>
                       </View>
-                    ),
-                  )}
+                    </Animated.View>
+
+
+                    <TouchableOpacity
+                      onPress={() => setShowAllGrammarTypes((prev) => !prev)}
+                      className="self-center px-4 py-2 rounded-full"
+                      style={{
+                        backgroundColor: theme === "dark" ? "#374151" : "#f3f4f6", 
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <View className="flex-row items-center">
+                        <Text
+                          className="text-sm font-semibold mr-2"
+                          style={{
+                            color: theme === "dark" ? "#e5e7eb" : "#374151", 
+                          }}
+                        >
+                          {showAllGrammarTypes ? "Show Less" : "View All"}
+                        </Text>
+                        {showAllGrammarTypes ? (
+                          <ChevronUp size={18} color={theme === "dark" ? "#e5e7eb" : "#6b7280"} /> 
+                        ) : (
+                          <ChevronDown size={18} color={theme === "dark" ? "#e5e7eb" : "#6b7280"} />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+
+
+                  </>
+                )}
                 </ScrollView>
               </>
             )}
-          </View>
-        );
 
-      case "Environment":
-        const environDataRaw = evaluationResults.environData;
-        const environData = Array.isArray(environDataRaw)
-          ? environDataRaw
-          : environDataRaw
-            ? [environDataRaw]
-            : [];
-
-        // 🔁 Count occurrences and sum durations
-        const elementCounts: Record<string, number> = {};
-        const elementDurations: Record<string, number> = {};
-
-        environData.forEach((item) => {
-          const key = item.element_type;
-          const duration = parseFloat(item.duration_seconds || "0");
-
-          elementCounts[key] = (elementCounts[key] || 0) + 1;
-          elementDurations[key] = (elementDurations[key] || 0) + duration;
-        });
-
-        const environLabels = Object.keys(elementCounts);
-        const elementCountValues = Object.values(elementCounts);
-        const totalEnvironDuration = Object.values(elementDurations).reduce(
-          (a, b) => a + b,
-          0,
-        );
-
-        const barChartData2 = {
-          labels: environLabels,
-          datasets: [
-            {
-              data: elementCountValues,
-              colors: environLabels.map((_, i) => (opacity = 1) => {
-                const hue = (i * 137.5) % 360;
-                return `hsla(${hue}, 70%, 50%, ${opacity})`;
-              }),
-            },
-          ],
-        };
-
-        return (
-          <View>
-            <View className="flex-row items-center justify-between mb-6">
-              <View className="flex-row items-center">
-                <View
-                  className="rounded-full p-2 mr-3"
-                  style={{
-                    backgroundColor: theme === "dark" ? "#f59e0b" : "#fef3c7",
-                  }}
-                >
-                  <Volume2
-                    size={20}
-                    color={theme === "dark" ? "#000" : "#d97706"}
-                  />
-                </View>
-                <Text
-                  className="text-xl font-bold"
-                  style={{ color: colors.text }}
-                >
-                  Environment
-                </Text>
-              </View>
-            </View>
-
-            {environLabels.length === 0 ? (
-              <View className="items-center py-8">
-                <View
-                  className="rounded-full p-4 mb-4"
-                  style={{
-                    backgroundColor: theme === "dark" ? "#065f46" : "#ecfdf5",
-                  }}
-                >
-                  <CheckCircle size={32} color={colors.success} />
-                </View>
-                <Text
-                  className="text-lg font-medium mb-2"
-                  style={{ color: colors.success }}
-                >
-                  Clean Environment!
-                </Text>
-                <Text
-                  className="text-center"
-                  style={{ color: colors.textSecondary }}
-                >
-                  No environmental distractions detected.
-                </Text>
-              </View>
-            ) : (
-              <>
-                {/* 📊 Bar Chart */}
-                <View className="mb-6">
-                  <Text
-                    className="text-lg font-bold mb-3"
-                    style={{ color: colors.text }}
+            {/* Tooltip Modal - Ensure this is outside the conditional rendering and at the end */}
+            {tooltipVisible && ( // Only render modal if visible to avoid unnecessary overhead
+              <Modal
+                  transparent={true}
+                  visible={tooltipVisible}
+                  onRequestClose={hideTooltip}
+              >
+                  <TouchableOpacity
+                      style={StyleSheet.absoluteFillObject} // Occupy entire screen for dismissing
+                      onPress={hideTooltip}
+                      activeOpacity={1} // Prevents opacity change on press
                   >
-                    Frequency by Element Type
-                  </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <BarChart
-                      data={barChartData2}
-                      width={Math.max(
-                        screenWidth - 48,
-                        environLabels.length * 100,
-                      )}
-                      height={200}
-                      chartConfig={{
-                        backgroundColor: colors.card,
-                        backgroundGradientFrom: colors.card,
-                        backgroundGradientTo: colors.card,
-                        color: (opacity = 1) =>
-                          `rgba(245, 158, 11, ${opacity})`,
-                        labelColor: (opacity = 1) => colors.textSecondary,
-                        style: { borderRadius: 16 },
-                        propsForBackgroundLines: {
-                          stroke: colors.border,
-                        },
-                        decimalPlaces: 0,
-                      }}
-                      formatYLabel={(val) => parseInt(val).toString()}
-                      fromZero
-                      style={{
-                        marginVertical: 8,
-                        borderRadius: 16,
-                      }}
-                    />
-                  </ScrollView>
-                </View>
-
-                {/* 🧾 Element List with durations */}
-                <View className="space-y-3">
-                  <Text
-                    className="text-lg font-bold mb-3"
-                    style={{ color: colors.text }}
-                  >
-                    Detected Elements
-                  </Text>
-                  {Object.entries(elementDurations).map(
-                    ([element, duration], index) => {
-                      const percentage = (
-                        (duration / totalEnvironDuration) *
-                        100
-                      ).toFixed(1);
-                      return (
-                        <View
-                          key={element}
-                          className="rounded-2xl p-4"
-                          style={{
-                            backgroundColor:
-                              theme === "dark" ? "#1f2937" : "#f9fafb",
-                            borderLeftWidth: 4,
-                            borderLeftColor: `hsla(${(index * 137.5) % 360}, 70%, 50%, 1)`,
-                          }}
-                        >
-                          <View className="flex-row items-center justify-between">
-                            <View className="flex-1">
-                              <Text
-                                className="text-base font-bold mb-1"
-                                style={{ color: colors.text }}
-                              >
-                                {element.charAt(0).toUpperCase() +
-                                  element.slice(1)}
-                              </Text>
-                              <Text
-                                className="text-sm"
-                                style={{ color: colors.textSecondary }}
-                              >
-                                {duration.toFixed(1)} seconds • {percentage}% of
-                                total
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      );
-                    },
-                  )}
-                </View>
-              </>
+                      <View
+                          style={[
+                              styles.tooltipContainer,
+                              {
+                                  // Adjust these values based on actual visual testing for optimal placement
+                                  top: tooltipPosition.y + 10,
+                                  // Dynamically adjust left to attempt to center the tooltip over the touch point
+                                  // This assumes styles.tooltipContainer.maxWidth is 200 (200 / 2 = 100)
+                                  left: tooltipPosition.x - (styles.tooltipContainer.maxWidth / 2 || 100),
+                                  backgroundColor: theme === "dark" ? "#334155" : "#fefefe",
+                                  borderColor: theme === "dark" ? "#475569" : "#cbd5e1",
+                                  borderWidth: 1,
+                              },
+                          ]}
+                      >
+                          <Text style={{ color: colors.text, fontSize: 13, padding: 8 }}>
+                              {tooltipContent}
+                          </Text>
+                      </View>
+                  </TouchableOpacity>
+              </Modal>
             )}
           </View>
         );
+      
+      case "Engagement":
+      const expectedElements = [
+        "applause",
+        "laughter",
+        "background_noise",
+        "pure_silence",
+        "cross_talk",
+      ];
 
-        {
-          /*case "Vocal Variety":
-        return (
-          <View>
-            <View className="flex-row items-center justify-between mb-6">
-              <View className="flex-row items-center">
-                <View
-                  className="rounded-full p-2 mr-3"
-                  style={{
-                    backgroundColor: theme === "dark" ? "#fbbf24" : "#fef3c7",
-                  }}
-                >
-                  <Lightbulb
-                    size={20}
-                    color={theme === "dark" ? "#000" : "#d97706"}
-                  />
-                </View>
+      const elementCounts: Record<string, number> = {};
+      const elementDurations: Record<string, number> = {};
+
+      expectedElements.forEach((el) => {
+        elementCounts[el] = 0;
+        elementDurations[el] = 0;
+      });
+
+      const environDataRaw = evaluationResults.environData;
+      const environData = Array.isArray(environDataRaw)
+        ? environDataRaw
+        : environDataRaw
+          ? [environDataRaw]
+          : [];
+
+      // Group sentences by element type
+      const elementSentences: Record<string, { timestamp: string; sentence: string }[]> = {};
+
+      environData.forEach((item) => {
+        const rawKey = item.element_type || "";
+        const key = rawKey.trim().toLowerCase().replace(/[\s-]/g, "_");
+
+        if (!elementSentences[key]) {
+          elementSentences[key] = [];
+        }
+
+        elementSentences[key].push({
+          timestamp: item.timestamp,
+          sentence: item.sentence,
+        });
+      });
+
+
+      // Override with actual data
+      environData.forEach((item) => {
+        const rawKey = item.element_type || "";
+        const key = rawKey.trim().toLowerCase().replace(/[\s-]/g, "_");
+
+        const duration = parseFloat(item.duration_seconds || "0");
+
+        if (expectedElements.includes(key)) {
+          elementCounts[key] += 1;
+          elementDurations[key] += duration;
+        }
+      });
+
+      const environLabels = expectedElements; // All 5 labels
+      const elementCountValues = environLabels.map((el) => elementCounts[el] || 0);
+
+      const totalEnvironDuration = Object.values(elementDurations).reduce(
+        (a, b) => a + b,
+        0,
+      );
+
+      // Step 1: Combine labels and values into one array
+      const combined = environLabels.map((label, index) => ({
+        label,
+        count: elementCountValues[index],
+      }));
+
+      // Step 2: Sort by count descending
+      const sorted = combined.sort((a, b) => b.count - a.count);
+
+      // Step 3: Rebuild chart data from sorted array
+      const barChartData2 = {
+        labels: sorted.map((item) =>
+          item.label
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase())
+        ),
+        datasets: [
+          {
+            data: sorted.map((item) => item.count),
+            colors: sorted.map((_, i) => (opacity = 1) => {
+              const hue = (i * 137.5) % 360;
+              return `hsla(${hue}, 70%, 50%, ${opacity})`;
+            }),
+          },
+        ],
+      };
+
+      const maxCount = Math.max(...barChartData2.datasets[0].data);
+      const yAxisMax = Math.ceil(maxCount * 1.2); // add buffer so bars don’t touch top
+
+      return (
+        <View>
+          <View className="flex-row items-center justify-between mb-6">
+            <View className="flex-row items-center">
+              <View
+                className="rounded-full p-2 mr-3"
+                style={{
+                  backgroundColor: theme === "dark" ? "#f59e0b" : "#fef3c7",
+                }}
+              >
+                <Volume2
+                  size={20}
+                  color={theme === "dark" ? "#000" : "#d97706"}
+                />
+              </View>
+              <Text
+                className="text-xl font-bold"
+                style={{ color: colors.text }}
+              >
+                Engagement
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => handleInfoPress("Engagement")}>
+              <View
+                className="rounded-full p-2"
+                style={{
+                  backgroundColor: theme === "dark" ? "#4b5563" : "#e5e7eb",
+                }}
+              >
+                <Info size={16} color={colors.textSecondary} />
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {environLabels.length === 0 ? (
+            <View className="items-center py-8">
+              <View
+                className="rounded-full p-4 mb-4"
+                style={{
+                  backgroundColor: theme === "dark" ? "#065f46" : "#ecfdf5",
+                }}
+              >
+                <CheckCircle size={32} color={colors.success} />
+              </View>
+              <Text
+                className="text-lg font-medium mb-2"
+                style={{ color: colors.success }}
+              >
+                No Engagement
+              </Text>
+              <Text
+                className="text-center"
+                style={{ color: colors.textSecondary }}
+              >
+                No audience engagement detected.
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* 📊 Bar Chart */}
+              <View className="mb-6">
                 <Text
-                  className="text-xl font-bold"
+                  className="text-lg font-bold mb-3"
                   style={{ color: colors.text }}
                 >
-                  Vocal Variety
+                  Frequency by Element Type
                 </Text>
+                <View  style={{ marginLeft: -23 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <BarChart
+                    data={barChartData2}
+                    width={Math.max(screenWidth - 48, environLabels.length * 100)}
+                    height={200}
+                    fromZero
+                    segments={3} // or 4 if your data is higher
+                    formatYLabel={(value) => {
+                      const num = Number(value);
+                      return Number.isInteger(num) ? `${num}` : ''; // only show whole numbers
+                    }}
+                    chartConfig={{
+                      backgroundColor: colors.card,
+                      backgroundGradientFrom: colors.card,
+                      backgroundGradientTo: colors.card,
+                      color: (opacity = 1) => `rgba(245, 158, 11, ${opacity})`,
+                      labelColor: (opacity = 1) => colors.textSecondary,
+                      style: { borderRadius: 16 },
+                      propsForBackgroundLines: {
+                        stroke: colors.border,
+                      },
+                      decimalPlaces: 0,
+                    }}
+                    style={{
+                      marginVertical: 8,
+                      borderRadius: 16,
+                    }}
+                  />
+
+                </ScrollView>
+                </View>
               </View>
-            </View>
-          </View>
-        );*/
-        }
+
+              {/* 🧾 Element List with durations */}
+              <View className="space-y-3">
+                <Text
+                  className="text-lg font-bold mb-3"
+                  style={{ color: colors.text }}
+                >
+                  Detected Elements
+                </Text>
+                {Object.entries(elementDurations)
+                .filter(([, duration]) => duration > 0)
+                .map(
+                  ([element, duration], index) => {
+                    const percentage = (
+                      (duration / totalEnvironDuration) *
+                      100
+                    ).toFixed(1);
+                    return (
+                      <View
+                        key={element}
+                        className="rounded-2xl p-4"
+                        style={{
+                          backgroundColor:
+                            theme === "dark" ? "#1f2937" : "#f9fafb",
+                          borderLeftWidth: 4,
+                          borderLeftColor: `hsla(${(index * 137.5) % 360}, 70%, 50%, 1)`,
+                        }}
+                      >
+                        <View className="flex-row items-center justify-between">
+                          <View className="flex-1">
+                            <Text
+                              className="text-base font-bold mb-1"
+                              style={{ color: colors.text }}
+                            >
+                              {element.charAt(0).toUpperCase() + element.slice(1).replace(/_/g, " ")}
+                            </Text>
+                            <Text
+                              className="text-sm mb-2"
+                              style={{ color: colors.textSecondary }}
+                            >
+                              {duration.toFixed(1)} seconds
+                            </Text>
+
+                            {/* Timestamped Sentences */}
+                            {elementSentences[element]?.map((entry, idx) => (
+                              <Text
+                                key={idx}
+                                className="text-sm"
+                                style={{ color: colors.text }}
+                              >
+                                <Text style={{ fontWeight: "bold" }}>
+                                  [{entry.timestamp}]
+                                </Text>{" "}
+                                {entry.sentence}
+                              </Text>
+                            ))}
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  },
+                )}
+              </View>
+            </>
+          )}
+        </View>
+      );         
     }
   };
 
@@ -1400,97 +1941,6 @@ const QuickFeedbackEvaluations = ({
         </View>
       </View>
 
-      {/*
-      <View
-        className="rounded-3xl p-6 mb-6 shadow-lg"
-        style={{ backgroundColor: colors.card }}
-      >
-        <Text className="text-xl font-bold mb-4" style={{ color: colors.text }}>
-          Evaluation Breakdown
-        </Text>
-        <View className="space-y-4">
-          {[
-            {
-              label: "Content Insight",
-              value: evaluationResults.contentInsight,
-              color: "#6366f1",
-            },
-            {
-              label: "Speaking Quality",
-              value: evaluationResults.speakingQuality,
-              color: "#3b82f6",
-            },
-            {
-              label: "Clarity",
-              value: evaluationResults.clarity,
-              color: "#10b981",
-            },
-            {
-              label: "Confidence",
-              value: evaluationResults.confidence,
-              color: "#f59e0b",
-            },
-          ].map((metric, index) => (
-            <View key={index} className="flex-row items-center justify-between">
-              <Text className="font-medium" style={{ color: colors.text }}>
-                {metric.label}
-              </Text>
-              <View className="flex-row items-center">
-                <View
-                  className="rounded-full h-2 w-20 mr-3"
-                  style={{ backgroundColor: colors.border }}
-                >
-                  <View
-                    className="rounded-full h-2"
-                    style={{
-                      width: `${metric.value}%`,
-                      backgroundColor: metric.color,
-                    }}
-                  />
-                </View>
-                <Text className="font-bold w-8" style={{ color: colors.text }}>
-                  {metric.value}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </View>/*}
-
-      {/* Key Insights */}
-      {/* <View
-        className="rounded-3xl p-6 mb-6 shadow-lg"
-        style={{ backgroundColor: colors.card }}
-      >
-        <View className="flex-row items-center mb-4">
-          <Lightbulb size={24} color={colors.warning} />
-          <Text
-            className="text-xl font-bold ml-2"
-            style={{ color: colors.text }}
-          >
-            Key Insights
-          </Text>
-        </View>
-        <View className="space-y-3">
-          {feedback.keyInsights.map((insight, index) => (
-            <View key={index} className="flex-row items-start">
-              <View
-                className="rounded-full p-1 mr-3 mt-1"
-                style={{ backgroundColor: colors.surface }}
-              >
-                <Star size={12} color={colors.warning} />
-              </View>
-              <Text
-                className="flex-1 text-base"
-                style={{ color: colors.textSecondary }}
-              >
-                {insight}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>*/}
-
       {/* Metrics Tabs */}
       <View className="px-3 py-4">
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -1498,11 +1948,11 @@ const QuickFeedbackEvaluations = ({
             {tabs.map((tab, index) => {
               const icons = [
                 Lightbulb, // Key Insights
-                Mic, // Fillers & Crutches
+                Mic, // Speech Patterns
                 Type, // Grammar
-                // Star, // Vocal
                 PauseCircle, // Pauses & Variety
-                Volume2, // Environment
+                Star, // Vocal
+                Volume2, // Engagement
               ];
               const IconComponent = icons[index];
               return (
@@ -1565,6 +2015,7 @@ const QuickFeedbackEvaluations = ({
       >
         {renderTabContent()}
       </View>
+      
 
       {/* Commendations Section */}
       <View
@@ -1686,8 +2137,113 @@ const QuickFeedbackEvaluations = ({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Info Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showInfoModal}
+        onRequestClose={() => setShowInfoModal(false)}
+      >
+        <View
+          className="flex-1 justify-end"
+          style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
+        >
+          <View
+            className="rounded-t-3xl p-6 pb-8"
+            style={{ backgroundColor: colors.card }}
+          >
+            <TouchableOpacity
+              onPress={() => setShowInfoModal(false)}
+              className="self-end p-2 -mt-2 -mr-2"
+            >
+              <Text className="text-2xl font-bold" style={{ color: colors.textSecondary }}>
+                &times;
+              </Text>
+            </TouchableOpacity>
+
+            {infoContent && (
+              <>
+                <View className="flex-row items-center mb-4">
+                  <View
+                    className="rounded-full p-3 mr-3"
+                    style={{ backgroundColor: colors.primary, opacity: 0.2 }}
+                  >
+                    <Info size={24} color='#ffff' />
+                  </View>
+                  <Text className="text-2xl font-bold" style={{ color: colors.text }}>
+                    {infoContent.title}
+                  </Text>
+                </View>
+                <Text className="text-base mb-4" style={{ color: colors.textSecondary }}>
+                  {infoContent.description}
+                </Text>
+
+                {infoContent.bullets?.map((bullet, index) => (
+                  <View key={index} className="flex-row items-start mb-3">
+                    <View className="mr-3 mt-1">{bullet.icon}</View>
+                    <Text className="flex-1 text-base" style={{ color: colors.text }}>
+                      {bullet.text}
+                    </Text>
+                  </View>
+                ))}
+
+                {infoContent.sections?.map((section, sectionIndex) => (
+                  <View key={sectionIndex} className="mb-4">
+                    <Text className="font-semibold text-lg mb-2" style={{ color: colors.text }}>
+                      {section.title}
+                    </Text>
+                    {Array.isArray(section.content) ? (
+                      section.content.map((item, itemIndex) => (
+                        <View key={itemIndex} className="flex-row items-start mb-2">
+                          <View className="mr-3 mt-1">{item.icon}</View>
+                          <Text className="flex-1 text-base" style={{ color: colors.textSecondary }}>
+                            {item.text}
+                          </Text>
+                        </View>
+                      ))
+                    ) : (
+                      <Text className="text-base" style={{ color: colors.textSecondary }}>
+                        {section.content}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </>
+            )}
+
+            <TouchableOpacity
+              onPress={() => setShowInfoModal(false)}
+              className="mt-6 py-3 rounded-full items-center shadow-lg"
+              style={{ backgroundColor: colors.primary }}
+            >
+              <Text
+                className="text-base font-bold"
+                style={{ color: "#fff" }}
+              >
+                Got It!
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
 export default QuickFeedbackEvaluations;
+
+const styles = StyleSheet.create({
+    tooltipContainer: {
+        position: 'absolute',
+        borderRadius: 8,
+        maxWidth: 200, // Important for the 'left' calculation
+        zIndex: 1000,
+        elevation: 5, // Android shadow
+        shadowColor: '#000', // iOS shadow
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+    },
+});
+

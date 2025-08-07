@@ -35,6 +35,7 @@ dayjs.extend(utc);
 export default function HomeScreen() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const [dataLoading, setDataLoading] = useState(true);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [modalMessage, setModalMessage] = useState(""); 
   const [modalTitle, setModalTitle] = useState("");
@@ -101,43 +102,52 @@ export default function HomeScreen() {
       }
   }, []);
 
-  useEffect(() => {
-      fetchPlan();
-      fetchLimits();
-  }, [fetchPlan, fetchLimits]);
+  const fetchSessions = useCallback(async () => {
+    const token = await AsyncStorage.getItem("auth_token");
+    try {
+      const response = await fetch(`${BASE_URL}/dashboard/recent`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-  useEffect(() => {
-    const fetchSessions = async () => {
-      const token = await AsyncStorage.getItem("auth_token");
-      try {
-        const response = await fetch(`${BASE_URL}/dashboard/recent`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      const { recent_sessions } = await response.json();
+      const sessions = recent_sessions || [];
 
-        const { recent_sessions } = await response.json();
-        const sessions = recent_sessions || [];
+      setRecentSessions(sessions);
 
-        setRecentSessions(sessions);
+      const achievements = sessions
+        .slice(0, 3)
+        .flatMap((s) => s.analytics?.achievement?.tag || [])
+        .filter((tag, index, self) => self.indexOf(tag) === index);
 
-        // ⬇️ Extract up to 3 achievement tags
-        const achievements = sessions
-          .slice(0, 3) // just last 3 sessions
-          .flatMap((s) => s.analytics?.achievement?.tag || [])
-          .filter((tag, index, self) => self.indexOf(tag) === index); // remove duplicates
-        
-        console.log(achievements)
-
-        setRecentAchievements(achievements);
-      } catch (err) {
-        console.error("Failed to fetch sessions:", err);
-      }
-    };
-
-    fetchSessions();
+      setRecentAchievements(achievements);
+    } catch (err) {
+      console.error("Failed to fetch sessions:", err);
+    }
   }, []);
+
+
+  useEffect(() => {
+  const initializeAppData = async () => {
+    setDataLoading(true);
+    try {
+      await Promise.all([
+        fetchPlan(),
+        fetchLimits(),
+        fetchSessions()
+      ]);
+    } catch (error) {
+      console.error("Initialization error:", error);
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  initializeAppData();
+}, []);
+
 
   const calculateStreak = (sessions: any[]) => {
     const today = dayjs().startOf("day");
@@ -278,19 +288,65 @@ export default function HomeScreen() {
     ];
   }, [plan, router]);
 
+  const tips = [
+    "Greatness takes time… and a fast internet connection.",
+    "Did you hydrate today? Your voice matters.",
+    "Fun fact: The fear of public speaking is called glossophobia.",
+    "Warming up your charisma engine…",
+    "Preparing the stage for your brilliance...",
+    "Even the best speakers need a dramatic pause…",
+    "Checking mic levels... Testing, testing... 1, 2, YOU!",
+    "Behind every great speech is a loading spinner.",
+    "Aligning your confidence chakras",
+    "Powering up your persuasive powers",
+    "Downloading applause. This may take a moment...",
+    "The audience is getting seated. Please hold.",
+    "Applying your charisma filter...",
+    "Searching for your inner TED Talk.",
+    "Installing virtual standing ovations...",
+    "Getting your 'um's and 'uh's under control...",
+    "Unmuting your potential...",
+    "Almost there… your voice is warming up!",
+  ];
 
-// Show loading state while checking authentication
-  if (loading) {
+
+  const [currentTip, setCurrentTip] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTip((prev) => (prev + 1) % tips.length);
+    }, 3000); // change tip every 3 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+const randomTip = tips[currentTip];
+
+
+  // Show loading state while checking authentication
+  if (loading || dataLoading) {
     return (
-    <SafeAreaView
-      className="flex-1 justify-center items-center"
-      style={{ backgroundColor: colors.background }}
-    >
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={{ color: colors.text, marginTop: 10 }}>Just a moment...</Text>
-    </SafeAreaView>
-  );
+      <SafeAreaView
+        className="flex-1 justify-center items-center"
+        style={{ backgroundColor: colors.background }}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text
+          style={{
+            color: colors.textSecondary,
+            marginTop: 16,
+            textAlign: "center",
+            paddingHorizontal: 30,
+            fontSize: 15,
+            lineHeight: 22,
+            fontWeight: '600'
+          }}
+        >
+          {randomTip}
+        </Text>
+      </SafeAreaView>
+    );
   }
+
 
   return (
     <SafeAreaView
@@ -299,10 +355,10 @@ export default function HomeScreen() {
     >
       <ScrollView className="flex-1">
         {/* Header with Level & Streak */}
-        <View className="flex-row justify-between items-center px-6 py-6">
+        <View className="flex-row justify-between items-center px-6 py-6 mt-2">
           <View>
             <Text
-              className="text-3xl font-bold mb-1"
+              className="text-3xl font-bold mb-1 mt-2"
               style={{ color: colors.text }}
             >
               {greeting}

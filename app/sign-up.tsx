@@ -40,6 +40,10 @@ export default function SignUpScreen() {
     profession: "",
     purposes: [] as string[],
     customPurpose: "",
+    avatar: "felix",
+    avatar_style: "bottts",
+    store_audio: false,
+    store_video: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -81,6 +85,71 @@ export default function SignUpScreen() {
     "Other",
   ];
 
+  // DiceBear avatar styles
+  const avatarStyles = [
+    "avataaars",
+    "adventurer",
+    "big-smile",
+    "lorelei",
+    "micah",
+    "personas",
+  ];
+
+  const [selectedAvatar, setSelectedAvatar] = useState("felix");
+  const [selectedAvatarStyle, setSelectedAvatarStyle] = useState("avataaars");
+  const [avatarSeeds, setAvatarSeeds] = useState<string[]>([]);
+  const [isShuffling, setIsShuffling] = useState(false);
+
+  // Generate DiceBear avatar URL
+  const generateAvatarUrl = (
+    seed: string,
+    style: string = "avataaars",
+  ): string => {
+    return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&size=80&backgroundColor=transparent`;
+  };
+
+  // Instead of generating randomly
+  const curatedAvatarSeeds = [
+    "felix",
+    "luna",
+    "maximus",
+    "pixelpete",
+    "nimbus",
+    "echo",
+    "blip",
+    "zara",
+    "orbit",
+  ];
+
+
+  useEffect(() => {
+    setAvatarSeeds(curatedAvatarSeeds);
+  }, []);
+
+  
+  const handleAvatarSelect = (avatarSeed: string) => {
+    setSelectedAvatar(avatarSeed);
+    console.log(selectedAvatar)
+    setFormData({
+      ...formData,
+      avatar: avatarSeed,
+      avatar_style: selectedAvatarStyle,
+    });
+  };
+
+  const handleShuffleAvatars = () => {
+    // setIsShuffling(true);
+    // setTimeout(() => {
+    //   setAvatarSeeds(generateRandomSeeds(12));
+    //   setIsShuffling(false);
+    // }, 300);
+  };
+
+  const handleStyleChange = (style: string) => {
+    setSelectedAvatarStyle(style);
+    // setAvatarSeeds(generateRandomSeeds(12));
+  };
+
   const handlePurposeToggle = (purpose: string) => {
     const newPurposes = formData.purposes.includes(purpose)
       ? formData.purposes.filter((p) => p !== purpose)
@@ -90,7 +159,7 @@ export default function SignUpScreen() {
 
   useEffect(() => {
     Animated.timing(progressAnim, {
-      toValue: (currentStep - 1) / 2, // range: 0 to 1
+      toValue: (currentStep - 1) / 4, // range: 0 to 1
       duration: 300,
       useNativeDriver: false,
     }).start();
@@ -150,7 +219,7 @@ export default function SignUpScreen() {
     return isValid;
   };
 
-  const validateStep2 = () => {
+  const validateStep3 = () => {
     const newErrors = { ...errors };
     let isValid = true;
 
@@ -182,7 +251,7 @@ export default function SignUpScreen() {
     return isValid;
   };
 
-  const validateStep3 = () => {
+  const validateStep4 = () => {
     const newErrors = { ...errors };
     let isValid = true;
 
@@ -208,19 +277,19 @@ export default function SignUpScreen() {
 
   const validateAllSteps = () => {
     const step1Valid = isGoogleUser ? true : validateStep1();
-    const step2Valid = validateStep2();
     const step3Valid = validateStep3();
+    const step4Valid = validateStep4();
 
     if (!step1Valid) {
       setCurrentStep(1);
       return false;
     }
-    if (!step2Valid) {
-      setCurrentStep(2);
-      return false;
-    }
     if (!step3Valid) {
       setCurrentStep(3);
+      return false;
+    }
+    if (!step4Valid) {
+      setCurrentStep(4);
       return false;
     }
 
@@ -228,18 +297,29 @@ export default function SignUpScreen() {
   };
 
   const nextStep = () => {
-    let isValid = false;
+  let isValid = true;
 
-    if (currentStep === 1) {
+  switch (currentStep) {
+    case 1:
       isValid = validateStep1();
-    } else if (currentStep === 2) {
-      isValid = validateStep2();
-    }
+      break;
+    case 3:
+      isValid = validateStep3();
+      break;
+    case 4:
+      isValid = validateStep4();
+      break;
+    default:
+      // step 2 or unknown step: no validation
+      isValid = true;
+  }
 
-    if (isValid && currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
+  if (isValid && currentStep < 5) {
+    setCurrentStep(currentStep + 1);
+  }
+
+};
+
 
   const handleGoogleSignUp = async () => {
     setIsGoogleLoading(true);
@@ -278,6 +358,7 @@ export default function SignUpScreen() {
     if (!validateAllSteps()) return;
 
     setIsLoading(true);
+    console.log(formData)
 
     try {
       if (!isGoogleUser) {
@@ -321,6 +402,10 @@ export default function SignUpScreen() {
           profession: formData.profession,
           purposes: formData.purposes,
           custom_purpose: formData.customPurpose,
+          avatar: formData.avatar,
+          avatar_style: formData.avatar_style,
+          store_audio: formData.store_audio ?? false, 
+          store_video: formData.store_video ?? false,
         }),
       });
 
@@ -335,7 +420,8 @@ export default function SignUpScreen() {
       });
       const userData = await meRes.json();
       setUser(userData);
-      router.push("/subscription");
+      // router.push("/subscription");
+      router.push("/trial");
     } catch (error) {
       Toast.show({
         type: "error",
@@ -349,7 +435,13 @@ export default function SignUpScreen() {
     }
   };
 
-  const stepTitle = ["Create your account", "Tell us about you", "Your goals"];
+  const stepTitle = [
+    "Create your account",
+    "Select Avatar",
+    "Tell us about you",
+    "Your goals",
+    "Your privacy preferences", 
+  ];
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -361,7 +453,7 @@ export default function SignUpScreen() {
           >
             <ArrowLeft size={20} color="#111" />
           </TouchableOpacity>
-          <Text className="text-gray-500 text-sm">Step {currentStep} of 3</Text>
+          <Text className="text-gray-500 text-sm">Step {currentStep} of 5</Text>
         </View>
 
         <View className="mb-6">
@@ -525,8 +617,69 @@ export default function SignUpScreen() {
           </View>
         )}
 
-        {/* Step 2 */}
         {currentStep === 2 && (
+         <View>
+            <Text className="text-base font-medium text-gray-800">
+              Pick your vibe
+            </Text>
+            <Text className="text-sm mb-3 text-gray-600">No pressure, you can always switch it up in your profile settings later!</Text>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="mb-4"
+            >
+              {avatarStyles.map((style) => (
+                <TouchableOpacity
+                  key={style}
+                  onPress={() => handleStyleChange(style)}
+                  className={`px-4 py-2 rounded-full border mr-2 ${
+                    selectedAvatarStyle === style
+                      ? "bg-black border-black"
+                      : "bg-white border-gray-300"
+                  }`}
+                >
+                  <Text
+                    className={`text-sm ${
+                      selectedAvatarStyle === style ? "text-white" : "text-black"
+                    }`}
+                  >
+                    {style}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <View className="flex-row flex-wrap justify-between">
+              {avatarSeeds.map((seed) => (
+                <TouchableOpacity
+                  key={seed}
+                  onPress={() => handleAvatarSelect(seed)}
+                  className={`m-2 rounded-full border-2 ${
+                    selectedAvatar === seed ? "border-black" : "border-transparent"
+                  }`}
+                >
+                  <Image
+                    source={{
+                      uri: generateAvatarUrl(seed, selectedAvatarStyle),
+                    }}
+                    style={{ width: 80, height: 80, borderRadius: 40 }}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* <TouchableOpacity
+              className="mt-4 px-4 py-3 bg-gray-100 rounded-xl border border-gray-300 items-center"
+              onPress={handleShuffleAvatars}
+            >
+              <Text className="text-black font-medium">Shuffle Avatars</Text>
+            </TouchableOpacity> */}
+          </View>
+        )}
+
+        {/* Step 2 */}
+        {currentStep === 3 && (
           <View className="space-y-6">
             <View>
               <Text className="text-base font-medium text-gray-800 mb-3">
@@ -623,7 +776,7 @@ export default function SignUpScreen() {
           </View>
         )}
 
-        {currentStep === 3 && (
+        {currentStep === 4 && (
           <View className="space-y-6">
             <View>
               <Text className="text-base font-medium text-gray-800 mb-3">
@@ -685,6 +838,66 @@ export default function SignUpScreen() {
           </View>
         )}
 
+        {currentStep === 5 && (
+          <View className="space-y-5">
+            <Text className="text-base font-medium text-gray-800">
+              Your data is safe with us.
+            </Text>
+            <Text className="text-sm text-gray-600">
+              We do not save any speech audio or video files in our database without your consent.
+              If you'd like to revisit speeches later, you can allow storage below.
+              For your privacy, saved files are automatically deleted after 30 days.
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => { 
+                setFormData((prev) => {
+                  const newState = {
+                    ...prev,
+                    store_audio: !prev.store_audio,
+                  };
+                  console.log("store_audio toggled. New formData:", newState); 
+                  return newState;
+                });
+              }}
+              className={`px-5 py-4 rounded-xl border flex-row justify-between items-center ${
+                formData.store_audio
+                  ? "border-black bg-gray-100"
+                  : "border-gray-200 bg-[#f6f7fb]"
+              }`}
+            >
+              <Text className="text-base text-gray-900">Allow audio storage</Text>
+              {formData.store_audio && <Check size={18} color="#111" />}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => { // Add curly braces here to allow multiple statements
+                setFormData((prev) => {
+                  const newState = {
+                    ...prev,
+                    store_video: !prev.store_video,
+                  };
+                  console.log("store_video toggled. New formData:", newState); // <-- Add this line
+                  return newState;
+                });
+              }}
+              className={`px-5 py-4 rounded-xl border flex-row justify-between items-center ${
+                formData.store_video
+                  ? "border-black bg-gray-100"
+                  : "border-gray-200 bg-[#f6f7fb]"
+              }`}
+            >
+              <Text className="text-base text-gray-900">Allow video storage</Text>
+              {formData.store_video && <Check size={18} color="#111" />}
+            </TouchableOpacity>
+
+              <Text className="text-sm text-gray-500">
+              You can change these settings in the profile.
+            </Text>
+          </View>
+        )}
+
+
         <View className="mt-10 space-y-4">
           {currentStep === 1 && (
             <>
@@ -720,25 +933,26 @@ export default function SignUpScreen() {
             className={`rounded-xl py-4 items-center justify-center ${
               isLoading ? "bg-gray-400" : "bg-black"
             }`}
-            onPress={currentStep === 3 ? handleSignUp : nextStep}
+            onPress={currentStep === 5 ? handleSignUp : nextStep}
             disabled={isLoading || isGoogleLoading}
           >
             <Text className="text-white font-semibold text-lg">
               {isLoading
                 ? "Signing up..."
-                : currentStep === 3
+                : currentStep === 4
                   ? "Get Started"
                   : "Continue"}
             </Text>
           </TouchableOpacity>
 
-          <View className="flex-row justify-center pt-4">
+          {currentStep === 1 ? (
+            <View className="flex-row justify-center pt-4">
             <Text className="text-gray-600">Already have an account? </Text>
-
             <TouchableOpacity onPress={() => router.push("/sign-in")}>
               <Text className="text-black font-semibold">Sign In</Text>
             </TouchableOpacity>
           </View>
+          )  : null}
         </View>
       </ScrollView>
       <Toast />

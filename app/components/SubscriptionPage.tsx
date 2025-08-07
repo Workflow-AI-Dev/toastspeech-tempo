@@ -31,7 +31,7 @@ export default function SubscriptionPage({
     {
       id: "free",
       name: "Starter",
-      description: "Perfect for trying out ToastSpeech",
+      description: "Perfect for trying out Echozi",
       price: { monthly: 0, yearly: 0 },
       icon: Mic,
       color: "#6b7280",
@@ -283,7 +283,7 @@ export default function SubscriptionPage({
         {/* Benefits */}
         <View className="px-6 py-8">
           <Text className="text-xl font-bold text-gray-900 mb-6 text-center">
-            Why Choose ToastSpeech?
+            Why Choose Echozi?
           </Text>
           <View className="space-y-4">
             {benefits.map((benefit, index) => {

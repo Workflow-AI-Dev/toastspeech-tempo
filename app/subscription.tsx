@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,8 @@ import {
   Users,
   ChevronLeft,
 } from "lucide-react-native";
+import { BASE_URL } from "./config/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function SubscriptionScreen() {
   const router = useRouter();
@@ -49,6 +51,58 @@ export default function SubscriptionScreen() {
     });
   }, []);
 
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+  const [trialEndsInDays, setTrialEndsInDays] = useState(null);
+  const [planStartsAt, setPlanStartsAt] = useState(null);
+  const [isNewUser, setIsNewUser] = useState(false);
+
+
+  const fetchStatus = useCallback(async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    if (!token) {
+      console.warn("No auth token found.");
+      return;
+    }
+
+    const res = await fetch(`${BASE_URL}/subscription/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setSubscriptionStatus(data.subscription_status);
+
+      if (data.plan_starts_at) {
+        const planStartDate = new Date(data.plan_starts_at);
+        setPlanStartsAt(planStartDate);
+
+        const now = new Date();
+        const minutesSinceStart = (now.getTime() - planStartDate.getTime()) / (1000 * 60);
+        if (minutesSinceStart < 5) {
+          setIsNewUser(true);
+        }
+      }
+
+      if (data.subscription_status === "trialing" && data.trial_ends_at) {
+        const endsAt = new Date(data.trial_ends_at);
+        const now = new Date();
+        const daysRemaining = Math.ceil((endsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        setTrialEndsInDays(daysRemaining);
+      }
+    } else {
+      console.error("Subscription status fetch failed:", data);
+    }
+  } catch (error) {
+    console.error("Error fetching subscription status", error);
+  }
+}, []);
+
+  useEffect(() => {
+        fetchStatus();
+    }, [fetchStatus]);
+
   const plans = [
     {
       id: "casual",
@@ -73,7 +127,6 @@ export default function SubscriptionScreen() {
         "Progress tracker and store speech audio",
       ],
       limitations: [],
-      tag: "14-Day Free Trial", // Special tag for the trial
     },
     {
       id: "committed",
@@ -115,6 +168,18 @@ export default function SubscriptionScreen() {
     }, 800);
   };
 
+  // Dynamically inject the trial tag if user is on a trial
+  const updatedPlans = plans.map((plan) => {
+    if (plan.id === "aspiring") {
+      return {
+        ...plan,
+        tag: subscriptionStatus === "trialing" ? "14-Day Free Trial" : null,
+      };
+    }
+    return plan;
+  });
+
+
   return (
     <SafeAreaView className="flex-1 bg-neutral-50">
       <ScrollView
@@ -144,17 +209,26 @@ export default function SubscriptionScreen() {
           {/* Trial Information Banner */}
           {showTrialMessage && (
             <View className="bg-blue-100 border-l-4 border-blue-500 p-4 rounded-lg mt-6 w-full">
-              <Text className="text-blue-800 text-sm font-semibold">
-                New users get a 14-day free trial of the "Aspiring Speaker"
-                plan, automatically downgrading to "Casual Speaker" (Free) after
-                the trial period.
-              </Text>
+              {isNewUser ? (
+                <Text className="text-blue-800 text-sm font-semibold">
+                  🎉 Welcome! You’ve unlocked a 14-day free trial of *Aspiring Speaker*. After that, we’ll slide you into *Casual Speaker* (Free). Take a peek at the paid plans below — no pressure, you can decide later!
+                </Text>
+              ) : subscriptionStatus === "trialing" && trialEndsInDays !== null ? (
+                <Text className="text-blue-800 text-sm font-semibold">
+                  ⏳ {trialEndsInDays} day{trialEndsInDays !== 1 && "s"} left on your *Aspiring Speaker* trial! Then it’s back to *Casual Speaker* (Free) - or upgrade if you're loving it!
+                </Text>
+              ) : (
+                <Text className="text-blue-800 text-sm font-semibold">
+                  🚀 New here? Enjoy a 14-day free trial of *Aspiring Speaker*! We’ll drop you into *Casual Speaker* (Free) after.
+                </Text>
+              )}
             </View>
           )}
+
         </View>
 
         <View className="space-y-8">
-          {plans.map((plan, i) => (
+          {updatedPlans.map((plan, i) => (
             <Animated.View
               key={plan.id}
               style={{
@@ -174,7 +248,7 @@ export default function SubscriptionScreen() {
                   selectedPlan === plan.id
                     ? "border-black bg-white shadow-xl"
                     : "border-neutral-200 bg-neutral-100"
-                } ${plan.tag === "Most Popular" ? "border-purple-500" : ""}
+                }
                 ${plan.tag === "Best Value" ? "border-green-500" : ""}`}
                 onPress={() => handlePlanSelect(plan.id)}
               >
@@ -227,41 +301,15 @@ export default function SubscriptionScreen() {
           ))}
         </View>
 
-        <View className="mt-16 px-6 py-8 bg-white rounded-2xl border border-gray-200 space-y-6 shadow-sm">
-          <Benefit
-            icon={BarChart2}
-            title="Progress Analytics"
-            desc="Track improvement trends over time."
-          />
-          <Divider />
-          <Benefit
-            icon={Award}
-            title="Feedback That Guides"
-            desc="Useful suggestions to help you grow with each speech."
-          />
-          <Divider />
-          <Benefit
-            icon={Shield}
-            title="Your Data is Yours"
-            desc="We respect your privacy. Data is encrypted and secure."
-          />
-          <Divider />
-          <Benefit
-            icon={Users}
-            title="Private, Growing Community"
-            desc="Join fellow speakers who care about leveling up."
-          />
-        </View>
-
         {/* Skip Button */}
         {!isFromProfile && (
-          <View className="mt-16 mb-10 items-center">
+          <View className="mt-10 mb-10 items-center">
             <TouchableOpacity
               className="bg-neutral-800 px-6 py-4 rounded-full"
               onPress={() => router.push("/")}
             >
               <Text className="text-white font-semibold text-lg">
-                Skip for now
+                {isNewUser ? "Finish" : "Skip for now"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -270,19 +318,3 @@ export default function SubscriptionScreen() {
     </SafeAreaView>
   );
 }
-
-const Benefit = ({ icon: Icon, title, desc }) => (
-  <View className="flex-row items-start">
-    <View className="w-8 h-8 mr-4 justify-center items-center">
-      <Icon size={20} color="#0f172a" />
-    </View>
-    <View className="flex-1">
-      <Text className="text-base font-semibold text-gray-900 mb-1">
-        {title}
-      </Text>
-      <Text className="text-sm text-gray-500 leading-relaxed">{desc}</Text>
-    </View>
-  </View>
-);
-
-const Divider = () => <View className="w-full h-px bg-gray-100" />;

@@ -9,7 +9,8 @@ import {
   Modal,
   Dimensions,
   Image,
-  Pressable
+  Pressable,
+  ActivityIndicator,
 } from "react-native";
 import {
   User,
@@ -42,6 +43,7 @@ import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { BASE_URL } from "../config/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface ProfileSettingsProps {
   user?: {
@@ -61,23 +63,13 @@ interface ProfileSettingsProps {
 
 // DiceBear avatar styles
 const avatarStyles = [
-  "adventurer",
-  "avataaars",
-  "big-ears",
-  "big-smile",
-  "bottts",
-  "croodles",
-  "fun-emoji",
-  "icons",
-  "identicon",
-  "initials",
-  "lorelei",
-  "micah",
-  "miniavs",
-  "open-peeps",
-  "personas",
-  "pixel-art",
-];
+    "avataaars",
+    "adventurer",
+    "big-smile",
+    "lorelei",
+    "micah",
+    "personas",
+  ];
 
 const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"];
 const ageGroups = ["18-25", "26-35", "36-45", "46-55", "56-65", "65+"];
@@ -92,11 +84,11 @@ const professions = [
 ];
 
 // Generate random seeds for avatars
-const generateRandomSeeds = (count: number = 12): string[] => {
-  return Array.from({ length: count }, () =>
-    Math.random().toString(36).substring(2, 15),
-  );
-};
+// const generateRandomSeeds = (count: number = 12): string[] => {
+//   return Array.from({ length: count }, () =>
+//     Math.random().toString(36).substring(2, 15),
+//   );
+// };
 
 // Generate DiceBear avatar URL
 const generateAvatarUrl = (
@@ -128,13 +120,14 @@ export default function ProfileSettings({
   const [weeklyReports, setWeeklyReports] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(user.avatar || "felix");
-  const [selectedAvatarStyle, setSelectedAvatarStyle] = useState("avataaars");
+  const [selectedAvatarStyle, setSelectedAvatarStyle] = useState(user.avatarStyle || "avataaars");
   const [avatarSeeds, setAvatarSeeds] = useState<string[]>([]);
   const [isShuffling, setIsShuffling] = useState(false);
   const router = useRouter();
   const { width } = Dimensions.get("window");
   const { signOut } = useAuth();
   const [profileData, setProfileData] = useState<any | null>(null);
+  const [metrics, setMetrics] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedEmail, setEditedEmail] = useState("");
@@ -148,9 +141,22 @@ export default function ProfileSettings({
   const [isLoading, setIsLoading] = useState(true);
 
   // Initialize avatar seeds on component mount
-  useEffect(() => {
-    setAvatarSeeds(generateRandomSeeds(12));
-  }, []);
+  const curatedAvatarSeeds = [
+      "felix",
+      "luna",
+      "maximus",
+      "pixelpete",
+      "nimbus",
+      "echo",
+      "blip",
+      "zara",
+      "orbit",
+    ];
+  
+  
+    useEffect(() => {
+      setAvatarSeeds(curatedAvatarSeeds);
+    }, []);
 
   const handleLogout = async () => {
     try {
@@ -160,8 +166,7 @@ export default function ProfileSettings({
     }
   };
 
-  useEffect(() => {
-    const fetchProfile = async () => {
+  const fetchProfile = async () => {
       try {
         const token = await AsyncStorage.getItem("auth_token");
         if (!token) {
@@ -169,20 +174,61 @@ export default function ProfileSettings({
           return;
         }
 
-        const response = await axios.get("http://127.0.0.1:8000/auth/me", {
+        const response = await fetch(`${BASE_URL}/auth/me`, {
+          method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
           },
         });
 
-        console.log("✅ Profile fetched:", response.data);
-        setProfileData(response.data);
+        const data = await response.json();
+
+        console.log("✅ Profile fetched:", data);
+        setProfileData(data);
+        setSelectedAvatar(data.avatar || "felix");
+        setSelectedAvatarStyle(data.avatar_style || "avataaars");
       } catch (err) {
         console.error("❌ Error fetching profile:", err);
+      } finally{
+        setIsLoading(false);
       }
     };
 
+  useEffect(() => {
     fetchProfile();
+  }, []);
+
+  const fetchMetrics = async () => {
+      try {
+        const token = await AsyncStorage.getItem("auth_token");
+        if (!token) {
+          console.warn("No access token found");
+          return;
+        }
+
+        const res = await fetch(`${BASE_URL}/user/user-metrics`, { 
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`, 
+              'Content-Type': 'application/json',
+            },
+        });
+        
+        const data = await res.json();
+
+        console.log("✅ Metrics fetched:", data);
+        setMetrics(data);
+      } catch (err) {
+        console.error("❌ Error fetching metrics:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+
+  useEffect(() => {
+    fetchMetrics();
   }, []);
 
   const handleAvatarSelect = async (avatarSeed: string) => {
@@ -222,18 +268,19 @@ export default function ProfileSettings({
     }
   };
 
-  const handleShuffleAvatars = () => {
-    setIsShuffling(true);
-    setTimeout(() => {
-      setAvatarSeeds(generateRandomSeeds(12));
-      setIsShuffling(false);
-    }, 300);
-  };
+  // const handleShuffleAvatars = () => {
+  //   setIsShuffling(true);
+  //   setTimeout(() => {
+  //     setAvatarSeeds(generateRandomSeeds(12));
+  //     setIsShuffling(false);
+  //   }, 300);
+  // };
 
   const handleStyleChange = (style: string) => {
     setSelectedAvatarStyle(style);
-    setAvatarSeeds(generateRandomSeeds(12));
+    // setAvatarSeeds(generateRandomSeeds(12));
   };
+  
 
   const startEditing = () => {
     setIsEditing(true);
@@ -286,7 +333,6 @@ export default function ProfileSettings({
 
   const fetchPrivacySettings = async () => {
     try {
-      setIsLoading(true);
       const token = await AsyncStorage.getItem("auth_token");
       const response = await fetch(`${BASE_URL}/user/privacy-settings`, {
         method: 'GET',
@@ -316,6 +362,21 @@ export default function ProfileSettings({
       fetchPrivacySettings();
     }
   }, [privacyVisible]);
+
+   if (isLoading) {
+    return (
+      <SafeAreaView
+        className="flex-1 justify-center items-center mt-9" // Centers content both horizontally and vertically
+        style={{ backgroundColor: colors.background }}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+        {/* Provides clear visual separation and emphasis for the loading message */}
+        <Text style={{ color: colors.text, marginTop: 16, fontSize: 16, fontWeight: '600' }}>
+          Loading profile data...
+        </Text>
+      </SafeAreaView>
+    );
+  }
 
 
   const handlePrivacySave = async (audioConsent: boolean, videoConsent: boolean) => {
@@ -364,7 +425,7 @@ export default function ProfileSettings({
         {
           icon: Crown,
           title: "Change Subscription",
-          description: "Current Plan - " + `${profileData?.subscription_plan}`,
+          description: "Current Plan - " + `${profileData?.current_plan_id?.charAt(0).toUpperCase()}${profileData?.current_plan_id?.slice(1)}`,
           onPress: () => {
             router.push("/subscription");
           },
@@ -439,14 +500,14 @@ export default function ProfileSettings({
     {
       icon: Flame,
       label: "Days streak",
-      value: profileData?.streak.toString(),
+      value: metrics?.streak ? metrics.streak.toString() : "0",
       color: "#ea580c",
       bgColor: "#fed7aa",
     },
     {
       icon: Trophy,
       label: "Avg Score",
-      value: profileData?.avg_score.toString(),
+      value: metrics?.average_score ? Math.round(metrics.average_score).toString() : "0",
       color: "#10b981",
       bgColor: "#d1fae5",
     },
@@ -1061,7 +1122,7 @@ export default function ProfileSettings({
                 {/* Description */}
                 <Text className="text-base mb-4" style={{ color: colors.textSecondary }}>
                   Your data is safe with us. We do not save any speech audio or video files in our database without your consent.
-                  If you'd like to revisit speeches later from the library, you can allow storage below.
+                  If you'd like to revisit speeches later, you can allow storage below.
                   For your privacy, saved files are automatically deleted after 30 days.
                 </Text>
 
@@ -1106,7 +1167,7 @@ export default function ProfileSettings({
             className="text-center text-sm"
             style={{ color: colors.textSecondary }}
           >
-            ToastSpeech v1.0.0
+            Echozi v1.0.0
           </Text>
         </View>
       </ScrollView>
@@ -1190,7 +1251,7 @@ export default function ProfileSettings({
             </View>
 
             {/* Shuffle Button */}
-            <TouchableOpacity
+            {/*<TouchableOpacity
               className="flex-row items-center justify-center p-4 rounded-2xl mb-6"
               style={{ backgroundColor: colors.primary }}
               onPress={handleShuffleAvatars}
@@ -1206,13 +1267,13 @@ export default function ProfileSettings({
               <Text className="text-white font-semibold ml-2">
                 {isShuffling ? "Shuffling..." : "Shuffle New Avatars"}
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity>*/}
 
             {/* Avatar Grid */}
             <ScrollView showsVerticalScrollIndicator={false}>
               <View className="flex-row flex-wrap justify-between">
                 {avatarSeeds.map((seed, index) => {
-                  const isSelected = selectedAvatar === seed;
+                  const isSelected = selectedAvatar === seed && selectedAvatarStyle === profileData?.avatar_style
                   const avatarSize = (width - 80) / 3 - 12;
                   return (
                     <TouchableOpacity

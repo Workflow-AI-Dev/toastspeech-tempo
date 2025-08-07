@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,10 @@ import {
   Flame,
   HandMetal,
 } from "lucide-react-native";
+import { Audio } from 'expo-av';
+import { Modal } from "react-native";
+import { Video } from "expo-av";
+
 
 interface DetailedFeedbackScreenProps {
   detailed: QuickFeedbackProps["detailedFeedback"];
@@ -37,12 +41,64 @@ const DetailedFeedbackScreen = ({
   onBack,
 }: DetailedFeedbackScreenProps) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
+
   const [isPlaying, setIsPlaying] = useState(false);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const isVideo = detailed?.url?.includes("/video/") || detailed?.url?.endsWith(".mp4");
+  const [isVideoModalVisible, setVideoModalVisible] = useState(false);
+
+
+  // Optional: Clean up sound on unmount
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
+
   const hasFeedback = (category: any) => {
     return (
       category?.strengths?.length > 0 || category?.improvements?.length > 0
     );
   };
+
+  useEffect(() => {
+    console.log('test')
+    console.log(detailedFeedback)
+  });
+
+  const handlePlayPause = async () => {
+    if (isVideo) {
+      setVideoModalVisible(true);
+      console.log('video')
+      return;
+    }
+
+    try {
+      if (!sound) {
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: detailed?.url },
+          { shouldPlay: true }
+        );
+        setSound(newSound);
+        setIsPlaying(true);
+      } else {
+        const status = await sound.getStatusAsync();
+        if (status.isPlaying) {
+          await sound.pauseAsync();
+          setIsPlaying(false);
+        } else {
+          await sound.playAsync();
+          setIsPlaying(true);
+        }
+      }
+    } catch (error) {
+      console.error("Error handling audio playback:", error);
+    }
+  };
+
+
 
   const categories = [
     { id: "all", label: "All", icon: BarChart3, color: "#6b7280" },
@@ -458,6 +514,9 @@ const DetailedFeedbackScreen = ({
     );
   };
 
+ 
+
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
@@ -473,7 +532,7 @@ const DetailedFeedbackScreen = ({
             Detailed Feedback
           </Text>
           <TouchableOpacity
-            onPress={() => setIsPlaying(!isPlaying)}
+            onPress={handlePlayPause}
             className="bg-white/20 rounded-full p-2"
           >
             {isPlaying ? (
@@ -482,6 +541,7 @@ const DetailedFeedbackScreen = ({
               <Play size={24} color="white" />
             )}
           </TouchableOpacity>
+
         </View>
 
         <Text className="text-white/80">
@@ -531,6 +591,64 @@ const DetailedFeedbackScreen = ({
       <ScrollView className="flex-1 px-6 py-4">
         {renderCategoryContent(selectedCategory)}
       </ScrollView>
+
+       <Modal
+  visible={isVideoModalVisible}
+  animationType="fade"
+  transparent
+  onRequestClose={() => setVideoModalVisible(false)}
+>
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}
+  >
+    <View
+      style={{
+        width: '90%',
+        aspectRatio: 16 / 9,
+        backgroundColor: '#000',
+        borderRadius: 16,
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      {/* Close Button */}
+      <TouchableOpacity
+        onPress={() => setVideoModalVisible(false)}
+        style={{
+          position: 'absolute',
+          top: 10,
+          right: 10,
+          zIndex: 2,
+          backgroundColor: '#fff',
+          borderRadius: 16,
+          padding: 6,
+          elevation: 5,
+        }}
+      >
+        <Text style={{ color: '#000', fontSize: 16, fontWeight: 'bold' }}>✕</Text>
+      </TouchableOpacity>
+
+      {/* Video */}
+      <Video
+        source={{ uri: detailed?.url }}
+        useNativeControls
+        shouldPlay
+        resizeMode="contain"
+        style={{
+          width: '100%',
+          height: '100%',
+        }}
+      />
+    </View>
+  </View>
+</Modal>
+
+
     </SafeAreaView>
   );
 };

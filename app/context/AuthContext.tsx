@@ -11,6 +11,7 @@ import { BASE_URL, GOOGLE_CLIENT_ID } from "../config/api";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { supabase } from "../../lib/supabase";
+import {registerForPushNotificationsAsync} from "../hooks/NotificationManager"
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -48,6 +49,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     userInfoEndpoint: "https://www.googleapis.com/oauth2/v2/userinfo",
   };
 
+  const updatePushTokenOnBackend = async (expoPushToken: string) => {
+    const token = await AsyncStorage.getItem("auth_token");
+    if (!token) return;
+
+    await fetch(`${BASE_URL}/notifications/register-token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ expo_push_token: expoPushToken }),
+    });
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
       const token = await AsyncStorage.getItem("auth_token");
@@ -63,6 +78,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (res.ok) {
         const userData = await res.json();
         setUser(userData);
+
+        const expoToken = await registerForPushNotificationsAsync();
+        if (expoToken) {
+          await updatePushTokenOnBackend(expoToken);
+        }
+
       }
 
       setLoading(false);
@@ -121,6 +142,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           profession: userData.profession,
           purposes: userData.purposes,
           custom_purpose: userData.customPurpose,
+          store_audio: userData.store_audio,
+          store_video: userData.store_video,
         }),
       });
 
@@ -142,6 +165,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userDataResponse = await meRes.json();
         if (meRes.ok) {
           setUser(userDataResponse);
+          const expoToken = await registerForPushNotificationsAsync();
+          if (expoToken) {
+            await updatePushTokenOnBackend(expoToken);
+          }
         }
       } else {
         // If no token returned, try to sign in automatically
@@ -183,6 +210,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userData = await meRes.json();
       if (meRes.ok) {
         setUser(userData);
+
+        const expoToken = await registerForPushNotificationsAsync();
+        if (expoToken) {
+          await updatePushTokenOnBackend(expoToken);
+        }
       }
 
       return { error: null };
@@ -285,6 +317,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await AsyncStorage.setItem("auth_token", data.access_token);
 
         setUser(data.user); // optional here, but also return for explicit use
+        const expoToken = await registerForPushNotificationsAsync();
+        if (expoToken) {
+          await updatePushTokenOnBackend(expoToken);
+        }
         return { error: null, user: data.user };
       }
     } catch (error) {
@@ -326,6 +362,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         await AsyncStorage.setItem("auth_token", data.access_token);
         // setUser(data.user);
+        const expoToken = await registerForPushNotificationsAsync();
+        if (expoToken) {
+          await updatePushTokenOnBackend(expoToken);
+        }
         return { error: null, user: data.user };
       } else {
         return { error: "Google sign up was cancelled" };

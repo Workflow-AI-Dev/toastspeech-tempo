@@ -166,6 +166,7 @@ interface QuickFeedbackProps {
       title: string;
       description: string;
     }[];
+    url: string;
   };
   onViewDetailedFeedback: (
     detailedFeedback: QuickFeedbackProps["detailedFeedback"],

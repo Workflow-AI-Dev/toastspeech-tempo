@@ -15,7 +15,7 @@ const { width, height } = Dimensions.get("window");
 
 const slides = [
   {
-    title: "Welcome to ToastSpeech",
+    title: "Welcome to Echozi",
     description: "AI-powered coaching to boost your public speaking game.",
     image: require("../assets/images/public.jpg"),
     bgColor: "#f6f2ef",

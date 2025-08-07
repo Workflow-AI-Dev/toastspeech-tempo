@@ -244,7 +244,10 @@ export default function SpeakerModeScreen({
         keyInsights: result.summary.KeyInsights ?? [],
       };
 
-      const detailedFeedback = result.detailed;
+      const detailedFeedback = {
+        ...result.detailed,
+        url: result.url,
+      };
 
       setAnalysisResults(mappedResults);
       setFeedback(mappedFeedback);

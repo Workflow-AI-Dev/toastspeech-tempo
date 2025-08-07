@@ -381,7 +381,7 @@ export default function EvaluationsLibrary({
       OverallImpact_recommendations:
         selectedEvaluation.detailed.OverallImpact_recommendations,
       OverallImpact_score: selectedEvaluation.detailed.OverallImpact_score,
-      OverallInsights: selectedSpeech.detailed.OverallInsights,
+      OverallInsights: selectedEvaluation.detailed.OverallInsights,
     };
 
     return (
@@ -642,7 +642,7 @@ if (noResults && !isLoading) {
               style={{ color: colors.textSecondary }}
             >
               No past evaluations yet. Time to grab that mic and show the world
-              what you've got. Your ToastSpeech journey starts now!
+              what you've got. Your Echozi journey starts now!
             </Text>
 
             <TouchableOpacity

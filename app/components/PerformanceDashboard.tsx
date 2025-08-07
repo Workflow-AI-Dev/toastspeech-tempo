@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { LineChart, BarChart } from "react-native-chart-kit";
 import { Dimensions } from "react-native";
 import {
@@ -17,11 +17,16 @@ import {
   TrendingDown,
   Timer,
   CheckCircle,
-  ThumbsUp
+  ThumbsUp,
+  PauseCircle,
+  Volume2,
+  MessageCircle,
+  Repeat,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { BASE_URL } from "../config/api";
 import dayjs from "dayjs";
 import weekday from "dayjs/plugin/weekday"; // Import the weekday plugin
@@ -65,6 +70,11 @@ const PerformanceDashboard = ({
   const colors = getThemeColors(theme);
   const router = useRouter();
 
+  const [loadingCount, setLoadingCount] = useState(0);
+  const isLoading = loadingCount > 0;
+  const [isFilteringTime, setIsFilteringTime] = useState(true);
+
+
   const screenWidth = Dimensions.get("window").width - 32; // Accounting for padding
   const [avgScore, setAvgScore] = useState<number>(0);
   const [totalSessions, setTotalSessions] = useState<number>(0);
@@ -93,6 +103,8 @@ const PerformanceDashboard = ({
   const [dynamicFillerWordsBreakdown, setDynamicFillerWordsBreakdown] =
     useState<{ labels: string[]; data: number[] }>(fillerWordsBreakdown);
   const [dynamicCrutchPhrasesBreakdown, setDynamicCrutchPhrasesBreakdown] =
+    useState<{ labels: string[]; data: number[] }>({ labels: [], data: [] });
+  const [dynamicRepeatPhrasesBreakdown, setDynamicRepeatPhrasesBreakdown] =
     useState<{ labels: string[]; data: number[] }>({ labels: [], data: [] });
   const [dynamicPausesBreakdown, setDynamicPausesBreakdown] = useState<{
     labels: string[];
@@ -134,6 +146,7 @@ const PerformanceDashboard = ({
     "Overall Score",
     "Fillers",
     "Crutches",
+    "Repetitions",
     "Pauses",
     "Engagement",
   ];
@@ -141,6 +154,7 @@ const PerformanceDashboard = ({
 
   useEffect(() => {
     const fetchPlan = async () => {
+      setLoadingCount((prev) => prev + 1);
       try {
         const token = await AsyncStorage.getItem("auth_token");
         const res = await fetch(`${BASE_URL}/subscription/plan`, {
@@ -156,6 +170,8 @@ const PerformanceDashboard = ({
         }
       } catch (error) {
         console.error("Error fetching subscription plan", error);
+      } finally {
+        setLoadingCount((prev) => prev - 1);
       }
     };
     fetchPlan();
@@ -163,6 +179,7 @@ const PerformanceDashboard = ({
 
   useEffect(() => {
     const fetchSessions = async () => {
+      setIsFilteringTime(true);
       const token = await AsyncStorage.getItem("auth_token");
       try {
         const response = await fetch(`${BASE_URL}/dashboard/all`, {
@@ -182,6 +199,7 @@ const PerformanceDashboard = ({
               overall_score: parseFloat(e.summary.Metadata.overall_score),
               filler_words: e.analytics?.filler_words || [],
               crutch_phrases: e.analytics?.crutch_phrases || [],
+              repeat_phrases: e.analytics?.repeated_words || [],
               pauses: e.analytics?.pauses || [],
               environmental_elements: e.analytics?.environmental_elements || [],
             });
@@ -194,6 +212,7 @@ const PerformanceDashboard = ({
               overall_score: parseFloat(s.summary.Metadata.overall_score),
               filler_words: s.analytics?.filler_words || [],
               crutch_phrases: s.analytics?.crutch_phrases || [],
+              repeat_phrases: s.analytics?.repeated_words || [],
               pauses: s.analytics?.pauses || [],
               environmental_elements: s.analytics?.environmental_elements || [],
             });
@@ -323,8 +342,9 @@ const PerformanceDashboard = ({
         const aggregatedSessions = filterSessionsByTimeFrame(
           allSessions,
           selectedTimeFrame,
-        ); // Aggregate Filler Words Breakdown - MODIFIED TO SHOW TOP 5
+        ); 
 
+        // Aggregate Filler Words Breakdown - MODIFIED TO SHOW TOP 5
         const fillerWordMap = new Map<string, number>();
         aggregatedSessions.forEach((session) => {
           session.filler_words.forEach((fw: { word: string }) => {
@@ -344,8 +364,9 @@ const PerformanceDashboard = ({
         setDynamicFillerWordsBreakdown({
           labels: sortedFillerWords.map(([word]) => word),
           data: sortedFillerWords.map(([, count]) => count),
-        }); // Aggregate Crutch Phrases Breakdown
+        }); 
 
+        // Aggregate Crutch Phrases Breakdown
         const crutchPhraseMap = new Map<string, number>();
         aggregatedSessions.forEach((session) => {
           session.crutch_phrases.forEach((cp: { phrase: string }) => {
@@ -356,15 +377,42 @@ const PerformanceDashboard = ({
             );
           });
         });
-        // Sort and slice for top 5 crutch phrases as well, if desired for consistency
-        const sortedCrutchPhrases = Array.from(crutchPhraseMap.entries()).sort(
-          ([, countA], [, countB]) => countB - countA,
-        );
+        // Sort and keep only top 5
+        const sortedCrutchPhrases = Array.from(crutchPhraseMap.entries())
+          .sort(([, countA], [, countB]) => countB - countA)
+          .slice(0, 5); // 👈 Top 5 only
+
         setDynamicCrutchPhrasesBreakdown({
           labels: sortedCrutchPhrases.map(([phrase]) => phrase),
           data: sortedCrutchPhrases.map(([, count]) => count),
-        }); // Aggregate Pauses Breakdown
+        }); 
 
+
+        // Aggregate Repeated Phrases Breakdown
+        const repeatedPhraseMap = new Map<string, number>();
+        aggregatedSessions.forEach((session) => {
+          session.repeat_phrases.forEach((cp: { word: string }) => {
+            const cleanRepeat = cp.word.trim().toLowerCase();
+            repeatedPhraseMap.set(
+              cleanRepeat,
+              (repeatedPhraseMap.get(cleanRepeat) || 0) + 1,
+            );
+          });
+        });
+        // Sort and keep only top 5
+        const sortedRepeatPhrases = Array.from(repeatedPhraseMap.entries())
+          .sort(([, countA], [, countB]) => countB - countA)
+          .slice(0, 5); // 👈 Top 5 only
+
+        console.log(sortedRepeatPhrases)
+
+        setDynamicRepeatPhrasesBreakdown({
+          labels: sortedRepeatPhrases.map(([word]) => word),
+          data: sortedRepeatPhrases.map(([, count]) => count),
+        }); 
+        
+
+        // Aggregate Pauses Breakdown
         const pauseTypeMap = new Map<string, number>();
         aggregatedSessions.forEach((session) => {
           session.pauses.forEach((p: { pause_type: string }) => {
@@ -475,6 +523,8 @@ const PerformanceDashboard = ({
         }
       } catch (err) {
         console.error("Failed to fetch sessions:", err);
+      } finally {
+        setIsFilteringTime(false);
       }
     };
 
@@ -484,6 +534,7 @@ const PerformanceDashboard = ({
   useEffect(() => {
   const fetchSessions = async () => {
     const token = await AsyncStorage.getItem("auth_token");
+    setLoadingCount((prev) => prev + 1);
     try {
       const response = await fetch(`${BASE_URL}/dashboard/recent`, {
         method: "GET",
@@ -517,11 +568,34 @@ const PerformanceDashboard = ({
       setRecentAchievements(achievements);
     } catch (err) {
       console.error("Failed to fetch sessions:", err);
+    } finally {
+      setLoadingCount((prev) => prev - 1);
     }
   };
 
   fetchSessions();
 }, []);
+
+const [showContent, setShowContent] = useState(false);
+useEffect(() => {
+  if (!isLoading) {
+    const timeout = setTimeout(() => setShowContent(true), 300);
+    return () => clearTimeout(timeout);
+  } else {
+    setShowContent(false);
+  }
+}, [isLoading]);
+
+
+
+ if (!showContent) return (
+  <SafeAreaView className="flex-1 justify-center items-center mt-9" style={{ backgroundColor: colors.background }}>
+    <ActivityIndicator size="large" color={colors.primary} />
+    <Text style={{ color: colors.text, marginTop: 16, fontSize: 16, fontWeight: '600' }}>
+      Loading your progress...
+    </Text>
+  </SafeAreaView>
+);
 
 
   const getChartData = () => {
@@ -572,6 +646,7 @@ const PerformanceDashboard = ({
     // For now, only Overall Score and Fillers have trends in this logic
     if (
       selectedMetric === "Crutches" ||
+      selectedMetric === "Repetitions" ||
       selectedMetric === "Pauses" ||
       selectedMetric === "Engagement"
     ) {
@@ -603,6 +678,8 @@ const PerformanceDashboard = ({
       breakdownData = dynamicFillerWordsBreakdown;
     } else if (selectedMetric === "Crutches") {
       breakdownData = dynamicCrutchPhrasesBreakdown;
+    } else if (selectedMetric === "Repetitions") {
+      breakdownData = dynamicRepeatPhrasesBreakdown;
     } else if (selectedMetric === "Pauses") {
       breakdownData = dynamicPausesBreakdown;
     } else if (selectedMetric === "Engagement") {
@@ -628,6 +705,8 @@ const PerformanceDashboard = ({
   const shouldShowBarChart = () => {
     return (
       selectedMetric === "Fillers" ||
+      selectedMetric === "Crutches" ||
+      selectedMetric === "Repetitions" ||
       selectedMetric === "Pauses" ||
       selectedMetric === "Engagement"
     );
@@ -930,7 +1009,7 @@ const PerformanceDashboard = ({
           >
             <View className="flex-row justify-between items-center mb-6">
               <View className="flex-row items-center">
-                <View
+                {/* <View
                   className="rounded-full p-2 mr-3"
                   style={{
                     backgroundColor:
@@ -938,7 +1017,7 @@ const PerformanceDashboard = ({
                   }}
                 >
                   <BarChart2 size={20} color={colors.primary} />
-                </View>
+                </View> */}
                 <Text
                   className="text-xl font-bold"
                   style={{ color: colors.text }}
@@ -963,63 +1042,34 @@ const PerformanceDashboard = ({
                 </Text>
               </View>
             </View>
-            {selectedMetric === "Crutches" ? (
-              <View>
-                {dynamicCrutchPhrasesBreakdown.labels.length > 0 ? (
-                  <View className="flex-row flex-wrap justify-center">
-                    {" "}
-                    {/* Added justify-center here */}
-                    {dynamicCrutchPhrasesBreakdown.labels.map(
-                      (phrase, index) => (
-                        <View
-                          key={phrase}
-                          className="rounded-full px-3 py-1 mr-2 mb-2"
-                          style={{
-                            backgroundColor:
-                              theme === "dark" ? "#8b5cf6" : "#ede9fe", // Purple background
-                          }}
-                        >
-                          <Text
-                            className="text-sm font-medium"
-                            style={{
-                              color: theme === "dark" ? "#fff" : "#6b21a8", // Dark purple text
-                            }}
-                          >
-                            {phrase} (
-                            {dynamicCrutchPhrasesBreakdown.data[index]})
-                          </Text>
-                        </View>
-                      ),
-                    )}
-                  </View>
-                ) : (
-                  <Text
-                    style={{
-                      color: colors.textSecondary,
-                      textAlign: "center",
-                      marginTop: 20,
-                    }}
-                  >
-                    No crutch phrases detected for this timeframe.
-                  </Text>
-                )}
-              </View>
-            ) : shouldShowBarChart() ? (
-              <BarChart
-                data={getBarChartData()!}
-                width={screenWidth - 80}
-                height={220}
-                chartConfig={{
-                  ...chartConfig,
-                  color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-                  barPercentage: 0.7,
-                }}
-                style={{
-                  marginVertical: 8,
-                  borderRadius: 16,
-                }}
-                showValuesOnTopOfBars
-              />
+              {isFilteringTime ? (
+                <View style={{ height: 220, justifyContent: 'center', alignItems: 'center' }}>
+                  {/* You'll need to import ActivityIndicator from 'react-native' */}
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={{ color: colors.textSecondary, marginTop: 10 }}>Loading data...</Text>
+                </View>
+              )  : shouldShowBarChart() ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingRight: 24 }} // Optional spacing
+              >
+                <BarChart
+                  data={getBarChartData()!}
+                  width={Math.max(getBarChartData()!.labels.length * 100, screenWidth)} // Dynamically set width
+                  height={220}
+                  chartConfig={{
+                    ...chartConfig,
+                    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+                    barPercentage: 0.7,
+                  }}
+                  style={{
+                    marginVertical: 8,
+                    borderRadius: 16,
+                  }}
+                  showValuesOnTopOfBars
+                />
+              </ScrollView>
             ) : (
               <LineChart
                 data={getChartData()}
@@ -1051,11 +1101,11 @@ const PerformanceDashboard = ({
               {metrics.map((metric, index) => {
                 const icons = [
                   BarChart2,
-                  Clock,
                   Mic,
-                  Target,
-                  Timer,
-                  CheckCircle,
+                  MessageCircle,
+                  Repeat,
+                  PauseCircle,
+                  Volume2,
                 ];
                 const IconComponent = icons[index];
                 return (

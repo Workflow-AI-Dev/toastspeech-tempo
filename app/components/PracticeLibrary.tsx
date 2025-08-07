@@ -645,7 +645,7 @@ export default function PracticeLibrary({
               style={{ color: colors.textSecondary }}
             >
               No past practices yet. Time to grab that mic and show the world
-              what you've got. Your ToastSpeech journey starts now!
+              what you've got. Your Echozi journey starts now!
             </Text>
 
             <TouchableOpacity

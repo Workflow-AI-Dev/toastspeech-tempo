@@ -23,7 +23,7 @@ export default function LoadingScreen() {
             className="text-xl font-bold ml-2"
             style={{ color: colors.text }}
           >
-            ToastSpeech
+            Echozi
           </Text>
         </View>
         <ActivityIndicator size="large" color={colors.primary} />

@@ -423,6 +423,7 @@ export default function SpeechLibrary({
         selectedSpeech.detailed.Connections_recommendations,
       Connections_score: selectedSpeech.detailed.Connections_score,
       OverallInsights: selectedSpeech.detailed.OverallInsights,
+      url: selectedSpeech.url,
     };
 
     console.log(detailedFeedback);
@@ -709,7 +710,7 @@ if (noResults && !isLoading) {
               className="text-center mb-8 text-base leading-6"
               style={{ color: colors.textSecondary }}
             >
-              No past sessions yet. Time to grab that mic and start yout ToastSpeech journey!
+              No past sessions yet. Time to grab that mic and start yout Echozi journey!
             </Text>
 
             <TouchableOpacity

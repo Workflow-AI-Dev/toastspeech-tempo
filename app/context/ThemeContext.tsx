@@ -18,7 +18,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const THEME_STORAGE_KEY = "@toastspeech_theme";
+const THEME_STORAGE_KEY = "@echozi_theme";
 
 interface ThemeProviderProps {
   children: ReactNode;
