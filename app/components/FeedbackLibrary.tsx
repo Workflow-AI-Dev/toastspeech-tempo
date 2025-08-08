@@ -834,7 +834,7 @@ export default function FeedbackLibrary({
               <View
                 className="flex-1 flex-row items-center rounded-2xl px-4 py-3 mr-2 border"
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: theme === "dark" ? colors.card : colors.surface, // Changed this line
                   borderColor: colors.border,
                 }}
               >
@@ -845,19 +845,19 @@ export default function FeedbackLibrary({
                     activeTab === "speech"
                       ? "Search speeches..."
                       : activeTab === "evaluation"
-                        ? "Search evaluations..."
-                        : "Search practice sessions..."
+                      ? "Search evaluations..."
+                      : "Search practice sessions..."
                   }
                   placeholderTextColor={colors.textSecondary}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
+                  style={{ color: colors.text }}
                 />
               </View>
               <TouchableOpacity
                 className="rounded-2xl px-4 py-3"
                 style={{
-                  backgroundColor:
-                    theme === "dark" ? colors.surface : "#ebedf0",
+                  backgroundColor: theme === "dark" ? colors.card : "#ebedf0", // Changed this line
                 }}
                 onPress={() => {
                   setIsSearchActive(false);
@@ -872,8 +872,7 @@ export default function FeedbackLibrary({
               <TouchableOpacity
                 className={`flex-row items-center rounded-2xl px-4 py-3 flex-1 mr-2`}
                 style={{
-                  backgroundColor:
-                    theme === "dark" ? colors.surface : "#ebedf0",
+                  backgroundColor: theme === "dark" ? colors.card : "#ebedf0", // Changed this line
                 }}
                 onPress={() => setIsSearchActive(true)}
               >
@@ -892,8 +891,8 @@ export default function FeedbackLibrary({
                   backgroundColor: hasActiveFilters
                     ? colors.primary
                     : theme === "dark"
-                      ? colors.surface
-                      : "#ebedf0",
+                    ? colors.card
+                    : "#ebedf0", // Changed this line
                 }}
                 onPress={() => setIsFilterModalVisible(true)}
               >
@@ -930,6 +929,7 @@ export default function FeedbackLibrary({
               </TouchableOpacity>
             </View>
           )}
+
         </View>
 
         {/*Toggle*/}

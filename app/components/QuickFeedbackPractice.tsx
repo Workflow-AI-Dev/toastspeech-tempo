@@ -48,6 +48,7 @@ const QuickFeedbackPractice = ({
 }: QuickFeedbackPracticeProps) => {
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
+  const isDark = theme === 'dark';
 
   return (
     <View className="p-3">
@@ -58,21 +59,21 @@ const QuickFeedbackPractice = ({
           backgroundColor: colors.card,
           shadowColor: theme === "dark" ? "#000" : "#000",
           shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-          shadowRadius: 12,
-          elevation: 8,
+          shadowOpacity: theme === "dark" ? 0.6 : 0.1,
+          shadowRadius: 16,
+          elevation: 10,
         }}
       >
         <View className="items-center mb-6">
           <View
             className="rounded-full w-24 h-24 items-center justify-center mb-4"
             style={{
-              backgroundColor: theme === "dark" ? colors.surface : "#dcfce7",
+              backgroundColor: theme === "dark" ? "#14532d" : "#dcfce7",
             }}
           >
             <Text
               className="text-4xl font-bold"
-              style={{ color: colors.success }}
+              style={{color: theme === "dark" ? "#4ade80" : "#10b981", }}
             >
               {analysisResults.overallScore}
             </Text>
@@ -131,177 +132,157 @@ const QuickFeedbackPractice = ({
         </View>
       </View>
 
-      {/* Quick Metrics */}
-      {/*  <View
-        className="rounded-3xl p-6 mb-6 shadow-lg"
-        style={{
-          backgroundColor: colors.card,
-          shadowColor: theme === "dark" ? "#000" : "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-          shadowRadius: 12,
-          elevation: 8,
-        }}
-      >
-        <Text className="text-xl font-bold mb-4" style={{ color: colors.text }}>
-          Performance Breakdown
-        </Text>
-        <View className="space-y-4">
-          {[
-            {
-              label: "Clarity",
-              value: analysisResults.clarity,
-              color: "#10b981",
-            },
-            {
-              label: "Confidence",
-              value: analysisResults.confidence,
-              color: "#3b82f6",
-            },
-            {
-              label: "Engagement",
-              value: analysisResults.engagement,
-              color: "#8b5cf6",
-            },
-            {
-              label: "Pace",
-              value: "0",
-              color: "#f59e0b",
-            },
-          ].map((metric, index) => (
-            <View key={index} className="flex-row items-center justify-between">
-              <Text className="font-medium" style={{ color: colors.text }}>
-                {metric.label}
-              </Text>
-              <View className="flex-row items-center">
-                <View
-                  className="rounded-full h-2 w-20 mr-3"
-                  style={{ backgroundColor: colors.border }}
-                >
-                  <View
-                    className="rounded-full h-2"
-                    style={{
-                      width: `${metric.value}%`,
-                      backgroundColor: metric.color,
-                    }}
-                  />
-                </View>
-                <Text className="font-bold w-8" style={{ color: colors.text }}>
-                  {metric.value}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </View>*/}
-
       {/* Commendations Section */}
-      <View
-        className="rounded-3xl p-6 mb-6 shadow-lg"
-        style={{
-          backgroundColor: colors.card,
-          shadowColor: theme === "dark" ? "#000" : "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-          shadowRadius: 12,
-          elevation: 8,
-        }}
-      >
-        <View className="flex-row items-center mb-4">
-          <CheckCircle size={24} color={colors.success} />
-          <Text
-            className="text-xl font-bold ml-2"
-            style={{ color: colors.text }}
-          >
-            Strengths ({feedback.strengths.length})
-          </Text>
-        </View>
-
-        <View className="space-y-4">
-          {feedback.strengths.slice(0, 3).map((item, index) => (
             <View
-              key={index}
-              className="rounded-2xl p-4"
+              className="rounded-3xl p-6 mb-6 shadow-lg"
               style={{
-                backgroundColor: theme === "dark" ? "#052e16" : "#dcfce7",
+                backgroundColor: colors.card,
+                shadowColor: theme === "dark" ? "#000" : "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: theme === "dark" ? 0.6 : 0.1,
+                shadowRadius: 16,
+                elevation: 10,
               }}
             >
-              <Text className="font-semibold text-green-900 mb-1">
-                {item.action}
-              </Text>
-              <View className="flex-row items-center mb-2">
-                <Clock size={14} color="#15803d" />
-                <Text className="text-green-700 text-sm ml-1">
-                  {item.timestamp}
+              <View className="flex-row items-center mb-4">
+                <CheckCircle size={24} color={colors.success} />
+                <Text
+                  className="text-xl font-bold ml-2"
+                  style={{ color: colors.text }}
+                >
+                  Strengths ({feedback.strengths.length})
                 </Text>
               </View>
-              <View className="bg-white rounded-xl p-3">
-                <View className="flex-row items-center mb-1">
-                  <Flame size={16} color="#22c55e" />
-                  <Text className="text-green-800 font-semibold ml-2">
-                    Impact
-                  </Text>
-                </View>
-                <Text className="text-gray-700">{item.impact}</Text>
+      
+              <View className="space-y-4">
+                {feedback.strengths.slice(0, 3).map((item, index) => (
+                  <View
+                    key={index}
+                    className="rounded-2xl p-4"
+                    style={{
+                      backgroundColor: isDark ? "#1f2a24" : "#ecfdf5",
+                    }}
+                  >
+                    <Text
+                      className="font-semibold"
+                      style={{ color: isDark ? "#a7f3d0" : "#065f46" }}
+                    >
+                      {item.action}
+                    </Text>
+                    <View className="flex-row items-center mb-2">
+                      <Clock
+                        size={14}
+                        color={isDark ? "#a7f3d0" : "#065f46"}
+                      />
+                      <Text
+                        className="text-sm ml-1"
+                        style={{ color: isDark ? "#a7f3d0" : "#065f46" }}
+                      >
+                        {item.timestamp}
+                      </Text>
+                    </View>
+                    <View
+                      className="rounded-xl p-3"
+                      style={{
+                        backgroundColor: isDark ? colors.surface : "#fff",
+                      }}
+                    >
+                      <View className="flex-row items-center mb-1">
+                        <Flame
+                          size={16}
+                          color={isDark ? colors.success : "#22c55e"}
+                        />
+                        <Text
+                          className="font-semibold ml-2"
+                          style={{ color: isDark ? colors.textSecondary : "#065f46" }}
+                        >
+                          Impact
+                        </Text>
+                      </View>
+                      <Text style={{ color: isDark ? colors.textSecondary : "#4b5563" }}>
+                        {item.impact}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
               </View>
             </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Recommendations Section */}
-      <View
-        className="rounded-3xl p-6 mb-6 shadow-lg"
-        style={{
-          backgroundColor: colors.card,
-          shadowColor: theme === "dark" ? "#000" : "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-          shadowRadius: 12,
-          elevation: 8,
-        }}
-      >
-        <View className="flex-row items-center mb-4">
-          <AlertCircle size={24} color={colors.warning} />
-          <Text
-            className="text-xl font-bold ml-2"
-            style={{ color: colors.text }}
-          >
-            Recommendations ({feedback.improvements.length})
-          </Text>
-        </View>
-
-        <View className="space-y-4">
-          {feedback.improvements.slice(0, 3).map((item, index) => (
+            
+            {/* Recommendations Section */}
             <View
-              key={index}
-              className="rounded-2xl p-4"
+              className="rounded-3xl p-6 mb-6 shadow-lg"
               style={{
-                backgroundColor: theme === "dark" ? "#7c2d12" : "#fef3c7",
+                backgroundColor: colors.card,
+                shadowColor: theme === "dark" ? "#000" : "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: theme === "dark" ? 0.6 : 0.1,
+                shadowRadius: 16,
+                elevation: 10,
               }}
             >
-              <Text className="font-semibold text-orange-900 mb-1">
-                {item.action}
-              </Text>
-              <View className="flex-row items-center mb-2">
-                <Clock size={14} color="#c2410c" />
-                <Text className="text-orange-700 text-sm ml-1">
-                  {item.timestamp}
+              <View className="flex-row items-center mb-4">
+                <AlertCircle size={24} color={colors.warning} />
+                <Text
+                  className="text-xl font-bold ml-2"
+                  style={{ color: colors.text }}
+                >
+                  Recommendations ({feedback.improvements.length})
                 </Text>
               </View>
-              <View className="bg-white rounded-xl p-3">
-                <View className="flex-row items-center mb-1">
-                  <Lightbulb size={16} color="#f97316" />
-                  <Text className="text-orange-800 font-semibold ml-2">
-                    Suggestion
-                  </Text>
-                </View>
-                <Text className="text-gray-700">{item.suggestion}</Text>
+      
+              <View className="space-y-4">
+                {feedback.improvements.slice(0, 3).map((item, index) => (
+                  <View
+                    key={index}
+                    className="rounded-2xl p-4"
+                    style={{
+                      backgroundColor: isDark ? "#2a241f" : "#fff7ed",
+                    }}
+                  >
+                    <Text
+                      className="font-semibold"
+                      style={{ color: isDark ? "#fcd34d" : "#92400e" }}
+                    >
+                      {item.action}
+                    </Text>
+                    <View className="flex-row items-center mb-2">
+                      <Clock
+                        size={14}
+                        color={isDark ? "#fcd34d" : "#92400e"}
+                      />
+                      <Text
+                        className="text-sm ml-1"
+                        style={{ color: isDark ? "#fcd34d" : "#92400e" }}
+                      >
+                        {item.timestamp}
+                      </Text>
+                    </View>
+                    <View
+                      className="rounded-xl p-3"
+                      style={{
+                        backgroundColor: isDark ? colors.surface : "#fff",
+                      }}
+                    >
+                      <View className="flex-row items-center mb-1">
+                        <Lightbulb
+                          size={16}
+                          color={isDark ? colors.warning : "#f97316"}
+                        />
+                        <Text
+                          className="font-semibold ml-2"
+                          style={{ color: isDark ? colors.textSecondary : "#92400e" }}
+                        >
+                          Suggestion
+                        </Text>
+                      </View>
+                      <Text style={{ color: isDark ? colors.textSecondary : "#4b5563" }}>
+                        {item.suggestion}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
               </View>
             </View>
-          ))}
-        </View>
-      </View>
 
       {/* Action Buttons */}
       <View className="space-y-3 mb-8">

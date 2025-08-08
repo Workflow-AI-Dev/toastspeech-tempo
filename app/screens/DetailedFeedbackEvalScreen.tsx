@@ -341,7 +341,7 @@ const DetailedFeedbackEvalScreen = ({
           <View className="flex-row items-center mb-4">
             <AlertTriangle size={24} color="#f59e0b" />
             <Text className="text-xl font-bold text-gray-900 ml-2">
-              Weaknesses ({category.improvements.length})
+              Recommendations ({category.improvements.length})
             </Text>
           </View>
           <View className="space-y-4">

@@ -12,7 +12,7 @@ export default function PerformanceDashboardPage() {
   const colors = getThemeColors(theme);
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <PerformanceDashboard />
 
       {/* Bottom Navigation */}

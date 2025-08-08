@@ -37,7 +37,7 @@ export default function HomeScreen() {
   const { user, loading } = useAuth();
   const [dataLoading, setDataLoading] = useState(true);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [modalMessage, setModalMessage] = useState(""); 
+  const [modalMessage, setModalMessage] = useState("");
   const [modalTitle, setModalTitle] = useState("");
   const [isFirstTime, setIsFirstTime] = useState(true);
   const { theme } = useTheme();
@@ -56,50 +56,49 @@ export default function HomeScreen() {
   }, []);
 
   const fetchPlan = useCallback(async () => {
-      try {
-          const token = await AsyncStorage.getItem("auth_token");
-          if (!token) {
-              console.warn("No auth token found. User might not be authenticated.");
-              return;
-          }
-          const res = await fetch(`${BASE_URL}/subscription/plan`, { 
-              headers: {
-                  Authorization: `Bearer ${token}`,
-              },
-          });
-          const data = await res.json();
-          if (res.ok) {
-              setPlan(data.id);
-          } else {
-              console.error("Plan fetch failed", data);
-              // Handle specific error codes if necessary, e.g., token expired
-          }
-      } catch (error) {
-          console.error("Error fetching subscription plan", error);
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (!token) {
+        console.warn("No auth token found. User might not be authenticated.");
+        return;
       }
+      const res = await fetch(`${BASE_URL}/subscription/plan`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPlan(data.id);
+      } else {
+        console.error("Plan fetch failed", data);
+      }
+    } catch (error) {
+      console.error("Error fetching subscription plan", error);
+    }
   }, []);
 
   const fetchLimits = useCallback(async () => {
-      try {
-          const token = await AsyncStorage.getItem("auth_token");
-          if (!token) {
-              console.warn("No auth token found. User might not be authenticated.");
-              return;
-          }
-          const res = await fetch(`${BASE_URL}/subscription/check_limits`, { 
-              headers: {
-                  Authorization: `Bearer ${token}`,
-              },
-          });
-          const data = await res.json();
-          if (res.ok) {
-              setLimits(data);
-          } else {
-              console.error("Limits fetch failed", data);
-          }
-      } catch (error) {
-          console.error("Error fetching limits", error);
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (!token) {
+        console.warn("No auth token found. User might not be authenticated.");
+        return;
       }
+      const res = await fetch(`${BASE_URL}/subscription/check_limits`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setLimits(data);
+      } else {
+        console.error("Limits fetch failed", data);
+      }
+    } catch (error) {
+      console.error("Error fetching limits", error);
+    }
   }, []);
 
   const fetchSessions = useCallback(async () => {
@@ -130,23 +129,23 @@ export default function HomeScreen() {
 
 
   useEffect(() => {
-  const initializeAppData = async () => {
-    setDataLoading(true);
-    try {
-      await Promise.all([
-        fetchPlan(),
-        fetchLimits(),
-        fetchSessions()
-      ]);
-    } catch (error) {
-      console.error("Initialization error:", error);
-    } finally {
-      setDataLoading(false);
-    }
-  };
+    const initializeAppData = async () => {
+      setDataLoading(true);
+      try {
+        await Promise.all([
+          fetchPlan(),
+          fetchLimits(),
+          fetchSessions()
+        ]);
+      } catch (error) {
+        console.error("Initialization error:", error);
+      } finally {
+        setDataLoading(false);
+      }
+    };
 
-  initializeAppData();
-}, []);
+    initializeAppData();
+  }, []);
 
 
   const calculateStreak = (sessions: any[]) => {
@@ -189,7 +188,6 @@ export default function HomeScreen() {
     }
 
     if (!limits) {
-      // Limits not loaded yet, prevent action and maybe show a loading indicator or alert
       console.log("Limits not yet loaded. Please wait.");
       return;
     }
@@ -217,7 +215,6 @@ export default function HomeScreen() {
         }
         break;
       default:
-        // For features without specific limits, proceed normally
         break;
     }
 
@@ -226,7 +223,7 @@ export default function HomeScreen() {
       setModalMessage(`You've reached your limit for ${limitType} this month. Upgrade your plan for more!`);
       setShowSubscriptionModal(true);
     } else {
-      currentOnPress(); // Proceed with the original navigation
+      currentOnPress();
     }
   };
 
@@ -235,58 +232,58 @@ export default function HomeScreen() {
     const isCasual = plan === "casual";
 
     return [
-        {
-            id: "performance-dashboard",
-            title: "Your Progress",
-            description: "Track stats & level up",
-            icon: BarChart2,
-            color: "#8b5cf6",
-            bgColor: "#faf5ff",
-            locked: isCasual, // casual users don't get dashboard
-            onPress: () => router.push("/performance-dashboard"),
-        },
-        {
-            id: "speech-recorder",
-            title: "Speaker Mode",
-            description: "AI-powered feedback in seconds",
-            icon: Mic,
-            color: "#6366f1",
-            bgColor: "#f0f9ff",
-            locked: false,
-            onPress: () => router.push("/speaker-mode"),
-        },
-        {
-            id: "evaluation-tools",
-            title: "Evaluator Mode",
-            description: "Test your evaluation skills",
-            icon: Award,
-            color: "#10b981",
-            bgColor: "#f0fdf4",
-            locked: isAspiringOrCasual, // disable for aspiring and casual
-            onPress: () => router.push("/evaluator-mode"),
-        },
-        {
-            id: "practice",
-            title: "Practice Mode",
-            description: "Warmup to sharpen your delivery skills",
-            icon: Zap,
-            color: "#f59e0b",
-            bgColor: "#fff7ed",
-            locked: false,
-            onPress: () => router.push("/practice-mode"),
-        },
-        {
-            id: "feedback-library",
-            title: "Library",
-            description: "Browse all your past sessions",
-            icon: BookOpen,
-            color: "#06b6d4",
-            bgColor: "#f0fdfa",
-            locked: false,
-            onPress: () => router.push("/feedback-library"),
-        },
+      {
+        id: "performance-dashboard",
+        title: "Your Progress",
+        description: "Track stats & level up",
+        icon: BarChart2,
+        color: colors.accent,
+        bgColor: theme === "light" ? "#faf5ff" : colors.surface,
+        locked: isCasual,
+        onPress: () => router.push("/performance-dashboard"),
+      },
+      {
+        id: "speech-recorder",
+        title: "Speaker Mode",
+        description: "AI-powered feedback in seconds",
+        icon: Mic,
+        color: colors.primary,
+        bgColor: theme === "light" ? "#f0f9ff" : colors.surface,
+        locked: false,
+        onPress: () => router.push("/speaker-mode"),
+      },
+      {
+        id: "evaluation-tools",
+        title: "Evaluator Mode",
+        description: "Test your evaluation skills",
+        icon: Award,
+        color: colors.success,
+        bgColor: theme === "light" ? "#f0fdf4" : colors.surface,
+        locked: isAspiringOrCasual,
+        onPress: () => router.push("/evaluator-mode"),
+      },
+      {
+        id: "practice",
+        title: "Practice Mode",
+        description: "Warmup to sharpen your delivery skills",
+        icon: Zap,
+        color: colors.warning,
+        bgColor: theme === "light" ? "#fff7ed" : colors.surface,
+        locked: false,
+        onPress: () => router.push("/practice-mode"),
+      },
+      {
+        id: "feedback-library",
+        title: "Library",
+        description: "Browse all your past sessions",
+        icon: BookOpen,
+        color: colors.primary,
+        bgColor: theme === "light" ? "#f0fdfa" : colors.surface,
+        locked: false,
+        onPress: () => router.push("/feedback-library"),
+      },
     ];
-  }, [plan, router]);
+  }, [plan, router, theme, colors]);
 
   const tips = [
     "Greatness takes time… and a fast internet connection.",
@@ -315,14 +312,13 @@ export default function HomeScreen() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTip((prev) => (prev + 1) % tips.length);
-    }, 3000); // change tip every 3 seconds
+    }, 3000);
     return () => clearInterval(interval);
   }, []);
 
-const randomTip = tips[currentTip];
+  const randomTip = tips[currentTip];
 
 
-  // Show loading state while checking authentication
   if (loading || dataLoading) {
     return (
       <SafeAreaView
@@ -354,7 +350,6 @@ const randomTip = tips[currentTip];
       style={{ backgroundColor: colors.background }}
     >
       <ScrollView className="flex-1">
-        {/* Header with Level & Streak */}
         <View className="flex-row justify-between items-center px-6 py-6 mt-2">
           <View>
             <Text
@@ -365,27 +360,27 @@ const randomTip = tips[currentTip];
             </Text>
 
             <View className="flex-row items-center">
-              <View className="bg-amber-100 rounded-full px-3 py-1 mr-3">
+              <View className="rounded-full px-3 py-1 mr-3" style={{ backgroundColor: theme === 'light' ? "#fef3c7" : colors.surface }}>
                 <View className="flex-row items-center">
-                  <Crown size={14} color="#f59e0b" />
-                  <Text className="text-sm font-semibold text-amber-700 ml-1">
+                  <Crown size={14} color={colors.warning} />
+                  <Text className="text-sm font-semibold ml-1" style={{ color: colors.warning }}>
                     Level {userLevel.current}
                   </Text>
                 </View>
               </View>
-              <View className="rounded-full px-3 py-1" style={{ backgroundColor: userLevel.streakDays > 0 ? "#ffedd5" : "#f3f4f6" }}>
+              <View className="rounded-full px-3 py-1" style={{ backgroundColor: userLevel.streakDays > 0 ? (theme === 'light' ? colors.warning + '20' : colors.surface) : colors.border }}>
                 <View className="flex-row items-center">
                   {userLevel.streakDays > 0 ? (
                     <>
-                      <Flame size={14} color="#ea580c" />
-                      <Text className="text-sm font-semibold text-orange-700 ml-1">
+                      <Flame size={14} color={colors.warning} />
+                      <Text className="text-sm font-semibold ml-1" style={{ color: colors.warning }}>
                         {userLevel.streakDays} day{userLevel.streakDays > 1 ? "s" : ""}
                       </Text>
                     </>
                   ) : (
                     <>
                       <Text className="text-lg mr-1">😞</Text>
-                      <Text className="text-sm font-semibold text-gray-500">0 days</Text>
+                      <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>0 days</Text>
                     </>
                   )}
                 </View>
@@ -394,14 +389,18 @@ const randomTip = tips[currentTip];
             </View>
           </View>
           <TouchableOpacity
-            className="bg-gray-100 rounded-full p-3"
+            className="rounded-full p-3"
+            style={{
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              borderWidth: 1,
+            }}
             onPress={() => router.push("/profile-settings")}
           >
-            <Settings size={24} color="#6b7280" />
+            <Settings size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        {/* Level Progress Bar */}
         <View className="px-6 mb-8">
           <View
             className="rounded-3xl p-6"
@@ -414,23 +413,22 @@ const randomTip = tips[currentTip];
               >
                 Level {userLevel.nextLevel} Progress
               </Text>
-              <Text className="text-sm font-semibold text-gray-600">
+              <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>
                 {userLevel.progress}%
               </Text>
             </View>
-            <View className="bg-gray-200 rounded-full h-2 mb-3">
+            <View className="rounded-full h-2 mb-3" style={{ backgroundColor: colors.border }}>
               <View
-                className="bg-indigo-500 rounded-full h-2"
-                style={{ width: `${userLevel.progress}%` }}
+                className="rounded-full h-2"
+                style={{ width: `${userLevel.progress}%`, backgroundColor: colors.primary }}
               />
             </View>
-            <Text className="text-sm text-gray-600">
+            <Text className="text-sm" style={{ color: colors.textSecondary }}>
               2 more speeches to reach Level {userLevel.nextLevel}
             </Text>
           </View>
         </View>
 
-        {/* Quick Actions */}
         <View className="px-6 mb-8">
           <Text
             className="text-xl font-bold mb-4"
@@ -468,15 +466,15 @@ const randomTip = tips[currentTip];
                           {feature.title}
                         </Text>
                         {feature.badge && (
-                          <View className="bg-green-100 rounded-full px-2 py-1 ml-2">
-                            <Text className="text-xs font-bold text-green-700">
+                          <View className="rounded-full px-2 py-1 ml-2" style={{ backgroundColor: colors.success + '20' }}>
+                            <Text className="text-xs font-bold" style={{ color: colors.success }}>
                               {feature.badge}
                             </Text>
                           </View>
                         )}
                         {feature.locked && (
-                          <View className="bg-red-100 rounded-full px-2 py-1 ml-2">
-                            <Text className="text-xs font-bold text-gray-600">
+                          <View className="rounded-full px-2 py-1 ml-2" style={{ backgroundColor: colors.error + '20' }}>
+                            <Text className="text-xs font-bold" style={{ color: colors.error }}>
                               LOCKED
                             </Text>
                           </View>
@@ -490,14 +488,13 @@ const randomTip = tips[currentTip];
                       </Text>
                     </View>
                   </View>
-                  <ChevronRight size={20} color="#d1d5db" />
+                  <ChevronRight size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               );
             })}
           </View>
         </View>
 
-        {/* Achievements */}
         <View className="px-6 mb-8">
           <Text
             className="text-xl font-bold mb-4"
@@ -520,8 +517,10 @@ const randomTip = tips[currentTip];
                   borderWidth: 1,
                 }}
               >
-                <View className="bg-gray-50 rounded-full w-12 h-12 items-center justify-center mb-3">
-                  <Text className="text-2xl"><Flame color="#fc5e03" /></Text>
+                <View className="rounded-full w-12 h-12 items-center justify-center mb-3" style={{ backgroundColor: colors.surface }}>
+                  <Text className="text-2xl">
+                    <Flame color={colors.warning} />
+                  </Text>
                 </View>
                 <Text
                   className="font-semibold text-center text-sm"
@@ -534,97 +533,72 @@ const randomTip = tips[currentTip];
           </ScrollView>
         </View>
 
-        {/* Recent Speeches */}
         <View className="px-6 mb-8">
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-xl font-bold" style={{ color: colors.text }}>
               Recent Sessions
             </Text>
             <TouchableOpacity onPress={() => router.push("/feedback-library")}>
-              <Text className="text-sm text-indigo-600 font-semibold">
+              <Text className="text-sm font-semibold" style={{ color: colors.primary }}>
                 View All
               </Text>
             </TouchableOpacity>
           </View>
 
           {recentSessions.map((session) => {
-          const isSpeech = session.type === "speech";
-          return (
-            <TouchableOpacity
-              key={session.id}
-              className="rounded-2xl p-4 mb-3 flex-row items-center"
-              style={{
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                borderWidth: 1,
-              }}
-            >
-              <View className="bg-gray-50 rounded-2xl w-12 h-12 items-center justify-center mr-4">
-                {isSpeech ? (
-                  <Mic size={24} color="#7c3aed" />
-                ) : (
-                  <Award size={24} color="#10b981" />
-                )}
-              </View>
-              <View className="flex-1">
-                <Text className="font-bold mb-1" style={{ color: colors.text }}>
-                  {session.title || (isSpeech ? "Untitled Speech" : "Evaluation")}
-                </Text>
-                <View className="flex-row items-center">
-                  <Text className="text-sm text-gray-500">
-                    {dayjs(session.created_at).fromNow()}  {/* e.g., "1 day ago" */}
-                  </Text>
+            const isSpeech = session.type === "speech";
+            return (
+              <TouchableOpacity
+                key={session.id}
+                className="rounded-2xl p-4 mb-3 flex-row items-center"
+                style={{
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                }}
+              >
+                <View className="rounded-2xl w-12 h-12 items-center justify-center mr-4" style={{ backgroundColor: colors.surface }}>
+                  {isSpeech ? (
+                    <Mic size={24} color={colors.primary} />
+                  ) : (
+                    <Award size={24} color={colors.success} />
+                  )}
                 </View>
-              </View>
-              <View className="items-end">
-                {session.summary.Metadata.overall_score && (
-                  <View className="bg-indigo-50 rounded-xl px-3 py-2 mb-2">
-                    <Text className="font-bold text-indigo-600 text-lg">
-                      {session.summary.Metadata.overall_score}
-                    </Text>
-                  </View>
-                )}
-                {session.improvement && (
+                <View className="flex-1">
+                  <Text className="font-bold mb-1" style={{ color: colors.text }}>
+                    {session.title || (isSpeech ? "Untitled Speech" : "Evaluation")}
+                  </Text>
                   <View className="flex-row items-center">
-                    <TrendingUp size={12} color="#10b981" />
-                    <Text className="text-xs text-green-600 ml-1 font-semibold">
-                      {session.improvement}
+                    <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                      {dayjs(session.created_at).fromNow()}
                     </Text>
                   </View>
-                )}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+                </View>
+                <View className="items-end">
+                  {session.summary.Metadata.overall_score && (
+                    <View className="rounded-xl px-3 py-2 mb-2" style={{ backgroundColor: colors.primary + '20' }}>
+                      <Text className="font-bold text-lg" style={{ color: colors.primary }}>
+                        {session.summary.Metadata.overall_score}
+                      </Text>
+                    </View>
+                  )}
+                  {session.improvement && (
+                    <View className="flex-row items-center">
+                      <TrendingUp size={12} color={colors.success} />
+                      <Text className="text-xs ml-1 font-semibold" style={{ color: colors.success }}>
+                        {session.improvement}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
 
         </View>
 
-        {/* Daily Challenge */}
-        {/*<View className="px-6 mb-8">
-          <View className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100">
-            <View className="flex-row items-center mb-3">
-              <View className="bg-indigo-100 rounded-full p-2 mr-3">
-                <Target size={20} color="#6366f1" />
-              </View>
-              <Text className="text-indigo-900 font-bold text-lg">
-                Today's Challenge
-              </Text>
-            </View>
-            <Text className="text-indigo-800 mb-4 leading-relaxed">
-              Record a 2-minute speech about your favorite hobby. Focus on using
-              descriptive language and clear structure.
-            </Text>
-            <TouchableOpacity
-              className="bg-indigo-600 rounded-2xl py-3 px-6 self-start"
-              onPress={() => router.push("/speaker-mode")}
-            >
-              <Text className="text-white font-bold">Start Challenge</Text>
-            </TouchableOpacity>
-          </View>
-        </View> */}
       </ScrollView>
 
-      {/* Bottom Navigation */}
       <View
         className="flex-row justify-around items-center py-4 border-t"
         style={{ backgroundColor: colors.card, borderTopColor: colors.border }}
@@ -683,7 +657,7 @@ const randomTip = tips[currentTip];
         >
           <View
             className="rounded-2xl p-3"
-            style={{ backgroundColor: colors.surface + "20" }}
+            style={{ backgroundColor: colors.surface }}
           >
             <User size={22} color={colors.textSecondary} />
           </View>
@@ -702,24 +676,24 @@ const randomTip = tips[currentTip];
         visible={showSubscriptionModal}
         onRequestClose={() => setShowSubscriptionModal(false)}
       >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
+        <View style={[styles.centeredView, { backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)' }]}>
+          <View style={[styles.modalView, { backgroundColor: colors.card }]}>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setShowSubscriptionModal(false)}
             >
-              <X size={24} color="#333" />
+              <X size={24} color={colors.textSecondary} />
             </TouchableOpacity>
-            <Crown size={60} color="#f97316" style={{ marginBottom: 20 }} />
-            <Text style={styles.modalTitle}>{modalTitle}</Text>
-            <Text style={styles.modalText}>
-              {modalMessage} {/* This will display the specific message */}
+            <Crown size={60} color={colors.warning} style={{ marginBottom: 20 }} />
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{modalTitle}</Text>
+            <Text style={[styles.modalText, { color: colors.textSecondary }]}>
+              {modalMessage}
             </Text>
             <TouchableOpacity
-              style={styles.upgradeButton}
+              style={[styles.upgradeButton, { backgroundColor: colors.warning }]}
               onPress={() => {
                 setShowSubscriptionModal(false);
-                router.push("/subscription"); // Navigate to your subscription page
+                router.push("/subscription");
               }}
             >
               <Text style={styles.upgradeButtonText}>Upgrade Plan</Text>
@@ -732,57 +706,52 @@ const randomTip = tips[currentTip];
 }
 
 const styles = StyleSheet.create({
-    centeredView: {
-        flex: 1,
-        justifyContent: "flex-end", // Align to bottom
-        alignItems: "center",
-        backgroundColor: "rgba(0,0,0,0.5)",
+  centeredView: {
+    flex: 1,
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  modalView: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 35,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
     },
-    modalView: {
-        backgroundColor: "white",
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        padding: 35,
-        alignItems: "center",
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
-        width: "100%", // Take full width
-    },
-    closeButton: {
-        position: 'absolute',
-        top: 15,
-        right: 15,
-        padding: 5,
-    },
-    modalTitle: {
-        fontSize: 24,
-        fontWeight: "bold",
-        marginBottom: 15,
-        color: "#333",
-    },
-    modalText: {
-        marginBottom: 25,
-        textAlign: "center",
-        fontSize: 16,
-        color: "#666",
-        lineHeight: 24,
-    },
-    upgradeButton: {
-        backgroundColor: "#f97316", // Orange color for upgrade button
-        borderRadius: 10,
-        paddingVertical: 14,
-        paddingHorizontal: 30,
-        elevation: 2,
-    },
-    upgradeButtonText: {
-        color: "white",
-        fontWeight: "bold",
-        fontSize: 18,
-    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    width: "100%",
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    padding: 5,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 15,
+  },
+  modalText: {
+    marginBottom: 25,
+    textAlign: "center",
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  upgradeButton: {
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    elevation: 2,
+  },
+  upgradeButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 18,
+  },
 });

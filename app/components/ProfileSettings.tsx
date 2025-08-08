@@ -35,6 +35,7 @@ import {
   Shuffle,
   Check,
   BriefcaseIcon,
+  MessageCircle,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import { supabase } from "../../lib/supabase";
@@ -472,10 +473,12 @@ export default function ProfileSettings({
       title: "Support",
       items: [
         {
-          icon: HelpCircle,
-          title: "Help & Support",
-          description: "Get help and contact support",
-          onPress: () => {},
+          icon: MessageCircle,
+          title: "Feedback",
+          description: "Send feedback or suggest features",
+          onPress: () => {
+            router.push("/feedback");
+          },
         },
 
         {

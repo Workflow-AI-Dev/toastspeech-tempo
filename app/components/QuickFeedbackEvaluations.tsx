@@ -156,6 +156,8 @@ const QuickFeedbackEvaluations = ({
 }: QuickFeedbackEvaluationsProps) => {
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
+  const isDark = theme === 'dark';
+  
   const [selectedTab, setSelectedTab] = useState("Key Insights");
 
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -482,10 +484,9 @@ const QuickFeedbackEvaluations = ({
           datasets: [
             {
               data: barChartDataValues,
-              // Dynamic colors for bars (optional, but makes chart more visually appealing)
               colors: barChartLabels.map((_, i) => (opacity = 1) => {
-                const hue = (i * 137.508) % 360; // Use golden angle approximation for distinct colors
-                return `hsla(${hue}, 70%, 50%, ${opacity})`;
+                const hue = (i * 137.508) % 360; 
+                return `hsla(${hue}, 70%, ${theme === 'dark' ? '60%' : '50%'}, ${opacity})`;
               }),
             },
           ],
@@ -493,24 +494,23 @@ const QuickFeedbackEvaluations = ({
 
         // Chart configuration for both charts
         const chartConfig = {
-          backgroundColor: colors.card, // Should match card background for seamless look
+          backgroundColor: colors.card, 
           backgroundGradientFrom: colors.card,
           backgroundGradientTo: colors.card,
-          decimalPlaces: 1, // optional, defaults to 2dp
-          color: (opacity = 1) => colors.primary, // Default color for lines/bars
+          decimalPlaces: 1, 
+          color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
           labelColor: (opacity = 1) => colors.textSecondary,
           style: {
             borderRadius: 16,
           },
           propsForDots: {
-            r: "6", // Radius of dots
-            strokeWidth: "2", // Stroke width of dots
-            stroke: colors.primary, // Stroke color of dots
+            r: "6",
+            strokeWidth: "2", 
+            stroke: colors.primary, 
           },
-          // Custom axis styles
           axisLabelColor: colors.textSecondary,
-          axisLineColor: colors.border,
-          gridLineColor: colors.border,
+          axisLineColor: theme === 'dark' ? colors.borderDark : colors.border,
+          gridLineColor: theme === 'dark' ? colors.borderDark : colors.border,
         };
 
         return (
@@ -520,7 +520,7 @@ const QuickFeedbackEvaluations = ({
                 <View
                   className="rounded-full p-2 mr-3"
                   style={{
-                    backgroundColor: theme === "dark" ? "#3b82f6" : "#dbeafe",
+                    backgroundColor: theme === "dark" ? "#1e40af" : "#dbeafe",
                   }}
                 >
                   <PauseCircle
@@ -592,7 +592,7 @@ const QuickFeedbackEvaluations = ({
                     <Text
                       className="text-sm font-medium"
                       style={{
-                        color: theme === "dark" ? "#93c5fd" : "#3730a3",
+                        color: theme === "dark" ? "#93c5fd" : "#3b82f6",
                       }}
                     >
                       Total Pauses
@@ -602,13 +602,13 @@ const QuickFeedbackEvaluations = ({
                   <View
                     className="flex-1 rounded-2xl p-4 mx-1"
                     style={{
-                      backgroundColor: theme === "dark" ? "#059669" : "#ecfdf5",
+                      backgroundColor: theme === "dark" ? "#047857" : "#ecfdf5",
                     }}
                   >
                     <Text
                       className="text-lg font-bold mb-1"
                       style={{
-                        color: theme === "dark" ? "#34d399" : "#047857",
+                        color: theme === "dark" ? "#6ee7b7" : "#047857",
                       }}
                     >
                       {avgPauseDuration}s
@@ -616,7 +616,7 @@ const QuickFeedbackEvaluations = ({
                     <Text
                       className="text-sm font-medium"
                       style={{
-                        color: theme === "dark" ? "#6ee7b7" : "#065f46",
+                        color: theme === "dark" ? "#a7f3d0" : "#065f46",
                       }}
                     >
                       Avg Duration
@@ -671,7 +671,7 @@ const QuickFeedbackEvaluations = ({
                         chartConfig={{
                           ...chartConfig,
                           color: (opacity = 1) =>
-                            `rgba(16, 185, 129, ${opacity})`, // Green primary color for bars
+                            `rgba(16, 185, 129, ${opacity})`, 
                           backgroundGradientFrom: colors.card,
                           backgroundGradientTo: colors.card,
                         }}
@@ -1034,7 +1034,7 @@ const QuickFeedbackEvaluations = ({
                 <View
                   className="rounded-full p-2 mr-3"
                   style={{
-                    backgroundColor: theme === "dark" ? "#8b5cf6" : "#ede9fe",
+                    backgroundColor: theme === "dark" ? "#581c87" : "#ede9fe",
                   }}
                 >
                   <Mic
@@ -1232,7 +1232,7 @@ const QuickFeedbackEvaluations = ({
                     </View>
                   )}
 
-                  {Object.keys(fillerCounts).length > 0 && (
+                  {Object.keys(repeatCounts).length > 0 && (
                     <View
                       className="rounded-2xl p-4"
                       style={{
@@ -1862,18 +1862,27 @@ const QuickFeedbackEvaluations = ({
       {/* Overall Score */}
       <View
         className="rounded-3xl p-6 mb-6 shadow-lg"
-        style={{ backgroundColor: colors.card }}
+        style={{
+          backgroundColor: colors.card,
+          shadowColor: theme === "dark" ? "#000" : "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: theme === "dark" ? 0.6 : 0.1,
+          shadowRadius: 16,
+          elevation: 10,
+        }}
       >
         <View className="items-center mb-6">
           <View
             className="rounded-full w-24 h-24 items-center justify-center mb-4"
             style={{
-              backgroundColor: theme === "dark" ? colors.surface : "#dcfce7",
+              backgroundColor: theme === "dark" ? "#14532d" : "#dcfce7",
             }}
           >
             <Text
               className="text-4xl font-bold"
-              style={{ color: colors.success }}
+              style={{
+                color: theme === "dark" ? "#4ade80" : "#10b981",
+              }}
             >
               {evaluationResults.overallScore}
             </Text>
@@ -1888,7 +1897,7 @@ const QuickFeedbackEvaluations = ({
             (() => {
               const isNegative = evaluationResults.improvement.includes("-");
               const Icon = isNegative ? TrendingDown : TrendingUp;
-              const color = isNegative ? "#ef4444" : "#10b981";
+              const color = isNegative ? "#f87171" : "#4ade80";
 
               return (
                 <View className="flex-row items-center">
@@ -2024,9 +2033,9 @@ const QuickFeedbackEvaluations = ({
           backgroundColor: colors.card,
           shadowColor: theme === "dark" ? "#000" : "#000",
           shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-          shadowRadius: 12,
-          elevation: 8,
+          shadowOpacity: theme === "dark" ? 0.6 : 0.1,
+          shadowRadius: 16,
+          elevation: 10,
         }}
       >
         <View className="flex-row items-center mb-4">
@@ -2045,32 +2054,54 @@ const QuickFeedbackEvaluations = ({
               key={index}
               className="rounded-2xl p-4"
               style={{
-                backgroundColor: theme === "dark" ? "#052e16" : "#dcfce7",
+                backgroundColor: isDark ? "#1f2a24" : "#ecfdf5",
               }}
             >
-              <Text className="font-semibold text-green-900 mb-1">
+              <Text
+                className="font-semibold"
+                style={{ color: isDark ? "#a7f3d0" : "#065f46" }}
+              >
                 {item.action}
               </Text>
               <View className="flex-row items-center mb-2">
-                <Clock size={14} color="#15803d" />
-                <Text className="text-green-700 text-sm ml-1">
+                <Clock
+                  size={14}
+                  color={isDark ? "#a7f3d0" : "#065f46"}
+                />
+                <Text
+                  className="text-sm ml-1"
+                  style={{ color: isDark ? "#a7f3d0" : "#065f46" }}
+                >
                   {item.timestamp}
                 </Text>
               </View>
-              <View className="bg-white rounded-xl p-3">
+              <View
+                className="rounded-xl p-3"
+                style={{
+                  backgroundColor: isDark ? colors.surface : "#fff",
+                }}
+              >
                 <View className="flex-row items-center mb-1">
-                  <Flame size={16} color="#22c55e" />
-                  <Text className="text-green-800 font-semibold ml-2">
+                  <Flame
+                    size={16}
+                    color={isDark ? colors.success : "#22c55e"}
+                  />
+                  <Text
+                    className="font-semibold ml-2"
+                    style={{ color: isDark ? colors.textSecondary : "#065f46" }}
+                  >
                     Impact
                   </Text>
                 </View>
-                <Text className="text-gray-700">{item.impact}</Text>
+                <Text style={{ color: isDark ? colors.textSecondary : "#4b5563" }}>
+                  {item.impact}
+                </Text>
               </View>
             </View>
           ))}
         </View>
       </View>
-
+      
       {/* Recommendations Section */}
       <View
         className="rounded-3xl p-6 mb-6 shadow-lg"
@@ -2078,9 +2109,9 @@ const QuickFeedbackEvaluations = ({
           backgroundColor: colors.card,
           shadowColor: theme === "dark" ? "#000" : "#000",
           shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-          shadowRadius: 12,
-          elevation: 8,
+          shadowOpacity: theme === "dark" ? 0.6 : 0.1,
+          shadowRadius: 16,
+          elevation: 10,
         }}
       >
         <View className="flex-row items-center mb-4">
@@ -2099,26 +2130,48 @@ const QuickFeedbackEvaluations = ({
               key={index}
               className="rounded-2xl p-4"
               style={{
-                backgroundColor: theme === "dark" ? "#7c2d12" : "#fef3c7",
+                backgroundColor: isDark ? "#2a241f" : "#fff7ed",
               }}
             >
-              <Text className="font-semibold text-orange-900 mb-1">
+              <Text
+                className="font-semibold"
+                style={{ color: isDark ? "#fcd34d" : "#92400e" }}
+              >
                 {item.action}
               </Text>
               <View className="flex-row items-center mb-2">
-                <Clock size={14} color="#c2410c" />
-                <Text className="text-orange-700 text-sm ml-1">
+                <Clock
+                  size={14}
+                  color={isDark ? "#fcd34d" : "#92400e"}
+                />
+                <Text
+                  className="text-sm ml-1"
+                  style={{ color: isDark ? "#fcd34d" : "#92400e" }}
+                >
                   {item.timestamp}
                 </Text>
               </View>
-              <View className="bg-white rounded-xl p-3">
+              <View
+                className="rounded-xl p-3"
+                style={{
+                  backgroundColor: isDark ? colors.surface : "#fff",
+                }}
+              >
                 <View className="flex-row items-center mb-1">
-                  <Lightbulb size={16} color="#f97316" />
-                  <Text className="text-orange-800 font-semibold ml-2">
+                  <Lightbulb
+                    size={16}
+                    color={isDark ? colors.warning : "#f97316"}
+                  />
+                  <Text
+                    className="font-semibold ml-2"
+                    style={{ color: isDark ? colors.textSecondary : "#92400e" }}
+                  >
                     Suggestion
                   </Text>
                 </View>
-                <Text className="text-gray-700">{item.suggestion}</Text>
+                <Text style={{ color: isDark ? colors.textSecondary : "#4b5563" }}>
+                  {item.suggestion}
+                </Text>
               </View>
             </View>
           ))}
