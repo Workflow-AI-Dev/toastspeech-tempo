@@ -78,6 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (res.ok) {
         const userData = await res.json();
         setUser(userData);
+        await AsyncStorage.setItem("plan", userData.current_plan_id);
 
         const expoToken = await registerForPushNotificationsAsync();
         if (expoToken) {
@@ -91,6 +92,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     checkAuth();
   }, []);
+
 
   useEffect(() => {
     if (loading) return;
@@ -154,6 +156,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (data.access_token) {
         const token = data.access_token;
         await AsyncStorage.setItem("auth_token", token);
+        await AsyncStorage.setItem("plan", data.current_plan_id);
 
         // Fetch user data
         const meRes = await fetch(`${BASE_URL}/auth/me`, {
@@ -208,6 +211,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const userData = await meRes.json();
+      await AsyncStorage.setItem("plan", userData.current_plan_id);
       if (meRes.ok) {
         setUser(userData);
 

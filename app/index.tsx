@@ -57,22 +57,9 @@ export default function HomeScreen() {
 
   const fetchPlan = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem("auth_token");
-      if (!token) {
-        console.warn("No auth token found. User might not be authenticated.");
-        return;
-      }
-      const res = await fetch(`${BASE_URL}/subscription/plan`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setPlan(data.id);
-      } else {
-        console.error("Plan fetch failed", data);
-      }
+      const plan = await AsyncStorage.getItem("plan");
+      setPlan(plan);
+      console.log(plan);
     } catch (error) {
       console.error("Error fetching subscription plan", error);
     }
@@ -81,11 +68,12 @@ export default function HomeScreen() {
   const fetchLimits = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem("auth_token");
+      const plan = await AsyncStorage.getItem("plan");
       if (!token) {
         console.warn("No auth token found. User might not be authenticated.");
         return;
       }
-      const res = await fetch(`${BASE_URL}/subscription/check_limits`, {
+      const res = await fetch(`${BASE_URL}/user/limits/${plan}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -93,6 +81,7 @@ export default function HomeScreen() {
       const data = await res.json();
       if (res.ok) {
         setLimits(data);
+        console.log(limits)
       } else {
         console.error("Limits fetch failed", data);
       }
@@ -186,7 +175,7 @@ export default function HomeScreen() {
       setShowSubscriptionModal(true);
       return;
     }
-
+    console.log(limits)
     if (!limits) {
       console.log("Limits not yet loaded. Please wait.");
       return;

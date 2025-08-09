@@ -93,18 +93,8 @@ export default function SpeakerModeScreen({
   useEffect(() => {
     const fetchPlan = async () => {
       try {
-        const token = await AsyncStorage.getItem("auth_token");
-        const res = await fetch(`${BASE_URL}/subscription/plan`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setPlan(data.id); 
-        } else {
-          console.error("Plan fetch failed", data);
-        }
+        const plan = await AsyncStorage.getItem("plan");
+        setPlan(plan);
       } catch (error) {
         console.error("Error fetching subscription plan", error);
       }
