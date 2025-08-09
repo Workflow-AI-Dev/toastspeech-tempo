@@ -20,7 +20,7 @@ import * as Haptics from "expo-haptics";
 import * as DocumentPicker from "expo-document-picker";
 import { Audio } from "expo-av";
 import { Camera as ExpoCamera } from "expo-camera";
-import { FFmpegKit, ReturnCode } from "ffmpeg-kit-react-native";
+import { Video as VideoCompressor } from 'react-native-compressor'; 
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -454,80 +454,47 @@ const SpeechRecorder = ({
     }
   };
 
-  // Video compression function using FFmpeg
+  // Video compression function using react-native-compressor
   const compressVideo = async (videoUri: string): Promise<string> => {
+    console.log("Starting video compression...");
+    const originalFileInfo = await FileSystem.getInfoAsync(videoUri);
+    console.log(`Original video size: ${ (originalFileInfo.size / (1024 * 1024)).toFixed(2)} MB`);
+
+    const outputUri = `${FileSystem.cacheDirectory}compressed_video_${Date.now()}.mp4`;
+
     try {
-      console.log("Starting FFmpeg video compression for:", videoUri);
-
-      // Get file info to check size
-      const fileInfo = await FileSystem.getInfoAsync(videoUri);
-      const fileSizeInMB = fileInfo.size ? fileInfo.size / (1024 * 1024) : 0;
-
-      console.log(`Original file size: ${fileSizeInMB.toFixed(2)} MB`);
-
-      // Create compressed file path
-      const compressedUri = `${FileSystem.cacheDirectory}compressed_video_${Date.now()}.mp4`;
-
-      // FFmpeg command to compress video with 5fps, lower resolution, and aggressive compression
-      const ffmpegCommand = `-i "${videoUri}" -vf "fps=5,scale=640:480" -c:v libx264 -preset ultrafast -crf 28 -c:a aac -b:a 64k -movflags +faststart "${compressedUri}"`;
-
-      console.log("Running FFmpeg command:", ffmpegCommand);
-
-      // Execute FFmpeg command
-      const session = await FFmpegKit.execute(ffmpegCommand);
-      const returnCode = await session.getReturnCode();
-
-      if (ReturnCode.isSuccess(returnCode)) {
-        console.log("FFmpeg compression successful");
-
-        // Check compressed file size
-        const compressedFileInfo = await FileSystem.getInfoAsync(compressedUri);
-        const compressedSizeInMB = compressedFileInfo.size
-          ? compressedFileInfo.size / (1024 * 1024)
-          : 0;
-
-        console.log(
-          `Compressed file size: ${compressedSizeInMB.toFixed(2)} MB`,
-        );
-
-        // If still too large, try more aggressive compression
-        if (compressedSizeInMB > 20) {
-          const ultraCompressedUri = `${FileSystem.cacheDirectory}ultra_compressed_video_${Date.now()}.mp4`;
-          const ultraCommand = `-i "${videoUri}" -vf "fps=3,scale=480:360" -c:v libx264 -preset ultrafast -crf 32 -c:a aac -b:a 32k -movflags +faststart "${ultraCompressedUri}"`;
-
-          const ultraSession = await FFmpegKit.execute(ultraCommand);
-          const ultraReturnCode = await ultraSession.getReturnCode();
-
-          if (ReturnCode.isSuccess(ultraReturnCode)) {
-            const ultraFileInfo =
-              await FileSystem.getInfoAsync(ultraCompressedUri);
-            const ultraSizeInMB = ultraFileInfo.size
-              ? ultraFileInfo.size / (1024 * 1024)
-              : 0;
-            console.log(
-              `Ultra compressed file size: ${ultraSizeInMB.toFixed(2)} MB`,
-            );
-            return ultraCompressedUri;
-          }
+      const result = await VideoCompressor.compress(
+        videoUri,
+        {
+          bitrate: 500, // Target bitrate in kbps
+          maxSize: 720, // Max dimension (width or height)
+          minimumFileSizeForCompress: 0, // Compress even small files
+          // The next two options help control file size but aren't direct "max size" in MB
+          // quality: 'low', // You can try 'low', 'medium', 'high'
+          compressionMethod: 'auto', // 'auto', 'fast', 'manual'
+        },
+        (progress) => {
+          console.log(`Compression progress: ${Math.round(progress * 100)}%`);
         }
+      );
 
-        return compressedUri;
-      } else {
-        console.error(
-          "FFmpeg compression failed with return code:",
-          returnCode,
-        );
-        const logs = await session.getAllLogs();
-        console.error(
-          "FFmpeg logs:",
-          logs.map((log) => log.getMessage()).join("\n"),
-        );
-        return videoUri; // Return original if compression fails
+      const compressedFileInfo = await FileSystem.getInfoAsync(result);
+      const compressedSizeMB = (compressedFileInfo.size / (1024 * 1024));
+
+      console.log(`Compression successful!`);
+      console.log(`Compressed video URI: ${result}`);
+      console.log(`Compressed video size: ${compressedSizeMB.toFixed(2)} MB`);
+
+      if (compressedSizeMB > 20) {
+        console.warn(`Compressed file size (${compressedSizeMB.toFixed(2)} MB) is over 20MB.`);
+        // You might want to handle this case, e.g., re-compress with stricter settings or alert the user.
+        // For now, we'll proceed with the larger file.
       }
+
+      return result;
     } catch (error) {
-      console.error("Error compressing video with FFmpeg:", error);
-      // Return original URI if compression fails
-      return videoUri;
+      console.error("Video compression failed:", error);
+      throw new Error("Video compression failed");
     }
   };
 
