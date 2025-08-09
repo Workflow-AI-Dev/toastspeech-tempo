@@ -242,7 +242,7 @@ export default function ProfileSettings({
 
       // Call API to update avatar
       const res = await axios.put(
-        "http://127.0.0.1:8000/user/edit-profile",
+        `${BASE_URL}/user/edit-profile`,
         {
           avatar: avatarSeed,
           avatar_style: selectedAvatarStyle,
@@ -308,7 +308,7 @@ export default function ProfileSettings({
       if (!token) return;
 
       const res = await axios.put(
-        "http://127.0.0.1:8000/user/edit-profile",
+        `${BASE_URL}/user/edit-profile`,
         {
           name: editedName,
           email: editedEmail,
