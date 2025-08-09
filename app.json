@@ -22,7 +22,9 @@
       "permissions": [
         "android.permission.CAMERA"
       ],
-      "package": "com.mazar.testtempo"
+      "package": "com.mazar.testtempo",
+      "usesCleartextTraffic": true,
+      "networkSecurityConfig": "network_security_config"
     },
     "web": {
       "bundler": "metro",
