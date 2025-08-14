@@ -157,7 +157,7 @@ export default function SpeakerModeScreen({
       formData.append("speech_type", speechType);
       formData.append("speech_details", JSON.stringify(speechDetails));
 
-      const response = await fetch(`${BASE_URL}/speech/process_file`, {
+      const initialResponse = await fetch(`${BASE_URL}/speech/process_file`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -165,18 +165,59 @@ export default function SpeakerModeScreen({
         body: formData,
       });
 
-      if (!response.ok) {
-        const err = await response.text();
-        throw new Error(err || "Upload failed");
+      if (!initialResponse.ok) {
+        const err = await initialResponse.text();
+        throw new Error(err || "Initial upload request failed");
       }
 
-      const data = await response.json();
-      console.log("✅ Upload success:", data);
-      return data;
+      const initialData = await initialResponse.json();
+      console.log("✅ Processing started:", initialData);
+
+      const taskId = initialData.task_id;
+      if (!taskId) {
+        throw new Error("Task ID not received from backend");
+      }
+
+      // Step 2 & 3: Polling for results
+      return await pollForResults(taskId, token);
     } catch (err) {
       console.error("❌ Upload error:", err);
       throw err;
     }
+  };
+
+  const pollForResults = (taskId, token) => {
+    return new Promise((resolve, reject) => {
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`${BASE_URL}/speech/status/${taskId}`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!statusResponse.ok) {
+            const err = await statusResponse.text();
+            clearInterval(pollInterval);
+            reject(new Error(err || "Status check failed"));
+          }
+
+          const statusData = await statusResponse.json();
+          console.log(`Polling for task ${taskId}:`, statusData.message);
+
+          // Check if the task is completed
+          if (statusData.success) {
+            clearInterval(pollInterval); // Stop polling
+            console.log("✅ Polling success:", statusData);
+            resolve(statusData); // Return the final result
+          }
+        } catch (err) {
+          clearInterval(pollInterval);
+          reject(err);
+        }
+      }, 5000); // Poll every 5 seconds
+    });
   };
 
   const confirmSubmission = async () => {
@@ -201,9 +242,11 @@ export default function SpeakerModeScreen({
         token,
       });
 
+      const finalData = result.result ?? result;
+
       const mappedResults = {
-        overallScore: result.summary.Metadata?.overall_score ?? 0,
-        pace: result.analytics?.speaker_analysis?.[0]?.words_per_minute || 0,
+        overallScore: finalData.summary?.Metadata?.overall_score ?? 0,
+        pace: finalData.analytics?.speaker_analysis?.[0]?.words_per_minute || 0,
         fillerWords: 0, // Gemini may not return this yet
         emotionalDelivery: 0,
         clarity: 0,
@@ -212,31 +255,31 @@ export default function SpeakerModeScreen({
         improvement: "N/A", // Or calculate based on history
         duration: (() => {
           const totalSpeakingSeconds =
-            result.analytics?.speaker_analysis?.[0]
+            finalData.analytics?.speaker_analysis?.[0]
               ?.total_speaking_time_seconds || 0;
           const minutes = Math.floor(totalSpeakingSeconds / 60);
           const seconds = Math.floor(totalSpeakingSeconds % 60);
           return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
         })(),
-        avgPause: result.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
-        pausesData: result.analytics?.pauses || [],
-        fillerData: result.analytics?.filler_words || [],
-        crutchData: result.analytics?.crutch_phrases || [],
-        repeatedPhrases: result.analytics?.repeated_words || [],
-        grammarData: result.analytics?.grammar_mistakes || [],
-        environData: result.analytics?.environmental_elements || [],
-        pitchData: result.pitch_track || [],
+        avgPause: finalData.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
+        pausesData: finalData.analytics?.pauses || [],
+        fillerData: finalData.analytics?.filler_words || [],
+        crutchData: finalData.analytics?.crutch_phrases || [],
+        repeatedPhrases: finalData.analytics?.repeated_words || [],
+        grammarData: finalData.analytics?.grammar_mistakes || [],
+        environData: finalData.analytics?.environmental_elements || [],
+        pitchData: finalData.pitch_track || [],
       };
 
       const mappedFeedback = {
-        strengths: result.summary.Commendations ?? [],
-        improvements: result.summary.Recommendations ?? [],
-        keyInsights: result.summary.KeyInsights ?? [],
+        strengths: finalData.summary?.Commendations ?? [],
+        improvements: finalData.summary?.Recommendations ?? [],
+        keyInsights: finalData.summary?.KeyInsights ?? [],
       };
 
       const detailedFeedback = {
-        ...result.detailed,
-        url: result.url,
+        ...finalData.detailed,
+        url: finalData.url,
       };
 
       setAnalysisResults(mappedResults);
