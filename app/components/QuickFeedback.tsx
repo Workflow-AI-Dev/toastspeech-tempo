@@ -1915,7 +1915,7 @@ const QuickFeedback = ({
             Excellent Performance!
           </Text>
           {analysisResults.improvement?.trim().toLowerCase() !== "n/a" &&
-            (() => {
+          analysisResults.improvement && (() => {
               const isNegative = analysisResults.improvement.includes("-");
               const Icon = isNegative ? TrendingDown : TrendingUp;
               const color = isNegative ? "#f87171" : "#4ade80";
@@ -1928,7 +1928,7 @@ const QuickFeedback = ({
                   </Text>
                 </View>
               );
-            })()}
+          })()}
         </View>
 
         <View className="flex-row justify-between">

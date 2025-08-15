@@ -35,6 +35,7 @@ interface SpeechRecorderSpeakerProps {
   };
   recordingMethod?: "audio" | "video" | "upload" | null;
   plan: string;
+  limits: {};
 }
 
 const SpeechRecorderSpeaker = ({
@@ -42,6 +43,7 @@ const SpeechRecorderSpeaker = ({
   isProcessing = false,
   recordingMethod = "audio",
   plan,
+  limits,
 }: SpeechRecorderSpeakerProps) => {
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "paused" | "completed" | "uploading"
@@ -324,24 +326,36 @@ const SpeechRecorderSpeaker = ({
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      const allowedTypes =
-      plan === "casual"
-        ? ["audio/mpeg", "audio/wav"]
-        : [
-            "audio/mpeg",
-            "audio/wav",
-            "audio/m4a",
-            "audio/mp4",
-            "video/mp4",
-            "video/mov",
-            "video/avi",
-          ];
+      // Base sets for file types/extensions
+      const audioTypes = ["audio/mpeg", "audio/wav", "audio/m4a", "audio/mp4"];
+      const audioExts = ["mp3", "wav", "m4a"];
 
-      const allowedExtensions = plan === "casual"
-      ? ["mp3", "wav"]
-      : ["mp3", "wav", "m4a", "mp4", "mov", "avi"];
+      const videoTypes = ["video/mp4", "video/mov", "video/avi"];
+      const videoExts = ["mp4", "mov", "avi"];
+
+      // Decide allowed types/extensions based on remaining limits
+      let allowedTypes: string[] = [];
+      let allowedExtensions: string[] = [];
+
+      if (limits.remaining_audio_speeches > 0 || limits.remaining_audio_practice > 0) {
+        allowedTypes = [...allowedTypes, ...audioTypes];
+        allowedExtensions = [...allowedExtensions, ...audioExts];
+      }
+
+      if (limits.remaining_video_speeches > 0 || limits.remaining_video_practice > 0) {
+        allowedTypes = [...allowedTypes, ...videoTypes];
+        allowedExtensions = [...allowedExtensions, ...videoExts];
+      }
+
+      if (allowedTypes.length === 0) {
+        Alert.alert(
+          "No Uploads Remaining",
+          "You don't have any remaining audio or video uploads available.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
           
-
       const result = await DocumentPicker.getDocumentAsync({
         type: allowedTypes,
         copyToCacheDirectory: true,
@@ -350,8 +364,8 @@ const SpeechRecorderSpeaker = ({
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
-
         const fileExtension = file.name.split(".").pop()?.toLowerCase() || "";
+
         if (!allowedTypes.includes(file.mimeType || "") && !allowedExtensions.includes(fileExtension)) {
           Alert.alert(
             "Unsupported File",
@@ -541,18 +555,26 @@ const SpeechRecorderSpeaker = ({
     }
   };
 
-const getRecordingDescription = () => {
-  switch (recordingMethod) {
-    case "video":
-      return "Tap to start recording with camera and microphone";
-    case "upload":
-      return plan === "casual"
-        ? "Tap to select a file from your device\nSupported: MP3, WAV"
-        : "Tap to select a file from your device\nSupported: MP3, WAV, M4A, MP4, MOV, AVI";
-    default:
-      return "Tap the mic to start recording";
-  }
-};
+  const getRecordingDescription = () => {
+    switch (recordingMethod) {
+      case "video":
+        return "Tap to start recording with camera and microphone";
+
+      case "upload":
+        // Define supported formats based on limits
+        let formats = [];
+        
+        if (limits.remaining_audio_speeches > 0) formats.push("MP3", "WAV");
+        if (limits.remaining_video_speeches > 0) formats.push("MP4", "MOV", "AVI");
+        if (plan !== "casual") formats.push("M4A"); // M4A is not allowed for casual users
+
+        const uniqueFormats = [...new Set(formats)]; // remove duplicates just in case
+        return `Tap to select a file from your device\nSupported: ${uniqueFormats.join(", ")}`;
+
+      default:
+        return "Tap the mic to start recording";
+    }
+  };
 
 
   return (

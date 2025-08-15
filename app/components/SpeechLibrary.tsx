@@ -74,7 +74,7 @@ export default function SpeechLibrary({
   const [selectedSpeech, setSelectedSpeech] = useState<SpeechEntry | null>(
     null,
   );
-  const [localSpeeches, setLocalSpeeches] = useState<Evaluation[]>(speeches);
+  const [localSpeeches, setLocalSpeeches] = useState<SpeechEntry[]>(speeches);
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
   const router = useRouter();

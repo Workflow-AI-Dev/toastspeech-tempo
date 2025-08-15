@@ -81,7 +81,8 @@ export default function HomeScreen() {
       const data = await res.json();
       if (res.ok) {
         setLimits(data);
-        console.log(limits)
+        console.log(data);
+        await AsyncStorage.setItem("limits", JSON.stringify(data));
       } else {
         console.error("Limits fetch failed", data);
       }

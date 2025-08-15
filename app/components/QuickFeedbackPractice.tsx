@@ -6,6 +6,7 @@ import {
   Lightbulb,
   Star,
   TrendingUp,
+  TrendingDown,
   Clock,
   Mic,
   Zap,
@@ -84,15 +85,24 @@ const QuickFeedbackPractice = ({
           >
             Excellent Performance!
           </Text>
-          <View className="flex-row items-center">
-            <TrendingUp size={16} color={colors.success} />
-            <Text className="font-bold ml-1" style={{ color: colors.success }}>
-              {analysisResults.improvement} from last speech
-            </Text>
-          </View>
+          {analysisResults.improvement?.trim().toLowerCase() !== "n/a" &&
+          analysisResults.improvement && (() => {
+              const isNegative = analysisResults.improvement.includes("-");
+              const Icon = isNegative ? TrendingDown : TrendingUp;
+              const color = isNegative ? "#f87171" : "#4ade80";
+
+              return (
+                <View className="flex-row items-center">
+                  <Icon size={16} color={color} />
+                  <Text className="font-bold ml-1" style={{ color }}>
+                    {analysisResults.improvement} from last speech
+                  </Text>
+                </View>
+              );
+          })()}
         </View>
 
-        <View className="flex-row justify-between">
+        {/* <View className="flex-row justify-between">
           <View className="items-center">
             <Clock size={20} color={colors.textSecondary} />
             <Text
@@ -129,7 +139,7 @@ const QuickFeedbackPractice = ({
               {analysisResults.avgPause}
             </Text>
           </View>
-        </View>
+        </View> */}
       </View>
 
       {/* Commendations Section */}

@@ -1894,19 +1894,19 @@ const QuickFeedbackEvaluations = ({
             Strong Evaluation!
           </Text>
           {evaluationResults.improvement?.trim().toLowerCase() !== "n/a" &&
-            (() => {
-              const isNegative = evaluationResults.improvement.includes("-");
-              const Icon = isNegative ? TrendingDown : TrendingUp;
-              const color = isNegative ? "#f87171" : "#4ade80";
-
-              return (
-                <View className="flex-row items-center">
-                  <Icon size={16} color={color} />
-                  <Text className="font-bold ml-1" style={{ color }}>
-                    {evaluationResults.improvement} from last speech
-                  </Text>
-                </View>
-              );
+            evaluationResults.improvement && (() => {
+                const isNegative = evaluationResults.improvement.includes("-");
+                const Icon = isNegative ? TrendingDown : TrendingUp;
+                const color = isNegative ? "#f87171" : "#4ade80";
+  
+                return (
+                  <View className="flex-row items-center">
+                    <Icon size={16} color={color} />
+                    <Text className="font-bold ml-1" style={{ color }}>
+                      {evaluationResults.improvement} from last evaluation
+                    </Text>
+                  </View>
+                );
             })()}
         </View>
 

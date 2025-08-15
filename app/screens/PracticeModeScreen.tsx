@@ -88,6 +88,7 @@ export default function PracticeModeScreen({
   const [detailedFeedback, setDetailedFeedback] = useState(null);
   const router = useRouter();
   const [plan, setPlan] = useState<string | null>(null);
+  const [limits, setLimits] = useState(null);
 
   useEffect(() => {
     const fetchPlan = async () => {
@@ -100,6 +101,19 @@ export default function PracticeModeScreen({
     };
     fetchPlan();
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      const savedLimits = await AsyncStorage.getItem("limits");
+      if (savedLimits) {
+        setLimits(JSON.parse(savedLimits));
+      }
+    })();
+  }, []);
+
+  const isAudioLocked = limits?.remaining_audio_practice === 0;
+  const isVideoLocked = limits?.remaining_video_practice === 0 || plan === "casual";
+  const isUploadLocked = limits?.total_remaining_practice === 0;
 
   const handleRecordingComplete = (data) => {
     setRecordingData(data); // Save recording file info
@@ -154,7 +168,7 @@ export default function PracticeModeScreen({
       formData.append("speech_type", speechType);
       formData.append("speech_details", JSON.stringify(speechDetails));
 
-      const response = await fetch(`${BASE_URL}/practice/process_file`, {
+      const initialResponse = await fetch(`${BASE_URL}/practice/process_file`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -162,19 +176,60 @@ export default function PracticeModeScreen({
         body: formData,
       });
 
-      if (!response.ok) {
-        const err = await response.text();
-        throw new Error(err || "Upload failed");
+      if (!initialResponse.ok) {
+        const err = await initialResponse.text();
+        throw new Error(err || "Initial upload request failed");
       }
 
-      const data = await response.json();
-      console.log("✅ Upload success:", data);
-      return data;
+      const initialData = await initialResponse.json();
+      console.log("✅ Processing started:", initialData);
+
+      const taskId = initialData.task_id;
+      if (!taskId) {
+        throw new Error("Task ID not received from backend");
+      }
+
+      // Step 2 & 3: Polling for results
+      return await pollForResults(taskId, token);
     } catch (err) {
       console.error("❌ Upload error:", err);
       throw err;
     }
   };
+
+  const pollForResults = (taskId, token) => {
+      return new Promise((resolve, reject) => {
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusResponse = await fetch(`${BASE_URL}/practice/status/${taskId}`, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+  
+            if (!statusResponse.ok) {
+              const err = await statusResponse.text();
+              clearInterval(pollInterval);
+              reject(new Error(err || "Status check failed"));
+            }
+  
+            const statusData = await statusResponse.json();
+            console.log(`Polling for task ${taskId}:`, statusData.message);
+  
+            // Check if the task is completed
+            if (statusData.success) {
+              clearInterval(pollInterval); // Stop polling
+              console.log("✅ Polling success:", statusData);
+              resolve(statusData); // Return the final result
+            }
+          } catch (err) {
+            clearInterval(pollInterval);
+            reject(err);
+          }
+        }, 5000); // Poll every 5 seconds
+      });
+    };
 
   const confirmSubmission = async () => {
     setShowConfirmModal(false);
@@ -199,8 +254,10 @@ export default function PracticeModeScreen({
 
       console.log(result);
 
+      const finalData = result.result ?? result;
+
       const mappedResults = {
-        overallScore: result.evaluation.OverallScore,
+        overallScore: finalData.evaluation?.OverallScore,
         pace: 0,
         fillerWords: 0, // Gemini may not return this yet
         emotionalDelivery: 0,
@@ -213,8 +270,8 @@ export default function PracticeModeScreen({
       };
 
       const mappedFeedback = {
-        strengths: result.evaluation.Commendations ?? [],
-        improvements: result.evaluation.Recommendations ?? [],
+        strengths: finalData.evaluation?.Commendations ?? [],
+        improvements: finalData.evaluation?.Recommendations ?? [],
       };
 
       setAnalysisResults(mappedResults);
@@ -795,6 +852,7 @@ export default function PracticeModeScreen({
 
           {/* Audio Only Option */}
           <TouchableOpacity
+            disabled={isAudioLocked}
             className="rounded-3xl p-6 mb-6 shadow-lg"
             style={{
               backgroundColor: colors.card,
@@ -805,11 +863,16 @@ export default function PracticeModeScreen({
               shadowOpacity: theme === "dark" ? 0.3 : 0.1,
               shadowRadius: 12,
               elevation: 8,
+              opacity: isAudioLocked ? 0.4 : 1,
             }}
-            onPress={() => {
-              setRecordingMethod("audio");
-              setCurrentStep("record");
-            }}
+            onPress={
+              isAudioLocked
+                ? undefined
+                : () => {
+                    setRecordingMethod("audio");
+                    setCurrentStep("record");
+                  }
+            }
           >
             <View className="flex-row items-center mb-4">
               <View
@@ -828,6 +891,11 @@ export default function PracticeModeScreen({
                 >
                   Record Audio
                 </Text>
+                {isAudioLocked && (
+                    <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
+                      <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
+                    </View>
+                  )}
                 <Text
                   className="text-base"
                   style={{ color: colors.textSecondary }}
@@ -867,7 +935,7 @@ export default function PracticeModeScreen({
 
           {/* Video + Audio Option */}
           <TouchableOpacity
-            disabled={plan === "casual"}
+            disabled={isVideoLocked}
             className="rounded-3xl p-6 mb-6 shadow-lg"
             style={{
               backgroundColor: colors.card,
@@ -878,10 +946,10 @@ export default function PracticeModeScreen({
               shadowOpacity: theme === "dark" ? 0.3 : 0.1,
               shadowRadius: 12,
               elevation: 8,
-              opacity: plan === "casual" ? 0.4 : 1,
+              opacity: isVideoLocked ? 0.4 : 1,
             }}
             onPress={
-              plan === "casual"
+              isVideoLocked
                 ? undefined
                 : () => {
                     setRecordingMethod("video");
@@ -905,8 +973,7 @@ export default function PracticeModeScreen({
                     Record Video
                   </Text>
 
-                  {/* 🔒 LOCKED badge for casual users */}
-                  {plan === "casual" && (
+                  {isVideoLocked && (
                     <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
                       <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
                     </View>
@@ -949,7 +1016,8 @@ export default function PracticeModeScreen({
 
           {/* Upload Recording Option */}
           <TouchableOpacity
-            className="rounded-3xl p-6 shadow-lg"
+            disabled={isUploadLocked}
+            className="rounded-3xl p-6 mb-6 shadow-lg"
             style={{
               backgroundColor: colors.card,
               borderColor: colors.border,
@@ -959,11 +1027,16 @@ export default function PracticeModeScreen({
               shadowOpacity: theme === "dark" ? 0.3 : 0.1,
               shadowRadius: 12,
               elevation: 8,
+              opacity: isUploadLocked ? 0.4 : 1,
             }}
-            onPress={() => {
-              setRecordingMethod("upload");
-              setCurrentStep("record");
-            }}
+            onPress={
+              isUploadLocked
+                ? undefined
+                : () => {
+                    setRecordingMethod("upload");
+                    setCurrentStep("record");
+                  }
+            }
           >
             <View className="flex-row items-center mb-4">
               <View
@@ -982,6 +1055,11 @@ export default function PracticeModeScreen({
                 >
                   Upload Recording
                 </Text>
+                {isUploadLocked && (
+                  <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
+                    <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
+                  </View>
+                )}
                 <Text
                   className="text-base"
                   style={{ color: colors.textSecondary }}
@@ -1063,6 +1141,7 @@ export default function PracticeModeScreen({
             analysisResults={analysisResults}
             recordingMethod={recordingMethod}
             plan={plan}
+            limits={limits}
           />
 
           {/* Confirmation Modal */}

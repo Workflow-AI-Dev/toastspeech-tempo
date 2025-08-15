@@ -89,6 +89,7 @@ export default function SpeakerModeScreen({
   const [detailedFeedback, setDetailedFeedback] = useState(null);
   const router = useRouter();
   const [plan, setPlan] = useState<string | null>(null);
+  const [limits, setLimits] = useState(null);
 
   useEffect(() => {
     const fetchPlan = async () => {
@@ -101,6 +102,20 @@ export default function SpeakerModeScreen({
     };
     fetchPlan();
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      const savedLimits = await AsyncStorage.getItem("limits");
+      if (savedLimits) {
+        setLimits(JSON.parse(savedLimits));
+      }
+    })();
+  }, []);
+
+  const isAudioLocked = limits?.remaining_audio_speeches === 0;
+  const isVideoLocked = limits?.remaining_video_speeches === 0 || plan === "casual";
+  const isUploadLocked = limits?.total_remaining_speeches === 0;
+
 
   const handleRecordingComplete = (data) => {
     setRecordingData(data); // Save recording file info
@@ -861,6 +876,7 @@ export default function SpeakerModeScreen({
 
           {/* Audio Only Option */}
           <TouchableOpacity
+            disabled={isAudioLocked}
             className="rounded-3xl p-6 mb-6 shadow-lg"
             style={{
               backgroundColor: colors.card,
@@ -871,11 +887,16 @@ export default function SpeakerModeScreen({
               shadowOpacity: theme === "dark" ? 0.3 : 0.1,
               shadowRadius: 12,
               elevation: 8,
+              opacity: isAudioLocked ? 0.4 : 1,
             }}
-            onPress={() => {
-              setRecordingMethod("audio");
-              setCurrentStep("record");
-            }}
+            onPress={
+              isAudioLocked
+                ? undefined
+                : () => {
+                    setRecordingMethod("audio");
+                    setCurrentStep("record");
+                  }
+            }
           >
             <View className="flex-row items-center mb-4">
               <View
@@ -888,12 +909,19 @@ export default function SpeakerModeScreen({
                 <Mic size={28} color={colors.primary} />
               </View>
               <View className="flex-1">
-                <Text
-                  className="text-xl font-bold"
-                  style={{ color: colors.text }}
-                >
-                  Record Audio
-                </Text>
+                <View className="flex-1 flex-row items-center">
+                  <Text
+                    className="text-xl font-bold"
+                    style={{ color: colors.text }}
+                  >
+                    Record Audio
+                  </Text>
+                  {isAudioLocked && (
+                    <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
+                      <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
+                    </View>
+                  )}
+                </View>
                 <Text
                   className="text-base"
                   style={{ color: colors.textSecondary }}
@@ -933,7 +961,7 @@ export default function SpeakerModeScreen({
 
           {/* Video + Audio Option */}
           <TouchableOpacity
-            disabled={plan === "casual"}
+            disabled={isVideoLocked}
             className="rounded-3xl p-6 mb-6 shadow-lg"
             style={{
               backgroundColor: colors.card,
@@ -944,10 +972,10 @@ export default function SpeakerModeScreen({
               shadowOpacity: theme === "dark" ? 0.3 : 0.1,
               shadowRadius: 12,
               elevation: 8,
-              opacity: plan === "casual" ? 0.4 : 1,
+              opacity: isVideoLocked ? 0.4 : 1,
             }}
             onPress={
-              plan === "casual"
+              isVideoLocked
                 ? undefined
                 : () => {
                     setRecordingMethod("video");
@@ -970,8 +998,7 @@ export default function SpeakerModeScreen({
                     Record Video
                   </Text>
 
-                  {/* 🔒 LOCKED badge for casual users */}
-                  {plan === "casual" && (
+                  {isVideoLocked && (
                     <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
                       <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
                     </View>
@@ -1006,7 +1033,8 @@ export default function SpeakerModeScreen({
 
           {/* Upload Recording Option */}
           <TouchableOpacity
-            className="rounded-3xl p-6 shadow-lg"
+            disabled={isUploadLocked}
+            className="rounded-3xl p-6 mb-6 shadow-lg"
             style={{
               backgroundColor: colors.card,
               borderColor: colors.border,
@@ -1016,11 +1044,16 @@ export default function SpeakerModeScreen({
               shadowOpacity: theme === "dark" ? 0.3 : 0.1,
               shadowRadius: 12,
               elevation: 8,
+              opacity: isUploadLocked ? 0.4 : 1,
             }}
-            onPress={() => {
-              setRecordingMethod("upload");
-              setCurrentStep("record");
-            }}
+            onPress={
+              isUploadLocked
+                ? undefined
+                : () => {
+                    setRecordingMethod("upload");
+                    setCurrentStep("record");
+                  }
+            }
           >
             <View className="flex-row items-center mb-4">
               <View
@@ -1039,6 +1072,11 @@ export default function SpeakerModeScreen({
                 >
                   Upload Recording
                 </Text>
+                {isUploadLocked && (
+                    <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
+                      <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
+                    </View>
+                  )}
                 <Text
                   className="text-base"
                   style={{ color: colors.textSecondary }}
@@ -1121,6 +1159,7 @@ export default function SpeakerModeScreen({
             analysisResults={analysisResults}
             recordingMethod={recordingMethod}
             plan={plan}
+            limits={limits}
           />
 
           {/* Confirmation Modal */}
