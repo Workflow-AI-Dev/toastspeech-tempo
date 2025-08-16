@@ -53,29 +53,201 @@ interface PracticeEntry {
 }
 
 interface PracticeLibraryProps {
-  practices?: PracticeEntry[];
-  isLoading?: boolean;
-  noResults?: boolean;
-  onRefresh?: () => void;
+  searchQuery: string;
+  speechTypeFilter: string | null;
+  durationFilter: "lt5" | "range5to7" | "gt7" | null;
+  scoreRange: [number, number] | null;
+  dateRange: "yesterday" | "last7days" | "last30days" | null;
 }
 
 export default function PracticeLibrary({
-  practices = [],
-  isLoading = false,
-  noResults = false,
-  onRefresh = () => {},
+  searchQuery,
+  speechTypeFilter,
+  durationFilter,
+  scoreRange,
+  dateRange,
 }: PracticeLibraryProps) {
   const [selectedPractice, setSelectedPractice] =
     useState<PracticeEntry | null>(null);
-  const [localPractices, setLocalPractices] =
-    useState<PracticeEntry[]>(practices);
+  const [practices, setPractices] = useState([]);
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    setLocalPractices(practices);
-  }, [practices]);
+  // Helper function to check if duration matches filter
+  const matchesDurationFilter = (duration: string, filter: string | null) => {
+    if (!filter) return true;
+
+    // Parse duration to minutes
+    const parseDurationToMinutes = (dur: string): number => {
+      if (!dur || dur.toLowerCase() === "n/a") return 0;
+
+      // Check for "MM:SS" format
+      const mmssMatch = dur.match(/^(\d+):(\d{1,2})$/);
+      if (mmssMatch) {
+        const minutes = parseInt(mmssMatch[1], 10);
+        const seconds = parseInt(mmssMatch[2], 10);
+        return minutes + seconds / 60;
+      }
+
+      // Check for "Xm" format
+      const minMatch = dur.match(/^(\d+)m/);
+      if (minMatch) {
+        return parseInt(minMatch[1], 10);
+      }
+
+      return 0;
+    };
+
+    const minutes = parseDurationToMinutes(duration);
+
+    switch (filter) {
+      case "lt5":
+        return minutes < 5;
+      case "range5to7":
+        return minutes >= 5 && minutes <= 7;
+      case "gt7":
+        return minutes > 7;
+      default:
+        return true;
+    }
+  };
+
+  // Helper function to check if score matches range
+  const matchesScoreRange = (score: number, range: [number, number] | null) => {
+    if (!range) return true;
+    return score >= range[0] && score <= range[1];
+  };
+
+  // Helper function to check if date matches range
+  const matchesDateRange = (dateString: string, range: string | null) => {
+    if (!range) return true;
+
+    const itemDate = new Date(dateString);
+    const now = new Date();
+    const diffTime = now.getTime() - itemDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    switch (range) {
+      case "yesterday":
+        return diffDays <= 1;
+      case "last7days":
+        return diffDays <= 7;
+      case "last30days":
+        return diffDays <= 30;
+      default:
+        return true;
+    }
+  };
+
+   useEffect(() => {
+    const fetchPractices = async () => {
+      setIsLoading(true);
+      try {
+      const token = await AsyncStorage.getItem("auth_token");
+
+      const response = await fetch(`${BASE_URL}/practice/all`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch evaluations");
+      }
+
+      const data = await response.json();
+      console.log("✅ Loaded practice records from Supabase", data.practices);
+
+      const transformed = data.practices
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(), // 🧠 Newest first
+        ).map((practice, idx, arr) => {
+          const currentScore = practice.evaluation.OverallScore || 0;
+          const previousScore =
+            idx < arr.length - 1
+              ? arr[idx + 1].evaluation.OverallScore || 0
+              : null;
+
+          const improvement =
+            previousScore !== null
+              ? `${currentScore - previousScore > 0 ? "+" : ""}${currentScore - previousScore}`
+              : "first practice session";
+
+          return {
+            id: practice.id || `practice-${idx}`,
+            date: new Date(practice.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }),
+            title: practice.speech_title,
+            category: practice.speech_type,
+            duration: practice.speech_target_duration || "N/A",
+            score: practice.evaluation.OverallScore || 0,
+            pace: 0,
+            pause: 0,
+            emoji: { name: "mic", color: "#7c3aed" },
+            improvement,
+            evaluation: practice.evaluation,
+          };
+        });
+
+      setPractices(transformed);
+      } catch (err) {
+        console.error("❌ Failed to load evaluation:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPractices();
+  }, []);
+
+  const filteredPractices = useMemo(() => {
+      return practices.filter((practice) => {
+        if (searchQuery) {
+          if (!practice.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+            return false;
+          }
+        }
+  
+        // Speech type filter
+        if (speechTypeFilter) {
+          if (
+            practice.category.toLowerCase() !== speechTypeFilter.toLowerCase()
+          ) {
+            return false;
+          }
+        }
+  
+        // Duration filter
+        if (!matchesDurationFilter(practice.duration, durationFilter)) {
+          return false;
+        }
+  
+        // Score range filter
+        if (!matchesScoreRange(practice.score, scoreRange)) {
+          return false;
+        }
+  
+        // Date range filter
+        if (!matchesDateRange(practice.date, dateRange)) {
+          return false;
+        }
+  
+        return true;
+      });
+    }, [
+      practices,
+      searchQuery,
+      speechTypeFilter,
+      durationFilter,
+      scoreRange,
+      dateRange,
+    ]);
 
   // Helper: Parse duration string (e.g. "5m 30s") to total seconds
   const parseDurationToSeconds = (duration: string): number => {
@@ -98,7 +270,7 @@ export default function PracticeLibrary({
 
   // Calculate stats memoized for performance
   const stats = useMemo(() => {
-    if (localPractices.length === 0) {
+    if (practices.length === 0) {
       return {
         count: 0,
         avgScore: 0,
@@ -107,22 +279,22 @@ export default function PracticeLibrary({
         streak: 0,
       };
     }
-    const count = localPractices.length;
+    const count = practices.length;
     // Scores array
-    const scores = localPractices.map((s) => s.score);
+    const scores = practices.map((s) => s.score);
     const avgScore =
       scores.reduce((sum, val) => sum + val, 0) / scores.length || 0;
     const highestScore = Math.max(...scores);
 
     // Total practice seconds
-    const totalPracticeSeconds = localPractices
+    const totalPracticeSeconds = practices
       .map((s) => parseDurationToSeconds(s.duration))
       .reduce((sum, val) => sum + val, 0);
 
     // Calculate streak (consecutive days with practices)
     // Get unique speech dates sorted ascending (in yyyy-mm-dd)
     const datesSet = new Set(
-      localPractices.map((s) => new Date(s.date).toISOString().slice(0, 10)),
+      practices.map((s) => new Date(s.date).toISOString().slice(0, 10)),
     );
     const uniqueDates = Array.from(datesSet).sort();
 
@@ -146,7 +318,7 @@ export default function PracticeLibrary({
       totalPracticeSeconds,
       streak,
     };
-  }, [localPractices]);
+  }, [practices]);
 
   // Convert seconds to mm:ss or "Xm" format
   const formatSecondsToDuration = (seconds: number) => {
@@ -191,14 +363,14 @@ export default function PracticeLibrary({
         return;
       }
 
-      if (onRefresh) {
-        onRefresh();
-      } else {
-        // fallback: update local
-        setLocalPractices((prev) =>
-          prev.filter((practice) => practice.id !== practiceId),
-        );
-      }
+      // if (onRefresh) {
+      //   onRefresh();
+      // } else {
+      //   // fallback: update local
+      //   setPractices((prev) =>
+      //     prev.filter((practice) => practice.id !== practiceId),
+      //   );
+      // }
     } catch (error) {
       console.error("Delete failed:", error);
     }
@@ -234,7 +406,7 @@ export default function PracticeLibrary({
             </Text>
             <View className="flex-row items-center">
               <View
-                className="rounded-full px-3 py-1 mr-2"
+                className="rounded-full py-1 mr-2"
                 style={{
                   backgroundColor:
                     theme === "dark" ? colors.surface : "#f3f4f6",
@@ -280,15 +452,6 @@ export default function PracticeLibrary({
         {/* Metrics Row */}
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center flex-1">
-            <View className="flex-row items-center mr-4">
-              <Clock size={14} color={colors.textSecondary} />
-              <Text
-                className="text-sm ml-1 font-medium"
-                style={{ color: colors.textSecondary }}
-              >
-                {item.duration}
-              </Text>
-            </View>
 
             <View className="flex-row items-center">
               {item.improvement === "N/A" ? (
@@ -438,41 +601,17 @@ export default function PracticeLibrary({
     );
   }
 
-  if (noResults && !isLoading) {
-  return (
-    <SafeAreaView
-  className="flex-1 items-center px-6"
-  style={{ backgroundColor: colors.background, justifyContent: "flex-start" }}
->
-  <View style={{ marginTop: 120, alignItems: "center" }}>
-    <Inbox size={64} color={colors.textSecondary} strokeWidth={1.5} />
-    <Text
-      style={{
-        color: colors.text,
-        marginTop: 16,
-        fontSize: 18,
-        fontWeight: "600",
-        textAlign: "center",
-      }}
-    >
-      No results found
-    </Text>
-    <Text
-      style={{
-        color: colors.textSecondary,
-        marginTop: 8,
-        fontSize: 14,
-        textAlign: "center",
-        maxWidth: 280,
-      }}
-    >
-      Try adjusting your filters or search terms to find what you need.
-    </Text>
-  </View>
-</SafeAreaView>
-
-  );
-}
+// Handle no results case here
+  if (filteredPractices.length === 0) {
+    return (
+      <View className="flex-1 justify-center items-center px-6 py-12">
+        <Text className="text-xl font-bold mb-2" style={{ color: colors.text }}>No Speeches Found</Text>
+        <Text className="text-center" style={{ color: colors.textSecondary }}>
+          {searchQuery ? "Try a different search or clear your filters." : "You haven't recorded any speeches yet."}
+        </Text>
+      </View>
+    );
+  }
 
   if (selectedPractice) {
     return renderDetailView();
@@ -595,7 +734,7 @@ export default function PracticeLibrary({
         </ScrollView>
       </View>
 
-      {localPractices.length > 0 ? (
+      {practices.length > 0 ? (
         <View className="flex-1">
           <View className="px-6 py-2">
             {/* <Text
@@ -605,7 +744,7 @@ export default function PracticeLibrary({
               Recent Practice Sessions
             </Text> */}
           </View>
-          {localPractices.map((practice) => (
+          {filteredPractices.map((practice) => (
             <View key={practice.id} style={{ paddingHorizontal: 24 }}>
               {renderPracticeItem({ item: practice })}
             </View>

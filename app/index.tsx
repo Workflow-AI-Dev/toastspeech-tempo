@@ -432,7 +432,7 @@ export default function HomeScreen() {
               return (
                 <TouchableOpacity
                   key={feature.id}
-                  className="rounded-2xl p-4 flex-row items-center justify-between"
+                  className="rounded-2xl p-4 mb-3 flex-row items-center"
                   style={{
                     backgroundColor: colors.card,
                     borderColor: colors.border,

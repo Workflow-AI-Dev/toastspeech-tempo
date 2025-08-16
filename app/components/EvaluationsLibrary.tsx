@@ -43,34 +43,213 @@ interface Evaluation {
 }
 
 interface EvaluationsLibraryProps {
-  evaluations: Evaluation[];
-  isLoading?: boolean;
-  noResults?: boolean;
+  searchQuery: string;
+  speechTypeFilter: string | null;
+  durationFilter: "lt5" | "range5to7" | "gt7" | null;
+  scoreRange: [number, number] | null;
+  dateRange: "yesterday" | "last7days" | "last30days" | null;
   onViewDetailedFeedbackEval: (id: string) => void;
-  onRefresh?: () => void;
 }
 
 export default function EvaluationsLibrary({
-  evaluations = [],
+  searchQuery,
+  speechTypeFilter,
+  durationFilter,
+  scoreRange,
+  dateRange,
   onViewDetailedFeedbackEval = () => {},
-  isLoading = false,
-  noResults = false,
-  onRefresh = () => {},
 }: EvaluationsLibraryProps) {
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
   const [selectedEvaluation, setSelectedEvaluation] =
     useState<Evaluation | null>(null);
-  const [localEvals, setLocalEvals] = useState<Evaluation[]>(evaluations);
+  const [evaluations, setEvaluations] = useState([]);
   const router = useRouter();
-  const totalEvaluations = localEvals.length;
+  const totalEvaluations = evaluations.length;
   const averageScore = Math.round(
     evaluations.reduce((acc, curr) => acc + curr.score, 0) / totalEvaluations,
   );
+  const [isLoading, setIsLoading] = useState(true);
+
+
+    // Helper function to check if duration matches filter
+  const matchesDurationFilter = (duration: string, filter: string | null) => {
+    if (!filter) return true;
+
+    // Parse duration to minutes
+    const parseDurationToMinutes = (dur: string): number => {
+      if (!dur || dur.toLowerCase() === "n/a") return 0;
+
+      // Check for "MM:SS" format
+      const mmssMatch = dur.match(/^(\d+):(\d{1,2})$/);
+      if (mmssMatch) {
+        const minutes = parseInt(mmssMatch[1], 10);
+        const seconds = parseInt(mmssMatch[2], 10);
+        return minutes + seconds / 60;
+      }
+
+      // Check for "Xm" format
+      const minMatch = dur.match(/^(\d+)m/);
+      if (minMatch) {
+        return parseInt(minMatch[1], 10);
+      }
+
+      return 0;
+    };
+
+    const minutes = parseDurationToMinutes(duration);
+
+    switch (filter) {
+      case "lt5":
+        return minutes < 5;
+      case "range5to7":
+        return minutes >= 5 && minutes <= 7;
+      case "gt7":
+        return minutes > 7;
+      default:
+        return true;
+    }
+  };
+
+  // Helper function to check if score matches range
+  const matchesScoreRange = (score: number, range: [number, number] | null) => {
+    if (!range) return true;
+    return score >= range[0] && score <= range[1];
+  };
+
+  // Helper function to check if date matches range
+  const matchesDateRange = (dateString: string, range: string | null) => {
+    if (!range) return true;
+
+    const itemDate = new Date(dateString);
+    const now = new Date();
+    const diffTime = now.getTime() - itemDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    switch (range) {
+      case "yesterday":
+        return diffDays <= 1;
+      case "last7days":
+        return diffDays <= 7;
+      case "last30days":
+        return diffDays <= 30;
+      default:
+        return true;
+    }
+  };
 
   useEffect(() => {
-    setLocalEvals(evaluations);
-  }, [evaluations]);
+    const fetchEvaluations = async () => {
+      setIsLoading(true);
+      try {
+      const token = await AsyncStorage.getItem("auth_token");
+
+      const response = await fetch(`${BASE_URL}/evaluator/all`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch evaluations");
+      }
+
+      const data = await response.json();
+      console.log("✅ Loaded evaluations from Supabase", data.evaluations);
+
+      const transformed = data.evaluations
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(), // 🧠 Newest first
+        )
+        .map((evaluation, idx, arr) => {
+          const metadata = evaluation.summary?.Metadata || {};
+          const currentScore = metadata.overall_score || 0;
+          const previousScore =
+            idx < arr.length - 1
+              ? arr[idx + 1].summary?.Metadata?.overall_score || 0
+              : null;
+
+          const improvement =
+            previousScore !== null
+              ? `${currentScore - previousScore > 0 ? "+" : ""}${currentScore - previousScore}`
+              : "0";
+
+          return {
+            id: evaluation.id || `evaluation-${idx}`,
+            date: new Date(evaluation.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }),
+            speechTitle: evaluation.speech_title,
+            duration: (() => {
+              const totalSpeakingSeconds =
+                evaluation.analytics?.speaker_analysis?.[0]
+                  ?.total_speaking_time_seconds || 0;
+              const minutes = Math.floor(totalSpeakingSeconds / 60);
+              const seconds = totalSpeakingSeconds % 60;
+              return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+            })(),
+            score: metadata.overall_score || 0,
+            pace:
+              evaluation.analytics?.speaker_analysis?.[0]?.words_per_minute ||
+              0,
+            pause:
+              evaluation.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
+            pausesData: evaluation.analytics?.pauses || [],
+            fillerData: evaluation.analytics?.filler_words || [],
+            crutchData: evaluation.analytics?.crutch_phrases || [],
+            repeatedPhrases: evaluation.analytics?.repeated_words || [],
+            grammarData: evaluation.analytics?.grammar_mistakes || [],
+            environData: evaluation.analytics?.environmental_elements || [],
+            pitchData: evaluation.pitch_track || [],
+            emoji: { name: "mic", color: "#7c3aed" },
+            improvement,
+            summary: evaluation.summary,
+            detailed: evaluation.detailed_evaluation,
+          };
+        });
+
+      setEvaluations(transformed);
+      } catch (err) {
+        console.error("❌ Failed to load evaluation:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchEvaluations();
+  }, []);
+
+    // Filter evaluations based on filters
+  const filteredEvaluations = useMemo(() => {
+    return evaluations.filter((evaluation) => {
+      if (searchQuery) {
+        if (
+          !evaluation.speechTitle ||
+          !evaluation.speechTitle.toLowerCase().includes(searchQuery.toLowerCase())
+        ) {
+          return false;
+        }
+      }
+  
+      if (!matchesDurationFilter(evaluation.duration, durationFilter)) {
+        return false;
+      }
+  
+      if (!matchesScoreRange(evaluation.score, scoreRange)) {
+        return false;
+      }
+  
+      if (!matchesDateRange(evaluation.date, dateRange)) {
+        return false;
+      }
+  
+      return true;
+    });
+  }, [evaluations, searchQuery, durationFilter, scoreRange, dateRange]);
+
 
   const parseDurationToSeconds = (duration: string): number => {
     if (!duration || duration.toLowerCase() === "n/a") return 0;
@@ -92,7 +271,7 @@ export default function EvaluationsLibrary({
 
   // Calculate stats memoized for performance
   const stats = useMemo(() => {
-    if (localEvals.length === 0) {
+    if (evaluations.length === 0) {
       return {
         count: 0,
         avgScore: 0,
@@ -101,22 +280,22 @@ export default function EvaluationsLibrary({
         streak: 0,
       };
     }
-    const count = localEvals.length;
+    const count = evaluations.length;
     // Scores array
-    const scores = localEvals.map((e) => e.score);
+    const scores = evaluations.map((e) => e.score);
     const avgScore =
       scores.reduce((sum, val) => sum + val, 0) / scores.length || 0;
     const highestScore = Math.max(...scores);
 
     // Total practice seconds
-    const totalPracticeSeconds = localEvals
+    const totalPracticeSeconds = evaluations
       .map((e) => parseDurationToSeconds(e.duration))
       .reduce((sum, val) => sum + val, 0);
 
     // Calculate streak (consecutive days with evaluations)
     // Get unique evaluations dates sorted ascending (in yyyy-mm-dd)
     const datesSet = new Set(
-      localEvals.map((e) => new Date(e.date).toISOString().slice(0, 10)),
+      evaluations.map((e) => new Date(e.date).toISOString().slice(0, 10)),
     );
     const uniqueDates = Array.from(datesSet).sort();
 
@@ -140,7 +319,7 @@ export default function EvaluationsLibrary({
       totalPracticeSeconds,
       streak,
     };
-  }, [localEvals]);
+  }, [evaluations]);
 
   // Convert seconds to mm:ss or "Xm" format
   const formatSecondsToDuration = (seconds: number) => {
@@ -191,7 +370,7 @@ export default function EvaluationsLibrary({
         onRefresh();
       } else {
         // fallback: update local
-        setLocalEvals((prev) =>
+        setEvaluations((prev) =>
           prev.filter((evaluation) => evaluation.id !== evaluationId),
         );
       }
@@ -438,41 +617,18 @@ if (isLoading) {
   );
 }
 
-if (noResults && !isLoading) {
-  return (
-    <SafeAreaView
-  className="flex-1 items-center px-6"
-  style={{ backgroundColor: colors.background, justifyContent: "flex-start" }}
->
-  <View style={{ marginTop: 120, alignItems: "center" }}>
-    <Inbox size={64} color={colors.textSecondary} strokeWidth={1.5} />
-    <Text
-      style={{
-        color: colors.text,
-        marginTop: 16,
-        fontSize: 18,
-        fontWeight: "600",
-        textAlign: "center",
-      }}
-    >
-      No results found
-    </Text>
-    <Text
-      style={{
-        color: colors.textSecondary,
-        marginTop: 8,
-        fontSize: 14,
-        textAlign: "center",
-        maxWidth: 280,
-      }}
-    >
-      Try adjusting your filters or search terms to find what you need.
-    </Text>
-  </View>
-</SafeAreaView>
+// Handle no results case here
+  if (filteredEvaluations.length === 0) {
+    return (
+      <View className="flex-1 justify-center items-center px-6 py-12">
+        <Text className="text-xl font-bold mb-2" style={{ color: colors.text }}>No Speeches Found</Text>
+        <Text className="text-center" style={{ color: colors.textSecondary }}>
+          {searchQuery ? "Try a different search or clear your filters." : "You haven't recorded any speeches yet."}
+        </Text>
+      </View>
+    );
+  }
 
-  );
-}
 
   if (selectedEvaluation) {
     return renderDetailView();
@@ -592,7 +748,7 @@ if (noResults && !isLoading) {
         </ScrollView>
       </View>
 
-      {localEvals.length > 0 ? (
+      {evaluations.length > 0 ? (
         <View className="flex-1">
           <View className="px-6 py-2">
             {/* <Text
@@ -602,7 +758,7 @@ if (noResults && !isLoading) {
               Recent Evaluations
             </Text> */}
           </View>
-          {localEvals.map((evaluation) => (
+          {filteredEvaluations.map((evaluation) => (
             <View key={evaluation.id} style={{ paddingHorizontal: 24 }}>
               {renderEvalItem({ item: evaluation })}
             </View>
