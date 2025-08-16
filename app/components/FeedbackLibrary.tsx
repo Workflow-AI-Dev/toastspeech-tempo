@@ -3,27 +3,15 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
-  TextInput,
   Modal,
 } from "react-native";
 import {
-  Filter,
-  Search,
-  BarChart3,
-  Mic,
   X,
-  Calendar,
-  Clock,
-  Star,
-  ChevronDown,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import SpeechLibrary from "./SpeechLibrary";
 import EvaluationsLibrary from "./EvaluationsLibrary";
 import PracticeLibrary from "./PracticeLibrary";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { BASE_URL } from "../config/api";
 
 interface SpeechEntry {
   id: string;
@@ -86,14 +74,6 @@ export default function FeedbackLibrary({
     setDateRange(null);
   };
 
-  // Check if any filters are active
-  const hasActiveFilters =
-    searchQuery ||
-    speechTypeFilter ||
-    durationFilter ||
-    scoreRange ||
-    dateRange;
-
   // Render filter modal
   const renderFilterModal = () => {
     return (
@@ -129,7 +109,7 @@ export default function FeedbackLibrary({
             </View>
           </View>
 
-          <ScrollView className="flex-1 px-6 py-4">
+          <View className="flex-1 px-6 py-4">
             {["speech", "practice", "evaluation"].includes(activeTab) && (
               <View className="mb-6">
                 <Text
@@ -308,7 +288,7 @@ export default function FeedbackLibrary({
                 ))}
               </View>
             </View>
-          </ScrollView>
+          </View>
 
           {/* Footer */}
           <View
@@ -350,212 +330,15 @@ export default function FeedbackLibrary({
     );
   };
 
-  return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Enhanced Header */}
-        <View
-          className="px-6 py-8"
-          style={{
-            backgroundColor: colors.surface,
-            borderBottomColor: colors.border,
-            borderBottomWidth: 0.5,
-          }}
-        >
-          <View className="flex-row items-center justify-between mb-4">
-            <View className="flex-1">
-              <Text
-                className="text-3xl font-bold"
-                style={{ color: colors.text }}
-              >
-                {activeTab === "speech"
-                  ? "Speech Library"
-                  : activeTab === "evaluation"
-                    ? "Evaluation Library"
-                    : "Practice Library"}
-              </Text>
-
-              <Text
-                className="mt-1 text-base"
-                style={{ color: colors.textSecondary }}
-              >
-                Explore your speeches, evaluations & practice
-              </Text>
-            </View>
-
-            <View
-              className="rounded-2xl p-4"
-              style={{
-                backgroundColor: theme === "dark" ? colors.surface : "#f0f9ff",
-              }}
-            >
-              <BarChart3 size={28} color={colors.primary} />
-            </View>
-          </View>
-
-          {/* Search and Filter Section */}
-          {isSearchActive ? (
-            <View className="flex-row items-center">
-              <View
-                className="flex-1 flex-row items-center rounded-2xl px-4 py-3 mr-2 border"
-                style={{
-                  backgroundColor: theme === "dark" ? colors.card : colors.surface, // Changed this line
-                  borderColor: colors.border,
-                }}
-              >
-                <Search size={18} color={colors.textSecondary} />
-                <TextInput
-                  className="flex-1 ml-2"
-                  placeholder={
-                    activeTab === "speech"
-                      ? "Search speeches..."
-                      : activeTab === "evaluation"
-                      ? "Search evaluations..."
-                      : "Search practice sessions..."
-                  }
-                  placeholderTextColor={colors.textSecondary}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  style={{ color: colors.text }}
-                />
-              </View>
-              <TouchableOpacity
-                className="rounded-2xl px-4 py-3"
-                style={{
-                  backgroundColor: theme === "dark" ? colors.card : "#ebedf0", // Changed this line
-                }}
-                onPress={() => {
-                  setIsSearchActive(false);
-                  setSearchQuery("");
-                }}
-              >
-                <X size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View className="flex-row justify-between">
-              <TouchableOpacity
-                className={`flex-row items-center rounded-2xl px-4 py-3 flex-1 mr-2`}
-                style={{
-                  backgroundColor: theme === "dark" ? colors.card : "#ebedf0", // Changed this line
-                }}
-                onPress={() => setIsSearchActive(true)}
-              >
-                <Search size={18} color={colors.textSecondary} />
-                <Text
-                  className="ml-2 font-medium"
-                  style={{ color: colors.textSecondary }}
-                >
-                  Search
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                className="flex-row items-center rounded-2xl px-4 py-3 ml-2"
-                style={{
-                  backgroundColor: hasActiveFilters
-                    ? colors.primary
-                    : theme === "dark"
-                    ? colors.card
-                    : "#ebedf0", // Changed this line
-                }}
-                onPress={() => setIsFilterModalVisible(true)}
-              >
-                <Filter
-                  size={18}
-                  color={hasActiveFilters ? "white" : colors.textSecondary}
-                />
-                <Text
-                  className="ml-2 font-medium"
-                  style={{
-                    color: hasActiveFilters ? "white" : colors.textSecondary,
-                  }}
-                >
-                  Filter
-                </Text>
-                {hasActiveFilters && (
-                  <View
-                    className="ml-2 rounded-full w-5 h-5 items-center justify-center"
-                    style={{ backgroundColor: "rgba(255,255,255,0.3)" }}
-                  >
-                    <Text className="text-xs font-bold text-white">
-                      {
-                        [
-                          searchQuery,
-                          speechTypeFilter,
-                          durationFilter,
-                          scoreRange,
-                          dateRange,
-                        ].filter(Boolean).length
-                      }
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-
-        </View>
-
-        {/*Toggle*/}
-        <View
-          className="flex-row mx-6 my-4 justify-center rounded-xl overflow-hidden border"
-          style={{ borderColor: colors.border }}
-        >
-          <TouchableOpacity
-            className={`flex-1 px-4 py-2 items-center ${activeTab === "speech" ? "bg-blue-500" : ""}`}
-            style={{
-              backgroundColor:
-                activeTab === "speech" ? colors.primary : "transparent",
-            }}
-            onPress={() => setActiveTab("speech")}
-          >
-            <Text
-              style={{ color: activeTab === "speech" ? "#fff" : colors.text }}
-            >
-              Speech
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className={`flex-1 px-4 py-2 items-center ${activeTab === "evaluation" ? "bg-blue-500" : ""}`}
-            style={{
-              backgroundColor:
-                activeTab === "evaluation" ? colors.primary : "transparent",
-            }}
-            onPress={() => setActiveTab("evaluation")}
-          >
-            <Text
-              style={{
-                color: activeTab === "evaluation" ? "#fff" : colors.text,
-              }}
-            >
-              Evaluation
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className={`flex-1 px-4 py-2 items-center ${activeTab === "practice" ? "bg-blue-500" : ""}`}
-            style={{
-              backgroundColor:
-                activeTab === "practice" ? colors.primary : "transparent",
-            }}
-            onPress={() => setActiveTab("practice")}
-          >
-            <Text
-              style={{
-                color: activeTab === "practice" ? "#fff" : colors.text,
-              }}
-            >
-              Practice
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/*Content based on selected option */}
-        {activeTab === "speech" ? (
+  const renderContent = () => {
+    switch (activeTab) {
+      case "speech":
+        return (
           <SpeechLibrary
+            activeTab={activeTab} // Pass activeTab for the header
+            setActiveTab={setActiveTab} // Pass setter for the header
             searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
             speechTypeFilter={speechTypeFilter}
             durationFilter={durationFilter}
             scoreRange={scoreRange}
@@ -563,29 +346,51 @@ export default function FeedbackLibrary({
             onEditNotes={onEditNotes}
             onDeleteEntry={onDeleteEntry}
             onViewDetailedFeedback={onViewDetailedFeedback}
+            isFilterModalVisible={isFilterModalVisible}
+            setIsFilterModalVisible={setIsFilterModalVisible}
           />
-        ) : activeTab === "practice" ? (
+        );
+      case "practice":
+        return (
           <PracticeLibrary
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
             searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
             speechTypeFilter={speechTypeFilter}
             durationFilter={durationFilter}
             scoreRange={scoreRange}
             dateRange={dateRange}
+            isFilterModalVisible={isFilterModalVisible}
+            setIsFilterModalVisible={setIsFilterModalVisible}
           />
-        ) : (
+        );
+      case "evaluation":
+        return (
           <EvaluationsLibrary
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
             searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
             speechTypeFilter={speechTypeFilter}
             durationFilter={durationFilter}
             scoreRange={scoreRange}
             dateRange={dateRange}
             onViewDetailedFeedbackEval={onViewDetailedFeedbackEval}
+            isFilterModalVisible={isFilterModalVisible}
+            setIsFilterModalVisible={setIsFilterModalVisible}
           />
-        )}
+        );
+      default:
+        return null;
+    }
+  };
 
-        {/* Filter Modal */}
-        {renderFilterModal()}
-      </ScrollView>
+  return (
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      {renderContent()}
+      {/* Filter Modal */}
+      {renderFilterModal()}
     </View>
   );
 }

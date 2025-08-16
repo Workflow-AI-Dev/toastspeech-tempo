@@ -1,19 +1,29 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, TextInput } from "react-native";
 import {
-  BarChart3,
-  Star,
-  Calendar,
   ChevronRight,
-  ArrowLeft,
   Clock,
+  Star,
+  Edit3,
+  Trash2,
+  ArrowLeft,
+  Calendar,
+  Trophy,
   TrendingUp,
   TrendingDown,
   Mic,
+  Play,
   Award,
+  BookOpen,
+  Filter,
+  Search,
+  BarChart3,
   Target,
   Zap,
+  CheckCircle,
+  AlertCircle,
   Inbox,
+  X
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import QuickFeedbackEvaluations from "./QuickFeedbackEvaluations";
@@ -22,6 +32,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../config/api";
 import { Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import LibraryHeader from "./LibraryHeader";
 
 interface Evaluation {
   id: string;
@@ -49,6 +60,11 @@ interface EvaluationsLibraryProps {
   scoreRange: [number, number] | null;
   dateRange: "yesterday" | "last7days" | "last30days" | null;
   onViewDetailedFeedbackEval: (id: string) => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  setSearchQuery: (query: string) => void;
+  isFilterModalVisible: boolean;
+  setIsFilterModalVisible: (visible: boolean) => void;
 }
 
 export default function EvaluationsLibrary({
@@ -58,6 +74,11 @@ export default function EvaluationsLibrary({
   scoreRange,
   dateRange,
   onViewDetailedFeedbackEval = () => {},
+  activeTab,
+  setActiveTab,
+  isFilterModalVisible,
+  setIsFilterModalVisible,
+  setSearchQuery,
 }: EvaluationsLibraryProps) {
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
@@ -70,6 +91,8 @@ export default function EvaluationsLibrary({
     evaluations.reduce((acc, curr) => acc + curr.score, 0) / totalEvaluations,
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const hasActiveFilters = searchQuery || speechTypeFilter || durationFilter || scoreRange || dateRange;
 
 
     // Helper function to check if duration matches filter
@@ -383,6 +406,7 @@ export default function EvaluationsLibrary({
     const scoreColors = getScoreColor(item.score);
 
     return (
+      <View className="px-6">
       <TouchableOpacity
         className="rounded-3xl p-5 mb-4 shadow-lg"
         style={{
@@ -505,6 +529,7 @@ export default function EvaluationsLibrary({
           </View>
         </View>
       </TouchableOpacity>
+      </View>
     );
   };
 
@@ -602,222 +627,56 @@ export default function EvaluationsLibrary({
     );
   };
 
-if (isLoading) {
-  return (
-    <SafeAreaView
-      className="flex-1 justify-center items-center mt-9" // Centers content both horizontally and vertically
-      style={{ backgroundColor: colors.background }}
-    >
-      <ActivityIndicator size="large" color={colors.primary} />
-      {/* Provides clear visual separation and emphasis for the loading message */}
-      <Text style={{ color: colors.text, marginTop: 16, fontSize: 16, fontWeight: '600' }}>
-        Loading your evaluations...
-      </Text>
-    </SafeAreaView>
-  );
-}
-
-// Handle no results case here
-  if (filteredEvaluations.length === 0) {
-    return (
-      <View className="flex-1 justify-center items-center px-6 py-12">
-        <Text className="text-xl font-bold mb-2" style={{ color: colors.text }}>No Speeches Found</Text>
-        <Text className="text-center" style={{ color: colors.textSecondary }}>
-          {searchQuery ? "Try a different search or clear your filters." : "You haven't recorded any speeches yet."}
-        </Text>
-      </View>
-    );
-  }
-
-
   if (selectedEvaluation) {
     return renderDetailView();
   }
 
-  function StatCard({
-    colors,
-    bgColor,
-    icon,
-    title,
-    value,
-    subtitle,
-  }: {
-    colors: ReturnType<typeof getThemeColors>;
-    bgColor: string;
-    icon: React.ReactNode;
-    title: string;
-    value: string | number;
-    subtitle: string;
-  }) {
-    return (
-      <View
-        className="rounded-3xl p-5 mr-4 shadow-lg min-w-[140px]"
-        style={{
-          backgroundColor: colors.card,
-          shadowColor: "#000", // always black works better cross-theme
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: 0.15,
-          shadowRadius: 6,
-          elevation: 4, // Android
-        }}
-      >
-        <View className="flex-row items-center justify-between mb-3">
-          <View
-            className="rounded-full p-2"
-            style={{ backgroundColor: bgColor }}
-          >
-            {icon}
-          </View>
-          <Text
-            className="text-xs font-medium"
-            style={{ color: colors.textSecondary }}
-          >
-            {title}
-          </Text>
-        </View>
-        <Text className="text-3xl font-bold" style={{ color: colors.text }}>
-          {value}
-        </Text>
-        <Text
-          className="text-sm font-medium"
-          style={{ color: colors.textSecondary }}
-        >
-          {subtitle}
-        </Text>
-      </View>
-    );
-  }
-
   return (
-    <>
-      {/* Enhanced Stats Overview */}
-      <View className="px-6 py-4">
-        <Text className="text-lg font-bold mb-3" style={{ color: colors.text }}>
-          Your Evaluations
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View className="flex-row">
-            <StatCard
-              colors={colors}
-              bgColor="#e0f2fe"
-              icon={<Mic size={20} color="#0284c7" />}
-              title="COUNT"
-              value={stats.count}
-              subtitle="Total Evaluations"
-            />
-            {/* AVG Score */}
-            <StatCard
-              colors={colors}
-              bgColor="#fef3c7"
-              icon={<Target size={20} color="#f59e0b" />}
-              title="AVG"
-              value={stats.avgScore}
-              subtitle="Average Score"
-            />
-
-            {/* Highest Score */}
-            <StatCard
-              colors={colors}
-              bgColor="#dcfce7"
-              icon={<Star size={20} color="#10b981" />}
-              title="BEST"
-              value={stats.highestScore}
-              subtitle="Highest Score"
-            />
-
-            {/* Total Practice Time */}
-            <StatCard
-              colors={colors}
-              bgColor="#dbeafe"
-              icon={<Clock size={20} color="#3b82f6" />}
-              title="TIME"
-              value={formatSecondsToDuration(stats.totalPracticeSeconds)}
-              subtitle="Total Practice"
-            />
-
-            {/* Streak */}
-            <StatCard
-              colors={colors}
-              bgColor="#f3e8ff"
-              icon={<Zap size={20} color="#8b5cf6" />}
-              title="STREAK"
-              value={stats.streak}
-              subtitle="Day Streak"
-            />
-          </View>
-        </ScrollView>
-      </View>
-
-      {evaluations.length > 0 ? (
-        <View className="flex-1">
-          <View className="px-6 py-2">
-            {/* <Text
-              className="text-lg font-bold mb-3"
-              style={{ color: colors.text }}
-            >
-              Recent Evaluations
-            </Text> */}
-          </View>
-          {filteredEvaluations.map((evaluation) => (
-            <View key={evaluation.id} style={{ paddingHorizontal: 24 }}>
-              {renderEvalItem({ item: evaluation })}
-            </View>
-          ))}
-        </View>
-      ) : (
-        <View className="flex-1 justify-center items-center px-6">
-          <View
-            className="rounded-3xl p-10 items-center shadow-lg w-full max-w-sm"
-            style={{
-              backgroundColor: colors.card,
-              shadowColor: theme === "dark" ? "#000" : "#000",
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-              shadowRadius: 16,
-              elevation: 12,
-            }}
-          >
-            <View
-              className="rounded-full p-6 mb-6"
-              style={{
-                backgroundColor: theme === "dark" ? colors.surface : "#f0f9ff",
-              }}
-            >
-              <Mic size={48} color={colors.primary} />
-            </View>
-
-            <Text
-              className="text-2xl font-bold mb-3 text-center"
-              style={{ color: colors.text }}
-            >
-              Looks like you're new here!
-            </Text>
-
-            <Text
-              className="text-center mb-8 text-base leading-6"
-              style={{ color: colors.textSecondary }}
-            >
-              No past evaluations yet. Time to grab that mic and show the world
-              what you've got. Your Echozi journey starts now!
-            </Text>
-
-            <TouchableOpacity
-              className="rounded-2xl px-8 py-4 w-full"
-              style={{ backgroundColor: colors.primary }}
-              onPress={() => {
-                alert("Navigating to Evaluator Mode...");
-              }}
-            >
-              <View className="flex-row items-center justify-center">
-                <Mic size={20} color="white" />
-                <Text className="text-white font-bold text-lg ml-2">
-                  Start Your First Evaluation
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-    </>
+   <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+         <FlatList
+           data={filteredEvaluations}
+           renderItem={renderEvalItem}
+           keyExtractor={(item) => item.id}
+           ListHeaderComponent={
+              <LibraryHeader
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                isSearchActive={isSearchActive}
+                setIsSearchActive={setIsSearchActive}
+                isFilterModalVisible={isFilterModalVisible}
+                setIsFilterModalVisible={setIsFilterModalVisible}
+                hasActiveFilters={hasActiveFilters}
+                stats={stats}
+              />
+            }
+           ListFooterComponent={<View style={{ height: 20 }} />}
+           ListEmptyComponent={() => {
+             if (isLoading) {
+               return (
+                 <View className="flex-1 justify-center items-center py-8">
+                   <ActivityIndicator size="large" color={colors.primary} />
+                   <Text style={{ color: colors.text, marginTop: 16 }}>
+                     Loading your evaluations...
+                   </Text>
+                 </View>
+               );
+             } else {
+               return (
+                 <View className="flex-1 justify-center items-center px-6 py-12">
+                   <Text className="text-xl font-bold mb-2" style={{ color: colors.text }}>
+                     No Evaluations Found
+                   </Text>
+                   <Text className="text-center" style={{ color: colors.textSecondary }}>
+                     {searchQuery ? "Try a different search or clear your filters." : "You haven't recorded any evaluations yet."}
+                   </Text>
+                 </View>
+               );
+             }
+           }}
+           contentContainerStyle={{ flexGrow: 1 }}
+         />
+       </SafeAreaView>
   );
 }
