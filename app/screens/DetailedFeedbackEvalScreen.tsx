@@ -139,7 +139,7 @@ const DetailedFeedbackEvalScreen = ({
       return (
         <View className="space-y-6">
           {/* Overall Insights */}
-          <View className="bg-white rounded-3xl p-6 shadow-sm">
+          <View className="bg-white rounded-3xl p-6 shadow-sm mb-3">
             <Text className="text-xl font-bold text-gray-900 mb-4">
               Key Insights
             </Text>
@@ -234,7 +234,7 @@ const DetailedFeedbackEvalScreen = ({
     return (
       <View className="space-y-6">
         {/* Category Header */}
-        <View className="bg-white rounded-3xl p-6 shadow-sm">
+        <View className="bg-white rounded-3xl p-6 shadow-sm mb-3">
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-2xl font-bold text-gray-900">
               {category.title}
@@ -420,7 +420,7 @@ const DetailedFeedbackEvalScreen = ({
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
       <View className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="flex-row items-center justify-between mb-4 mt-4">
           <TouchableOpacity
             onPress={onBack}
             className="bg-white/20 rounded-full p-2"

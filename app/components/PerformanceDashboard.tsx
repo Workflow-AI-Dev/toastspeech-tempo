@@ -1208,7 +1208,7 @@ useEffect(() => {
               return (
                 <TouchableOpacity
                   key={index}
-                  className="flex-row items-center justify-between py-3 px-4 rounded-2xl"
+                  className="flex-row items-center justify-between py-3 px-4 rounded-2xl mb-3"
                   style={{ backgroundColor: colors.surface }}
                 >
                   <View className="flex-row items-center flex-1">
@@ -1243,7 +1243,7 @@ useEffect(() => {
           </Text>
           <View className="space-y-1">
             <TouchableOpacity
-              className="flex-row items-center justify-between py-3 px-4 rounded-2xl"
+              className="flex-row items-center justify-between py-3 px-4 rounded-2xl mb-3"
               style={{ backgroundColor: colors.surface }}
             >
               <View className="flex-row items-center flex-1">

@@ -278,12 +278,6 @@ function LibraryHeader({
 
       {/* Enhanced Stats Overview */}
       <View className="px-6 py-4">
-        <Text
-          className="text-lg font-bold mb-3"
-          style={{ color: colors.text }}
-        >
-          Your Practice Speeches
-        </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row">
             {/* Count */}

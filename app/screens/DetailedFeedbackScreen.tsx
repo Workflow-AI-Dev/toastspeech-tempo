@@ -252,7 +252,7 @@ const DetailedFeedbackScreen = ({
       return (
         <View className="space-y-6">
           {/* Overall Insights */}
-          <View style={{ backgroundColor: sectionBgColor }} className="rounded-3xl p-6 shadow-sm">
+          <View style={{ backgroundColor: sectionBgColor }} className="rounded-3xl p-6 shadow-sm mb-3">
             <Text style={{ color: sectionTitleColor }} className="text-xl font-bold mb-4">
               Key Insights
             </Text>
@@ -348,7 +348,7 @@ const DetailedFeedbackScreen = ({
     return (
       <View className="space-y-6">
         {/* Category Header */}
-        <View style={{ backgroundColor: sectionBgColor }} className="rounded-3xl p-6 shadow-sm">
+        <View style={{ backgroundColor: sectionBgColor }} className="rounded-3xl p-6 shadow-sm mb-3">
           <View className="flex-row items-center justify-between mb-4">
             <Text style={{ color: sectionTitleColor }} className="text-2xl font-bold">
               {category.title}
@@ -479,7 +479,7 @@ const DetailedFeedbackScreen = ({
     <SafeAreaView style={{ backgroundColor: colors.background }} className="flex-1">
       {/* Header */}
       <View style={{ backgroundColor: headerGradientFrom }} className="px-6 py-4">
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="flex-row items-center justify-between mb-4 mt-4">
           <TouchableOpacity
             onPress={onBack}
             className="rounded-full p-2"
