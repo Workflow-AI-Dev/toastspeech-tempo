@@ -12,6 +12,9 @@ import { useTheme, getThemeColors } from "../context/ThemeContext";
 import SpeechLibrary from "./SpeechLibrary";
 import EvaluationsLibrary from "./EvaluationsLibrary";
 import PracticeLibrary from "./PracticeLibrary";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { BarChart2, BookOpen, User, House } from "lucide-react-native";
+import { useRouter } from "expo-router";
 
 interface SpeechEntry {
   id: string;
@@ -50,7 +53,6 @@ export default function FeedbackLibrary({
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
 
-  // Filter states
   const [speechTypeFilter, setSpeechTypeFilter] = useState<string | null>(null);
   const [durationFilter, setDurationFilter] = useState<
     "lt5" | "range5to7" | "gt7" | null
@@ -65,7 +67,6 @@ export default function FeedbackLibrary({
     setIsSearchActive(false);
   }, [activeTab]);
 
-  // Clear all filters
   const clearFilters = () => {
     setSearchQuery("");
     setSpeechTypeFilter(null);
@@ -74,7 +75,6 @@ export default function FeedbackLibrary({
     setDateRange(null);
   };
 
-  // Render filter modal
   const renderFilterModal = () => {
     return (
       <Modal
@@ -335,8 +335,8 @@ export default function FeedbackLibrary({
       case "speech":
         return (
           <SpeechLibrary
-            activeTab={activeTab} // Pass activeTab for the header
-            setActiveTab={setActiveTab} // Pass setter for the header
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             speechTypeFilter={speechTypeFilter}
@@ -388,7 +388,11 @@ export default function FeedbackLibrary({
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
+
+
+      {/* Content based on active tab */}
       {renderContent()}
+
       {/* Filter Modal */}
       {renderFilterModal()}
     </View>
