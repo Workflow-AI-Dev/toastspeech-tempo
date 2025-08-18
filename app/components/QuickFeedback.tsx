@@ -431,7 +431,7 @@ const QuickFeedback = ({
               {feedback.keyInsights.map((insight, index) => (
                 <View
                   key={index}
-                  className="rounded-2xl p-2"
+                  className="rounded-2xl p-2 mb-3"
                   style={{
                     backgroundColor: theme === "dark" ? "#1f2937" : "#f8fafc",
                   }}
@@ -2072,7 +2072,7 @@ const QuickFeedback = ({
           {feedback.strengths.slice(0, 3).map((item, index) => (
             <View
               key={index}
-              className="rounded-2xl p-4"
+              className="rounded-2xl p-4 mb-3"
               style={{
                 backgroundColor: isDark ? "#1f2a24" : "#ecfdf5",
               }}
@@ -2148,7 +2148,7 @@ const QuickFeedback = ({
           {feedback.improvements.slice(0, 3).map((item, index) => (
             <View
               key={index}
-              className="rounded-2xl p-4"
+              className="rounded-2xl p-4 mb-3"
               style={{
                 backgroundColor: isDark ? "#2a241f" : "#fff7ed",
               }}
@@ -2207,22 +2207,6 @@ const QuickFeedback = ({
         >
           <Text className="text-white font-bold text-lg text-center">
             View Detailed Analysis
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={onRecordAnother}
-          className="border-2 rounded-2xl py-4 px-6"
-          style={{
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-          }}
-        >
-          <Text
-            className="font-bold text-lg text-center"
-            style={{ color: colors.primary }}
-          >
-            Record Another Speech
           </Text>
         </TouchableOpacity>
       </View>

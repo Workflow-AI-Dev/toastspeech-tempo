@@ -636,7 +636,7 @@ export default function EvaluationsLibrary({
   }
 
   return (
-   <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+   <View className="flex-1" style={{ backgroundColor: colors.background }}>
          <FlatList
            data={filteredEvaluations}
            renderItem={renderEvalItem}
@@ -681,6 +681,6 @@ export default function EvaluationsLibrary({
            }}
            contentContainerStyle={{ flexGrow: 1 }}
          />
-       </SafeAreaView>
+       </View>
   );
 }

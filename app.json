@@ -20,7 +20,8 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.INTERNET"
       ],
       "package": "com.mazar.testtempo",
       "usesCleartextTraffic": true,

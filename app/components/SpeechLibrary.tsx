@@ -642,7 +642,7 @@ export default function SpeechLibrary({
             borderBottomWidth: 0.5,
           }}
         >
-          <View className="flex-row items-center justify-between mb-4">
+          <View className="flex-row items-center justify-between">
             <TouchableOpacity
               onPress={() => setSelectedSpeech(null)}
               className="rounded-full p-2"

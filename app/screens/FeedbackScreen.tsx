@@ -3,17 +3,9 @@ import { View, StyleSheet, Text, Platform, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 const FeedbackScreen = () => {
-  // if (Platform.OS === 'web') {
-  //   return (
-  //     <View style={styles.container}>
-  //       <Text>Feedback view not supported on web. Please use the mobile app.</Text>
-  //     </View>
-  //   );
-  // }
-
   if (Platform.OS === 'web') {
-  Linking.openURL('https://echozi.canny.io/feature-requests');
-}
+    Linking.openURL('https://echozi.canny.io/feature-requests');
+  }
 
   return (
     <View style={styles.container}>

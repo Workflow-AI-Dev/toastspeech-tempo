@@ -94,7 +94,7 @@ function LibraryHeader({
     <View>
       {/* Enhanced Header */}
       <View
-        className="px-6 py-6"
+        className="px-6 py-8"
         style={{
           backgroundColor: colors.surface,
           borderBottomColor: colors.border,

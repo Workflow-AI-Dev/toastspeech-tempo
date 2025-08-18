@@ -615,7 +615,7 @@ export default function PracticeLibrary({
   }
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
           <FlatList
             data={filteredPractices}
             renderItem={renderPracticeItem}
@@ -660,6 +660,6 @@ export default function PracticeLibrary({
             }}
             contentContainerStyle={{ flexGrow: 1 }}
           />
-        </SafeAreaView>
+        </View>
   );
 }
