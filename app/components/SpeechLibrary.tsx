@@ -71,6 +71,16 @@ interface SpeechLibraryProps {
   setIsFilterModalVisible: (visible: boolean) => void;
 }
 
+const parseDateString = (dateString) => {
+  if (!dateString) {
+    return new Date(NaN); // Returns an invalid date object
+  }
+  // Trim microseconds to ensure compatibility with all JS engines
+  const trimmedDateString = dateString.slice(0, 19);
+  return new Date(trimmedDateString);
+};
+
+
 export default function SpeechLibrary({
   searchQuery,
   speechTypeFilter,
@@ -185,10 +195,18 @@ export default function SpeechLibrary({
       console.log("✅ Loaded speeches from Supabase", data.speeches);
 
       const transformed = data.speeches
-        .sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(), 
-        ).map((speech, idx, arr) => {
+        .sort((a, b) => {
+          const dateA = parseDateString(a.created_at);
+          const dateB = parseDateString(b.created_at);
+
+          // If either date is invalid, prevent crash by returning 0
+          if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+            return 0;
+          }
+
+          return dateB.getTime() - dateA.getTime();
+        })
+        .map((speech, idx, arr) => {
           const metadata = speech.summary?.Metadata || {};
           const currentScore = metadata.overall_score || 0;
           const previousScore =
@@ -204,11 +222,14 @@ export default function SpeechLibrary({
           return {
             id: speech.id || `speech-${idx}`,
             title: speech.title || "Untitled",
-            date: new Date(speech.created_at).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            }),
+            date: parseDateString(speech.created_at).toLocaleDateString(
+              "en-US",
+              {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              },
+            ),
             duration: (() => {
               const totalSpeakingSeconds =
                 speech.analytics?.speaker_analysis?.[0]
