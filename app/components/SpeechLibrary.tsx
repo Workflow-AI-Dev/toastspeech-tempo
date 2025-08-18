@@ -171,26 +171,26 @@ export default function SpeechLibrary({
     return score >= range[0] && score <= range[1];
   };
 
-  // Helper function to check if date matches range
-  const matchesDateRange = (dateString: string, range: string | null) => {
-    if (!range) return true;
+  // // Helper function to check if date matches range
+  // const matchesDateRange = (dateString: string, range: string | null) => {
+  //   if (!range) return true;
 
-    const itemDate = new Date(dateString);
-    const now = new Date();
-    const diffTime = now.getTime() - itemDate.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  //   const itemDate = new Date(dateString);
+  //   const now = new Date();
+  //   const diffTime = now.getTime() - itemDate.getTime();
+  //   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    switch (range) {
-      case "yesterday":
-        return diffDays <= 1;
-      case "last7days":
-        return diffDays <= 7;
-      case "last30days":
-        return diffDays <= 30;
-      default:
-        return true;
-    }
-  };
+  //   switch (range) {
+  //     case "yesterday":
+  //       return diffDays <= 1;
+  //     case "last7days":
+  //       return diffDays <= 7;
+  //     case "last30days":
+  //       return diffDays <= 30;
+  //     default:
+  //       return true;
+  //   }
+  // };
 
 
   useEffect(() => {
@@ -287,9 +287,9 @@ export default function SpeechLibrary({
       if (!matchesScoreRange(speech.score, scoreRange)) {
         return false;
       }
-      if (!matchesDateRange(speech.date, dateRange)) {
-        return false;
-      }
+      // if (!matchesDateRange(speech.date, dateRange)) {
+      //   return false;
+      // }
       return true;
     });
   }, [
@@ -350,18 +350,19 @@ export default function SpeechLibrary({
     );
     const uniqueDates = Array.from(datesSet).sort();
 
-    let streak = 1;
-    for (let i = uniqueDates.length - 1; i > 0; i--) {
-      const currDate = new Date(uniqueDates[i]);
-      const prevDate = new Date(uniqueDates[i - 1]);
-      const diffDays =
-        (currDate.getTime() - prevDate.getTime()) / (1000 * 3600 * 24);
-      if (diffDays === 1) {
-        streak++;
-      } else {
-        break; // streak broken
-      }
-    }
+    // let streak = 1;
+    // for (let i = uniqueDates.length - 1; i > 0; i--) {
+    //   const currDate = new Date(uniqueDates[i]);
+    //   const prevDate = new Date(uniqueDates[i - 1]);
+    //   const diffDays =
+    //     (currDate.getTime() - prevDate.getTime()) / (1000 * 3600 * 24);
+    //   if (diffDays === 1) {
+    //     streak++;
+    //   } else {
+    //     break; // streak broken
+    //   }
+    // }
+    const streak = 0;
 
     return {
       count,
