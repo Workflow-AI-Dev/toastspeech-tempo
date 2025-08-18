@@ -210,7 +210,7 @@ export default function PracticeLibrary({
 
           return {
             id: practice.id || `practice-${idx}`,
-            date: parseDateString(speech.created_at).toLocaleDateString(
+            date: parseDateString(practice.created_at).toLocaleDateString(
               "en-US",
               {
                 year: "numeric",
