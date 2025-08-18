@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,9 +12,6 @@ import { useTheme, getThemeColors } from "../context/ThemeContext";
 import SpeechLibrary from "./SpeechLibrary";
 import EvaluationsLibrary from "./EvaluationsLibrary";
 import PracticeLibrary from "./PracticeLibrary";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { BarChart2, BookOpen, User, House } from "lucide-react-native";
-import { useRouter } from "expo-router";
 
 interface SpeechEntry {
   id: string;
@@ -389,11 +386,8 @@ export default function FeedbackLibrary({
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
 
-
-      {/* Content based on active tab */}
       {renderContent()}
 
-      {/* Filter Modal */}
       {renderFilterModal()}
     </View>
   );
