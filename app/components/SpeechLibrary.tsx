@@ -71,14 +71,33 @@ interface SpeechLibraryProps {
   setIsFilterModalVisible: (visible: boolean) => void;
 }
 
-const parseDateString = (dateString) => {
-  if (!dateString) {
-    return new Date(NaN); // Returns an invalid date object
+const parseDateString = (input: unknown): Date | null => {
+  if (typeof input !== "string" || !input.trim()) return null;
+
+  try {
+    const iso = input
+      .replace(" ", "T")
+      .replace(/(\.\d{3})\d+/, "$1"); 
+
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
   }
-  // Trim microseconds to ensure compatibility with all JS engines
-  const trimmedDateString = dateString.slice(0, 19);
-  return new Date(trimmedDateString);
 };
+
+
+const formatDate = (input: string) => {
+  const d = parseDateString(input);
+  if (!d) return "Invalid date";
+
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
 
 
 export default function SpeechLibrary({
@@ -195,17 +214,6 @@ export default function SpeechLibrary({
       console.log("✅ Loaded speeches from Supabase", data.speeches);
 
       const transformed = data.speeches
-        .sort((a, b) => {
-          const dateA = parseDateString(a.created_at);
-          const dateB = parseDateString(b.created_at);
-
-          // If either date is invalid, prevent crash by returning 0
-          if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
-            return 0;
-          }
-
-          return dateB.getTime() - dateA.getTime();
-        })
         .map((speech, idx, arr) => {
           const metadata = speech.summary?.Metadata || {};
           const currentScore = metadata.overall_score || 0;
@@ -222,14 +230,7 @@ export default function SpeechLibrary({
           return {
             id: speech.id || `speech-${idx}`,
             title: speech.title || "Untitled",
-            date: parseDateString(speech.created_at).toLocaleDateString(
-              "en-US",
-              {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              },
-            ),
+            date: formatDate(speech.created_at),
             duration: (() => {
               const totalSpeakingSeconds =
                 speech.analytics?.speaker_analysis?.[0]
@@ -369,23 +370,6 @@ export default function SpeechLibrary({
       streak,
     };
   }, [speeches]);
-
-  // Convert seconds to mm:ss or "Xm" format
-  const formatSecondsToDuration = (seconds: number) => {
-    if (seconds < 60) return `${seconds}s`;
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m`;
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return { bg: "#dcfce7", text: "#166534", icon: "#22c55e" };
