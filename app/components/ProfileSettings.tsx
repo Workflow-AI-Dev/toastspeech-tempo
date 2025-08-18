@@ -1032,7 +1032,7 @@ export default function ProfileSettings({
                 return (
                   <TouchableOpacity
                     key={itemIndex}
-                    className="flex-row items-center justify-between py-3 px-4 rounded-2xl"
+                    className="flex-row items-center justify-between py-3 px-4 rounded-2xl mb-3"
                     style={{ backgroundColor: colors.surface }}
                     onPress={item.onPress}
                   >

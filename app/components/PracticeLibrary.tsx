@@ -385,14 +385,7 @@ export default function PracticeLibrary({
         return;
       }
 
-      // if (onRefresh) {
-      //   onRefresh();
-      // } else {
-      //   // fallback: update local
-      //   setPractices((prev) =>
-      //     prev.filter((practice) => practice.id !== practiceId),
-      //   );
-      // }
+      setPractices((prev) => prev.filter((practice) => practice.id !== practiceId));
     } catch (error) {
       console.error("Delete failed:", error);
     }

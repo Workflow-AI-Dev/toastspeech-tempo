@@ -17,13 +17,16 @@
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@google/genai": "^1.11.0",
-    "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-native-community/netinfo": "11.4.1",
     "@react-native-google-signin/google-signin": "^15.0.0",
     "@react-native-masked-view/masked-view": "0.3.2",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
     "@supabase/supabase-js": "^2.50.2",
+    "@tanstack/query-async-storage-persister": "^5.85.3",
+    "@tanstack/react-query": "^5.85.3",
+    "@tanstack/react-query-persist-client": "^5.85.3",
     "autoprefixer": "^10.4.20",
     "axios": "^1.10.0",
     "date-fns": "^4.1.0",
@@ -36,6 +39,7 @@
     "expo-camera": "~16.1.11",
     "expo-constants": "~17.1.5",
     "expo-crypto": "~14.1.5",
+    "expo-dev-client": "~5.2.4",
     "expo-device": "~7.1.4",
     "expo-document-picker": "~13.1.6",
     "expo-file-system": "~18.1.11",
@@ -74,8 +78,7 @@
     "react-native-web": "^0.20.0",
     "react-native-webview": "13.13.5",
     "tailwindcss": "^3.4.17",
-    "tempo-devtools": "^2.0.109",
-    "expo-dev-client": "~5.2.4"
+    "tempo-devtools": "^2.0.109"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

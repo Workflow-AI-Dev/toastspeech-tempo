@@ -393,14 +393,7 @@ export default function EvaluationsLibrary({
         return;
       }
 
-      if (onRefresh) {
-        onRefresh();
-      } else {
-        // fallback: update local
-        setEvaluations((prev) =>
-          prev.filter((evaluation) => evaluation.id !== evaluationId),
-        );
-      }
+      setEvaluations((prev) => prev.filter((evaluation) => evaluation.id !== evaluationId));
     } catch (error) {
       console.error("Delete failed:", error);
     }

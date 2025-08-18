@@ -398,15 +398,8 @@ export default function SpeechLibrary({
         alert(error.detail || "Failed to delete speech.");
         return;
       }
+      setSpeeches((prev) => prev.filter((speech) => speech.id !== speechId));
 
-      // if (onRefresh) {
-      //   onRefresh();
-      // } else {
-      //   // fallback: update local
-      //   setSpeeches((prev) =>
-      //     prev.filter((speech) => speech.id !== speechId),
-      //   );
-      // }
     } catch (error) {
       console.error("Delete failed:", error);
     }
