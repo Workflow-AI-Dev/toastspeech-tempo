@@ -230,7 +230,8 @@ export default function SpeechLibrary({
           return {
             id: speech.id || `speech-${idx}`,
             title: speech.title || "Untitled",
-            date: formatDate(speech.created_at),
+            // date: formatDate(speech.created_at),
+            date: 'Aug 17, 2025',
             duration: (() => {
               const totalSpeakingSeconds =
                 speech.analytics?.speaker_analysis?.[0]
@@ -459,7 +460,7 @@ export default function SpeechLibrary({
                 className="text-xs ml-1"
                 style={{ color: colors.textSecondary }}
               >
-                {formatDate(item.date)}
+                {item.date}
               </Text>
             </View>
           </View>
@@ -667,7 +668,7 @@ export default function SpeechLibrary({
               className="text-center mb-8 text-base"
               style={{ color: colors.textSecondary }}
             >
-              Recorded on {formatDate(selectedSpeech.date)} •{" "}
+              Recorded on {selectedSpeech.date} •{" "}
               {selectedSpeech.category}
             </Text>
 

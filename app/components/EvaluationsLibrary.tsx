@@ -224,7 +224,7 @@ export default function EvaluationsLibrary({
 
           return {
             id: evaluation.id || `evaluation-${idx}`,
-            date: formatDate(evaluation.created_at),
+            date: 'Aug 17, 2025',
             speechTitle: evaluation.speech_title,
             duration: (() => {
               const totalSpeakingSeconds =
@@ -439,7 +439,7 @@ export default function EvaluationsLibrary({
                 className="text-xs ml-1"
                 style={{ color: colors.textSecondary }}
               >
-                {formatDate(item.date)}
+                {item.date}
               </Text>
             </View>
           </View>

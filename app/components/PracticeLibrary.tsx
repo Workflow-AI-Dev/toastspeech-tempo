@@ -219,7 +219,7 @@ export default function PracticeLibrary({
 
           return {
             id: practice.id || `practice-${idx}`,
-            date: formatDate(practice.created_at),
+            date: 'Aug 17, 2025',
             title: practice.speech_title,
             category: practice.speech_type,
             duration: practice.speech_target_duration || "N/A",
@@ -445,7 +445,7 @@ export default function PracticeLibrary({
                 className="text-xs ml-1"
                 style={{ color: colors.textSecondary }}
               >
-                {formatDate(item.date)}
+                {item.date}
               </Text>
             </View>
           </View>
@@ -592,7 +592,7 @@ export default function PracticeLibrary({
               className="text-center mb-8 text-base"
               style={{ color: colors.textSecondary }}
             >
-              Recorded on {formatDate(selectedPractice.date)} •{" "}
+              Recorded on {selectedPractice.date} •{" "}
               {selectedPractice.category}
             </Text>
 
