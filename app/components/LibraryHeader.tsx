@@ -94,7 +94,7 @@ function LibraryHeader({
     <View>
       {/* Enhanced Header */}
       <View
-        className="px-6 py-8"
+        className="px-6 py-6"
         style={{
           backgroundColor: colors.surface,
           borderBottomColor: colors.border,
@@ -321,14 +321,14 @@ function LibraryHeader({
             />
 
             {/* Streak */}
-            <StatCard
+            {/* <StatCard
               colors={colors}
               bgColor="#f3e8ff"
               icon={<Zap size={20} color="#8b5cf6" />}
               title="STREAK"
               value={stats.streak}
               subtitle="Day Streak"
-            />
+            /> */}
           </View>
         </ScrollView>
       </View>

@@ -171,26 +171,26 @@ export default function SpeechLibrary({
     return score >= range[0] && score <= range[1];
   };
 
-  // // Helper function to check if date matches range
-  // const matchesDateRange = (dateString: string, range: string | null) => {
-  //   if (!range) return true;
+  // Helper function to check if date matches range
+  const matchesDateRange = (dateString: string, range: string | null) => {
+    if (!range) return true;
 
-  //   const itemDate = new Date(dateString);
-  //   const now = new Date();
-  //   const diffTime = now.getTime() - itemDate.getTime();
-  //   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const itemDate = new Date(dateString);
+    const now = new Date();
+    const diffTime = now.getTime() - itemDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  //   switch (range) {
-  //     case "yesterday":
-  //       return diffDays <= 1;
-  //     case "last7days":
-  //       return diffDays <= 7;
-  //     case "last30days":
-  //       return diffDays <= 30;
-  //     default:
-  //       return true;
-  //   }
-  // };
+    switch (range) {
+      case "yesterday":
+        return diffDays <= 1;
+      case "last7days":
+        return diffDays <= 7;
+      case "last30days":
+        return diffDays <= 30;
+      default:
+        return true;
+    }
+  };
 
 
   useEffect(() => {
@@ -230,8 +230,8 @@ export default function SpeechLibrary({
           return {
             id: speech.id || `speech-${idx}`,
             title: speech.title || "Untitled",
-            // date: formatDate(speech.created_at),
-            date: 'Aug 17, 2025',
+            date: formatDate(speech.created_at),
+            // date: 'Aug 17, 2025',
             duration: (() => {
               const totalSpeakingSeconds =
                 speech.analytics?.speaker_analysis?.[0]
@@ -287,9 +287,9 @@ export default function SpeechLibrary({
       if (!matchesScoreRange(speech.score, scoreRange)) {
         return false;
       }
-      // if (!matchesDateRange(speech.date, dateRange)) {
-      //   return false;
-      // }
+      if (!matchesDateRange(speech.date, dateRange)) {
+        return false;
+      }
       return true;
     });
   }, [
@@ -711,7 +711,7 @@ export default function SpeechLibrary({
   }
 
    return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <FlatList
         data={filteredSpeeches}
         renderItem={renderSpeechItem}
@@ -756,6 +756,6 @@ export default function SpeechLibrary({
         }}
         contentContainerStyle={{ flexGrow: 1 }}
       />
-    </SafeAreaView>
+    </View>
   );
 }

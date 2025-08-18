@@ -163,26 +163,26 @@ export default function PracticeLibrary({
     return score >= range[0] && score <= range[1];
   };
 
-  // // Helper function to check if date matches range
-  // const matchesDateRange = (dateString: string, range: string | null) => {
-  //   if (!range) return true;
+  // Helper function to check if date matches range
+  const matchesDateRange = (dateString: string, range: string | null) => {
+    if (!range) return true;
 
-  //   const itemDate = new Date(dateString);
-  //   const now = new Date();
-  //   const diffTime = now.getTime() - itemDate.getTime();
-  //   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const itemDate = new Date(dateString);
+    const now = new Date();
+    const diffTime = now.getTime() - itemDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  //   switch (range) {
-  //     case "yesterday":
-  //       return diffDays <= 1;
-  //     case "last7days":
-  //       return diffDays <= 7;
-  //     case "last30days":
-  //       return diffDays <= 30;
-  //     default:
-  //       return true;
-  //   }
-  // };
+    switch (range) {
+      case "yesterday":
+        return diffDays <= 1;
+      case "last7days":
+        return diffDays <= 7;
+      case "last30days":
+        return diffDays <= 30;
+      default:
+        return true;
+    }
+  };
 
    useEffect(() => {
     const fetchPractices = async () => {
@@ -219,7 +219,8 @@ export default function PracticeLibrary({
 
           return {
             id: practice.id || `practice-${idx}`,
-            date: 'Aug 17, 2025',
+            // date: 'Aug 17, 2025',
+            date: formatDate(practice.created_at),
             title: practice.speech_title,
             category: practice.speech_type,
             duration: practice.speech_target_duration || "N/A",
@@ -269,10 +270,10 @@ export default function PracticeLibrary({
           return false;
         }
   
-        // // Date range filter
-        // if (!matchesDateRange(practice.date, dateRange)) {
-        //   return false;
-        // }
+        // Date range filter
+        if (!matchesDateRange(practice.date, dateRange)) {
+          return false;
+        }
   
         return true;
       });

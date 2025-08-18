@@ -167,26 +167,26 @@ export default function EvaluationsLibrary({
     return score >= range[0] && score <= range[1];
   };
 
-  // // Helper function to check if date matches range
-  // const matchesDateRange = (dateString: string, range: string | null) => {
-  //   if (!range) return true;
+  // Helper function to check if date matches range
+  const matchesDateRange = (dateString: string, range: string | null) => {
+    if (!range) return true;
 
-  //   const itemDate = new Date(dateString);
-  //   const now = new Date();
-  //   const diffTime = now.getTime() - itemDate.getTime();
-  //   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const itemDate = new Date(dateString);
+    const now = new Date();
+    const diffTime = now.getTime() - itemDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  //   switch (range) {
-  //     case "yesterday":
-  //       return diffDays <= 1;
-  //     case "last7days":
-  //       return diffDays <= 7;
-  //     case "last30days":
-  //       return diffDays <= 30;
-  //     default:
-  //       return true;
-  //   }
-  // };
+    switch (range) {
+      case "yesterday":
+        return diffDays <= 1;
+      case "last7days":
+        return diffDays <= 7;
+      case "last30days":
+        return diffDays <= 30;
+      default:
+        return true;
+    }
+  };
 
   useEffect(() => {
     const fetchEvaluations = async () => {
@@ -224,7 +224,8 @@ export default function EvaluationsLibrary({
 
           return {
             id: evaluation.id || `evaluation-${idx}`,
-            date: 'Aug 17, 2025',
+            // date: 'Aug 17, 2025',
+            date: formatDate(evaluation.created_at),
             speechTitle: evaluation.speech_title,
             duration: (() => {
               const totalSpeakingSeconds =
@@ -284,9 +285,9 @@ export default function EvaluationsLibrary({
         return false;
       }
   
-      // if (!matchesDateRange(evaluation.date, dateRange)) {
-      //   return false;
-      // }
+      if (!matchesDateRange(evaluation.date, dateRange)) {
+        return false;
+      }
   
       return true;
     });
