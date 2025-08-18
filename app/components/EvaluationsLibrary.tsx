@@ -336,10 +336,10 @@ export default function EvaluationsLibrary({
 
     // Calculate streak (consecutive days with evaluations)
     // Get unique evaluations dates sorted ascending (in yyyy-mm-dd)
-    const datesSet = new Set(
-      evaluations.map((e) => new Date(e.date).toISOString().slice(0, 10)),
-    );
-    const uniqueDates = Array.from(datesSet).sort();
+    // const datesSet = new Set(
+    //   evaluations.map((e) => new Date(e.date).toISOString().slice(0, 10)),
+    // );
+    // const uniqueDates = Array.from(datesSet).sort();
 
     // let streak = 1;
     // for (let i = uniqueDates.length - 1; i > 0; i--) {

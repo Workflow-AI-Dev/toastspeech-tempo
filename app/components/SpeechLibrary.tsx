@@ -345,10 +345,10 @@ export default function SpeechLibrary({
 
     // Calculate streak (consecutive days with speeches)
     // Get unique speech dates sorted ascending (in yyyy-mm-dd)
-    const datesSet = new Set(
-      speeches.map((s) => new Date(s.date).toISOString().slice(0, 10)),
-    );
-    const uniqueDates = Array.from(datesSet).sort();
+    // const datesSet = new Set(
+    //   speeches.map((s) => new Date(s.date).toISOString().slice(0, 10)),
+    // );
+    // const uniqueDates = Array.from(datesSet).sort();
 
     // let streak = 1;
     // for (let i = uniqueDates.length - 1; i > 0; i--) {
