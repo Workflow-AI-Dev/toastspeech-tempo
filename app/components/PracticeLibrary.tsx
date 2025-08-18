@@ -68,6 +68,15 @@ interface PracticeLibraryProps {
   setIsFilterModalVisible: (visible: boolean) => void;
 }
 
+const parseDateString = (dateString) => {
+  if (!dateString) {
+    return new Date(NaN); // Returns an invalid date object
+  }
+  // Trim microseconds to ensure compatibility with all JS engines
+  const trimmedDateString = dateString.slice(0, 19);
+  return new Date(trimmedDateString);
+};
+
 export default function PracticeLibrary({
   searchQuery,
   speechTypeFilter,
@@ -177,10 +186,17 @@ export default function PracticeLibrary({
       console.log("✅ Loaded practice records from Supabase", data.practices);
 
       const transformed = data.practices
-        .sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(), // 🧠 Newest first
-        ).map((practice, idx, arr) => {
+        .sort((a, b) => {
+          const dateA = parseDateString(a.created_at);
+          const dateB = parseDateString(b.created_at);
+
+          // If either date is invalid, prevent crash by returning 0
+          if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+            return 0;
+          }
+
+          return dateB.getTime() - dateA.getTime();
+        }).map((practice, idx, arr) => {
           const currentScore = practice.evaluation.OverallScore || 0;
           const previousScore =
             idx < arr.length - 1
@@ -194,11 +210,14 @@ export default function PracticeLibrary({
 
           return {
             id: practice.id || `practice-${idx}`,
-            date: new Date(practice.created_at).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            }),
+            date: parseDateString(speech.created_at).toLocaleDateString(
+              "en-US",
+              {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              },
+            ),
             title: practice.speech_title,
             category: practice.speech_type,
             duration: practice.speech_target_duration || "N/A",

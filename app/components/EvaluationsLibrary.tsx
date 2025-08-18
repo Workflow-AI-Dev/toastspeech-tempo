@@ -67,6 +67,15 @@ interface EvaluationsLibraryProps {
   setIsFilterModalVisible: (visible: boolean) => void;
 }
 
+const parseDateString = (dateString) => {
+  if (!dateString) {
+    return new Date(NaN); // Returns an invalid date object
+  }
+  // Trim microseconds to ensure compatibility with all JS engines
+  const trimmedDateString = dateString.slice(0, 19);
+  return new Date(trimmedDateString);
+};
+
 export default function EvaluationsLibrary({
   searchQuery,
   speechTypeFilter,
@@ -182,10 +191,17 @@ export default function EvaluationsLibrary({
       console.log("✅ Loaded evaluations from Supabase", data.evaluations);
 
       const transformed = data.evaluations
-        .sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(), // 🧠 Newest first
-        )
+        .sort((a, b) => {
+          const dateA = parseDateString(a.created_at);
+          const dateB = parseDateString(b.created_at);
+
+          // If either date is invalid, prevent crash by returning 0
+          if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+            return 0;
+          }
+
+          return dateB.getTime() - dateA.getTime();
+        })
         .map((evaluation, idx, arr) => {
           const metadata = evaluation.summary?.Metadata || {};
           const currentScore = metadata.overall_score || 0;
@@ -201,11 +217,14 @@ export default function EvaluationsLibrary({
 
           return {
             id: evaluation.id || `evaluation-${idx}`,
-            date: new Date(evaluation.created_at).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            }),
+            date: parseDateString(evaluation.created_at).toLocaleDateString(
+              "en-US",
+              {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              },
+            ),
             speechTitle: evaluation.speech_title,
             duration: (() => {
               const totalSpeakingSeconds =
