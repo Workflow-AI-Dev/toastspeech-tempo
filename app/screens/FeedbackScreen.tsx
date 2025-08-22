@@ -29,11 +29,10 @@ const FeedbackScreen = () => {
         }
         
         const data = await response.json();
-        const sso_token = data.sso_token;
-        
-        const canny_url = `https://webview.canny.io?boardToken=f34431d8-57ac-e426-c709-9985d5f0c646&ssoToken=${sso_token}`;
-        console.log('Final Canny URL:', canny_url);
-        setCannyUrl(canny_url);
+        const sso_token = data.sso_token; 
+        const redirectUrl = `${BASE_URL}/feedback/redirect?sso_token=${sso_token}`;
+        console.log(redirectUrl);
+        setCannyUrl(redirectUrl);
       } catch (err) {
         console.error("❌ Failed to get token:", err);
       }
