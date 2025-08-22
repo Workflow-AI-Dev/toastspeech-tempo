@@ -31,6 +31,7 @@ const FeedbackScreen = () => {
         const sso_token = await response.text();
         
         const canny_url = `https://webview.canny.io?boardToken=f34431d8-57ac-e426-c709-9985d5f0c646&ssoToken=${sso_token}`;
+        console.log('Final Canny URL:', canny_url);
         setCannyUrl(canny_url);
       } catch (err) {
         console.error("❌ Failed to get token:", err);
@@ -44,7 +45,6 @@ const FeedbackScreen = () => {
     return (
         <View style={styles.container}>
             <Text>Redirecting to Canny...</Text>
-            {/* The useEffect will handle the URL and this component will not be used in APK */}
             <a href="https://echozi.canny.io/feature-requests" target="_blank" rel="noopener noreferrer" style={{color: 'blue'}}>
                 Click here to go to the feedback board
             </a>
