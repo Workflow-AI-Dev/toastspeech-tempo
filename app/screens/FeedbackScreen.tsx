@@ -28,7 +28,8 @@ const FeedbackScreen = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        const sso_token = await response.text();
+        const data = await response.json();
+        const sso_token = data.sso_token;
         
         const canny_url = `https://webview.canny.io?boardToken=f34431d8-57ac-e426-c709-9985d5f0c646&ssoToken=${sso_token}`;
         console.log('Final Canny URL:', canny_url);
