@@ -8,37 +8,39 @@ const FeedbackScreen = () => {
   const [cannyUrl, setCannyUrl] = useState('');
 
   useEffect(() => {
-    const fetchToken = async () => {
-      try {
-        const auth_token = await AsyncStorage.getItem("auth_token");
+      const fetchToken = async () => {
+          try {
+              const auth_token = await AsyncStorage.getItem("auth_token");
 
-        if (!auth_token) {
-          console.error("❌ Auth token not found.");
-          return;
-        }
+              if (!auth_token) {
+                  console.error("❌ Auth token not found.");
+                  return;
+              }
 
-        const response = await fetch(`${BASE_URL}/feedback/token`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${auth_token}`,
-          },
-        });
+              const response = await fetch(`${BASE_URL}/feedback/token`, {
+                  method: "GET",
+                  headers: {
+                      Authorization: `Bearer ${auth_token}`,
+                  },
+              });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        const sso_token = data.sso_token; 
-        const redirectUrl = `${BASE_URL}/feedback/redirect?sso_token=${sso_token}`;
-        console.log(redirectUrl);
-        setCannyUrl(redirectUrl);
-      } catch (err) {
-        console.error("❌ Failed to get token:", err);
-      }
-    };
-    fetchToken();
-  }, []);
+              if (!response.ok) {
+                  throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              
+              const data = await response.json();
+              const sso_token = data.sso_token; 
+              
+              // Construct the URL to your new HTML wrapper endpoint
+              const cannyPageUrl = `${BASE_URL}/feedback/page?sso_token=${sso_token}`;
+              console.log('Loading Canny page from:', cannyPageUrl);
+              setCannyUrl(cannyPageUrl);
+          } catch (err) {
+              console.error("❌ Failed to get token:", err);
+          }
+      };
+      fetchToken();
+    }, []);
 
   // Use a single return statement to handle both platforms
   if (Platform.OS === 'web') {
