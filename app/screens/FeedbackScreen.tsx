@@ -60,6 +60,22 @@ const FeedbackScreen = () => {
           source={{ uri: cannyUrl }}
           style={{ flex: 1 }}
           startInLoadingState
+          javaScriptEnabled={true} 
+          domStorageEnabled={true} 
+          mixedContentMode="always" 
+          originWhitelist={['*']} 
+          onLoadEnd={(syntheticEvent) => {
+            const { nativeEvent } = syntheticEvent;
+            if (nativeEvent.didFailLoad) {
+              console.log('WebView failed to load:', nativeEvent.error);
+            } else {
+              console.log('WebView finished loading successfully.');
+            }
+          }}
+          onError={(syntheticEvent) => {
+            const { nativeEvent } = syntheticEvent;
+            console.error('WebView error:', nativeEvent.code, nativeEvent.description);
+          }}
         />
       ) : (
         <Text>Loading Canny...</Text>

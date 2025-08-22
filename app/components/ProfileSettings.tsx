@@ -84,13 +84,6 @@ const professions = [
   "Other",
 ];
 
-// Generate random seeds for avatars
-// const generateRandomSeeds = (count: number = 12): string[] => {
-//   return Array.from({ length: count }, () =>
-//     Math.random().toString(36).substring(2, 15),
-//   );
-// };
-
 // Generate DiceBear avatar URL
 const generateAvatarUrl = (
   seed: string,
