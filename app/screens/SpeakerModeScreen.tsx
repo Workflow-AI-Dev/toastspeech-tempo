@@ -119,7 +119,7 @@ export default function SpeakerModeScreen({
 
   const handleRecordingComplete = (data) => {
     setRecordingData(data); // Save recording file info
-    console.log(data);
+    console.log`File data:${data}`;
     setShowConfirmModal(true);
   };
 

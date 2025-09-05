@@ -11,7 +11,7 @@ import { BASE_URL, GOOGLE_CLIENT_ID } from "../config/api";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { supabase } from "../../lib/supabase";
-import {registerForPushNotificationsAsync} from "../hooks/NotificationManager"
+import { registerForPushNotificationsAsync } from "../hooks/NotificationManager";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -84,7 +84,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (expoToken) {
           await updatePushTokenOnBackend(expoToken);
         }
-
       }
 
       setLoading(false);
@@ -92,7 +91,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     checkAuth();
   }, []);
-
 
   useEffect(() => {
     if (loading) return;
@@ -192,6 +190,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     password: string,
   ): Promise<{ error: any }> => {
     try {
+      // Step 1: Sign in and get the new token
       const res = await fetch(`${BASE_URL}/auth/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -199,31 +198,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const data = await res.json();
-      if (!res.ok) return { error: data.detail || "Login failed" };
+      if (!res.ok) {
+        return { error: data.detail || "Login failed" };
+      }
 
       const token = data.access_token;
+      console.log(token);
+
+      // Step 2: Store the token in AsyncStorage
       await AsyncStorage.setItem("auth_token", token);
 
+      // Step 3: Use the token directly for the subsequent API call
       const meRes = await fetch(`${BASE_URL}/auth/me`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`, // Use the token variable directly
         },
       });
 
       const userData = await meRes.json();
-      await AsyncStorage.setItem("plan", userData.current_plan_id);
       if (meRes.ok) {
         setUser(userData);
+        await AsyncStorage.setItem("plan", userData.current_plan_id);
 
         const expoToken = await registerForPushNotificationsAsync();
         if (expoToken) {
           await updatePushTokenOnBackend(expoToken);
         }
+      } else {
+        console.error("Failed to fetch user data after sign-in");
+        return { error: userData.detail || "Failed to fetch user data" };
       }
 
       return { error: null };
     } catch (error) {
-      return { error };
+      console.error("Sign-in failed:", error);
+      return { error: "An unexpected error occurred." };
     }
   };
 

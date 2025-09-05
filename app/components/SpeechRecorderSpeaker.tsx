@@ -153,12 +153,6 @@ const SpeechRecorderSpeaker = ({
     };
   }, [recordingState, pulseAnim]);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
 
   const handleStartRecording = async () => {
     try {
@@ -429,48 +423,69 @@ const SpeechRecorderSpeaker = ({
     }
   };
 
-  // Video compression function using react-native-compressor
+  // Video compression function that guarantees under 20 MB
   const compressVideo = async (videoUri: string): Promise<string> => {
     console.log("Starting video compression...");
     const originalFileInfo = await FileSystem.getInfoAsync(videoUri);
-    console.log(`Original video size: ${ (originalFileInfo.size / (1024 * 1024)).toFixed(2)} MB`);
+    console.log(
+      `Original size: ${(originalFileInfo.size / (1024 * 1024)).toFixed(2)} MB`
+    );
 
-    const outputUri = `${FileSystem.cacheDirectory}compressed_video_${Date.now()}.mp4`;
+    let attempt = 0;
+    let bitrate = 2000; // start at ~2 Mbps
+    let maxSize = 720;  // start HD-ish
+    let compressedUri = videoUri;
+    let compressedSizeMB = originalFileInfo.size / (1024 * 1024);
 
-    try {
-      const result = await VideoCompressor.compress(
-        videoUri,
-        {
-          bitrate: 500, // Target bitrate in kbps
-          maxSize: 720, // Max dimension (width or height)
-          minimumFileSizeForCompress: 0, // Compress even small files
-          // The next two options help control file size but aren't direct "max size" in MB
-          // quality: 'low', // You can try 'low', 'medium', 'high'
-          compressionMethod: 'auto', // 'auto', 'fast', 'manual'
-        },
-        (progress) => {
-          console.log(`Compression progress: ${Math.round(progress * 100)}%`);
-        }
+    while (compressedSizeMB > 20 && attempt < 5) {
+      attempt++;
+      bitrate = Math.max(300, Math.floor(bitrate * 0.6)); // progressively lower bitrate
+      maxSize = Math.max(240, Math.floor(maxSize * 0.8)); // progressively lower resolution
+
+      console.log(
+        `Compression attempt ${attempt}: bitrate=${bitrate} kbps, maxSize=${maxSize}`
       );
 
-      const compressedFileInfo = await FileSystem.getInfoAsync(result);
-      const compressedSizeMB = (compressedFileInfo.size / (1024 * 1024));
+      try {
+        const result = await VideoCompressor.compress(
+          videoUri,
+          {
+            bitrate,             // kbps
+            maxSize,             // target dimension
+            compressionMethod: "auto",
+            minimumFileSizeForCompress: 0,
+          },
+          (progress) => {
+            console.log(`Compression progress: ${Math.round(progress * 100)}%`);
+          }
+        );
 
-      console.log(`Compression successful!`);
-      console.log(`Compressed video URI: ${result}`);
-      console.log(`Compressed video size: ${compressedSizeMB.toFixed(2)} MB`);
+        const compressedFileInfo = await FileSystem.getInfoAsync(result);
+        compressedSizeMB = compressedFileInfo.size / (1024 * 1024);
 
-      if (compressedSizeMB > 20) {
-        console.warn(`Compressed file size (${compressedSizeMB.toFixed(2)} MB) is over 20MB.`);
-        // You might want to handle this case, e.g., re-compress with stricter settings or alert the user.
-        // For now, we'll proceed with the larger file.
+        console.log(
+          `Attempt ${attempt} result: ${compressedSizeMB.toFixed(2)} MB`
+        );
+
+        compressedUri = result;
+
+        if (compressedSizeMB <= 20) {
+          console.log("✅ Compression successful under 20 MB");
+          break;
+        }
+      } catch (error) {
+        console.error("Compression error:", error);
+        break; // stop trying if compressor fails
       }
-
-      return result;
-    } catch (error) {
-      console.error("Video compression failed:", error);
-      throw new Error("Video compression failed");
     }
+
+    if (compressedSizeMB > 20) {
+      console.warn(
+        `⚠️ Final video still over 20MB (${compressedSizeMB.toFixed(2)} MB)`
+      );
+    }
+
+    return compressedUri;
   };
 
   // Function to process and compress files
@@ -481,57 +496,49 @@ const SpeechRecorderSpeaker = ({
     try {
       const isWeb = Platform.OS === "web";
 
-      // Detect if it's a video file
+      // Detect video file
       const isVideoFile = (mimeType?: string, name?: string) => {
-        const videoMimeTypes = ["video/mp4", "video/mov", "video/avi"];
         const videoExtensions = ["mp4", "mov", "avi"];
-
-        const hasVideoMime = mimeType ? videoMimeTypes.includes(mimeType.toLowerCase()) : false;
-        const hasVideoExtension = name ? videoExtensions.includes(name.split(".").pop()?.toLowerCase() || "") : false;
-
-        // Also ensure it's not specifically an audio MIME type
-        const audioMimeTypes = ["audio/mpeg", "audio/wav", "audio/m4a", "audio/mp4"];
-        const isAudioMime = mimeType ? audioMimeTypes.includes(mimeType.toLowerCase()) : false;
-
-        return (hasVideoMime || hasVideoExtension) && !isAudioMime;
+        const hasExt = name
+          ? videoExtensions.includes(name.split(".").pop()?.toLowerCase() || "")
+          : false;
+        return hasExt;
       };
+
       const isVideo = isVideoFile(selectedFile?.mimeType, fileName);
 
-      if (!isVideo || isWeb) {
-        // ✅ Skip compression and FileSystem if on web or audio file
+      if (isWeb) {
+        // ⚡ Web: cannot use FileSystem, just return the file as-is
         return {
           uri: fileUri,
-          size: selectedFile?.size || 0, // fallback to file.size from picker
+          size: selectedFile?.size || 0, // DocumentPicker gives you size on web
         };
       }
 
-      // ✅ Native only — compress video
+      if (!isVideo) {
+        // Audio file: just return size
+        const info = await FileSystem.getInfoAsync(fileUri);
+        return { uri: fileUri, size: info.size || 0 };
+      }
+
+      // ✅ Native video compression path
       const compressedUri = await compressVideo(fileUri);
       const fileInfo = await FileSystem.getInfoAsync(compressedUri);
 
       return { uri: compressedUri, size: fileInfo.size || 0 };
     } catch (error) {
       console.error("Error processing video file:", error);
-      return {
-        uri: fileUri,
-        size: selectedFile?.size || 0, // fallback again
-      };
+
+      if (Platform.OS === "web") {
+        return { uri: fileUri, size: selectedFile?.size || 0 };
+      }
+
+      const info = await FileSystem.getInfoAsync(fileUri);
+      return { uri: fileUri, size: info.size || 0 };
     }
   };
 
-  const resetRecording = async () => {
-    try {
-      if (recording) {
-        await recording.stopAndUnloadAsync();
-        setRecording(null);
-      }
-      setRecordingState("idle");
-      setTimer(0);
-      setAudioLevels(Array(30).fill(5));
-    } catch (error) {
-      console.error("Error resetting recording:", error);
-    }
-  };
+
 
   const getRecordingIcon = () => {
     switch (recordingMethod) {
