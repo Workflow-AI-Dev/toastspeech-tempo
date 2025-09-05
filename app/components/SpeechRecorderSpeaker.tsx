@@ -312,6 +312,17 @@ const SpeechRecorderSpeaker = ({
     }
   };
 
+  // ✅ Ensure we always get a file path (handles content://)
+  const ensureFilePath = async (uri: string): Promise<string> => {
+    if (uri.startsWith("content://")) {
+      console.log("⚠️ Got content:// URI, copying to cache...");
+      const destPath = FileSystem.cacheDirectory + "upload_" + Date.now();
+      await FileSystem.copyAsync({ from: uri, to: destPath });
+      return destPath;
+    }
+    return uri;
+  };
+
   const handleFileUpload = async () => {
     console.log("test");
     try {
@@ -381,41 +392,36 @@ const SpeechRecorderSpeaker = ({
         try {
           // Always process and compress the uploaded file
           const { uri: processedUri, size: processedSize } =
-            await processVideoFile(file.uri, file.name, file.mimeType); // ⭐ FIX: pass mimeType
+            await processVideoFile(file.uri, file.name, file.mimeType);
 
-          const fileSizeInMB = processedSize / (1024 * 1024);
-          console.log(
-            `Final processed file size: ${fileSizeInMB.toFixed(2)} MB`,
-          );
+          console.log("✅ Processed file ready:", processedUri, processedSize);
 
           setRecordingState("completed");
-          setTimeout(() => {
-            onRecordingComplete({
-              duration: timer,
-              timestamp: new Date(),
-              method: recordingMethod,
-              recordingUri: processedUri,
-              fileName: file.name,
-              fileSize: processedSize,
-              mimeType: file.mimeType,
-            });
-          }, 1000);
+
+          // Fire immediately instead of relying on timeout
+          onRecordingComplete({
+            duration: timer,
+            timestamp: new Date(),
+            method: recordingMethod,
+            recordingUri: processedUri,
+            fileName: file.name,
+            fileSize: processedSize,
+            mimeType: file.mimeType,
+          });
         } catch (error) {
-          console.error("Error processing uploaded file:", error);
+          console.error("❌ Processing failed, falling back:", error);
 
-          // Use original file if processing fails
           setRecordingState("completed");
-          setTimeout(() => {
-            onRecordingComplete({
-              duration: 180,
-              timestamp: new Date(),
-              method: "upload",
-              fileName: file.name,
-              fileUri: file.uri,
-              fileSize: file.size,
-              mimeType: file.mimeType,
-            });
-          }, 1000);
+
+          onRecordingComplete({
+            duration: 180,
+            timestamp: new Date(),
+            method: "upload",
+            fileName: file.name,
+            fileUri: file.uri,
+            fileSize: file.size,
+            mimeType: file.mimeType,
+          });
         }
       }
     } catch (error) {
@@ -428,35 +434,37 @@ const SpeechRecorderSpeaker = ({
     }
   };
 
-  // Video compression function that guarantees under 20 MB
+  // Video compression with safe path
   const compressVideo = async (videoUri: string): Promise<string> => {
     console.log("Starting video compression...");
-    const originalFileInfo = await FileSystem.getInfoAsync(videoUri);
+
+    let safeUri = await ensureFilePath(videoUri); // ⭐ FIX
+    let originalFileInfo = await FileSystem.getInfoAsync(safeUri);
     console.log(
       `Original size: ${(originalFileInfo.size / (1024 * 1024)).toFixed(2)} MB`,
     );
 
     let attempt = 0;
-    let bitrate = 2000; // start at ~2 Mbps
-    let maxSize = 720; // start HD-ish
-    let compressedUri = videoUri;
+    let bitrate = 2000;
+    let maxSize = 720;
+    let compressedUri = safeUri;
     let compressedSizeMB = originalFileInfo.size / (1024 * 1024);
 
     while (compressedSizeMB > 20 && attempt < 5) {
       attempt++;
-      bitrate = Math.max(300, Math.floor(bitrate * 0.6)); // progressively lower bitrate
-      maxSize = Math.max(240, Math.floor(maxSize * 0.8)); // progressively lower resolution
+      bitrate = Math.max(300, Math.floor(bitrate * 0.6));
+      maxSize = Math.max(240, Math.floor(maxSize * 0.8));
 
       console.log(
-        `Compression attempt ${attempt}: bitrate=${bitrate} kbps, maxSize=${maxSize}`,
+        `Compression attempt ${attempt}: bitrate=${bitrate}, maxSize=${maxSize}`,
       );
 
       try {
         const result = await VideoCompressor.compress(
-          videoUri,
+          safeUri,
           {
-            bitrate, // kbps
-            maxSize, // target dimension
+            bitrate,
+            maxSize,
             compressionMethod: "auto",
             minimumFileSizeForCompress: 0,
           },
@@ -465,14 +473,14 @@ const SpeechRecorderSpeaker = ({
           },
         );
 
-        const compressedFileInfo = await FileSystem.getInfoAsync(result);
+        compressedUri = await ensureFilePath(result); // ⭐ FIX
+
+        const compressedFileInfo = await FileSystem.getInfoAsync(compressedUri);
         compressedSizeMB = compressedFileInfo.size / (1024 * 1024);
 
         console.log(
           `Attempt ${attempt} result: ${compressedSizeMB.toFixed(2)} MB`,
         );
-
-        compressedUri = result;
 
         if (compressedSizeMB <= 20) {
           console.log("✅ Compression successful under 20 MB");
@@ -480,73 +488,61 @@ const SpeechRecorderSpeaker = ({
         }
       } catch (error) {
         console.error("Compression error:", error);
-        break; // stop trying if compressor fails
+        break;
       }
-    }
-
-    if (compressedSizeMB > 20) {
-      console.warn(
-        `⚠️ Final video still over 20MB (${compressedSizeMB.toFixed(2)} MB)`,
-      );
     }
 
     return compressedUri;
   };
 
-  // Function to process and compress files
+  // Main processor
   const processVideoFile = async (
     fileUri: string,
     fileName?: string,
-    mimeType?: string, // ⭐ FIX: accept mimeType directly
+    mimeType?: string,
   ): Promise<{ uri: string; size: number }> => {
     try {
       const isWeb = Platform.OS === "web";
 
-      // Detect video file
       const isVideoFile = (mimeType?: string, name?: string) => {
         const videoExtensions = ["mp4", "mov", "avi"];
         const hasExt = name
           ? videoExtensions.includes(name.split(".").pop()?.toLowerCase() || "")
           : false;
-
         return mimeType?.startsWith("video/") || hasExt;
       };
 
-      const isVideo = isVideoFile(mimeType, fileName); // ⭐ FIX: use passed mimeType
+      const isVideo = isVideoFile(mimeType, fileName);
 
       if (isWeb) {
-        // ⚡ Web: cannot use FileSystem, just return the file as-is
-        return {
-          uri: fileUri,
-          size: selectedFile?.size || 0, // DocumentPicker gives size on web
-        };
+        return { uri: fileUri, size: selectedFile?.size || 0 };
       }
+
+      let safeUri = await ensureFilePath(fileUri);
 
       if (!isVideo) {
-        // Audio file: just return size
-        const info = await FileSystem.getInfoAsync(fileUri);
-        console.log("Audio file info:", info); // ⭐ Debug
-        return { uri: fileUri, size: info.size || 0 };
+        const info = await FileSystem.getInfoAsync(safeUri);
+        console.log("Audio file info:", info);
+        return { uri: safeUri, size: info.size || 0 };
       }
 
-      // ✅ Native video compression path
-      const compressedUri = await compressVideo(fileUri);
-
-      console.log("Compressed URI:", compressedUri); // ⭐ Debug
+      const compressedUri = await compressVideo(safeUri);
+      console.log("Compressed URI:", compressedUri);
 
       const fileInfo = await FileSystem.getInfoAsync(compressedUri);
-      console.log("Compressed file info:", fileInfo); // ⭐ Debug
+      console.log("Compressed file info:", fileInfo);
+
+      if (!fileInfo.exists) {
+        throw new Error("Compressed file not found");
+      }
 
       return { uri: compressedUri, size: fileInfo.size || 0 };
     } catch (error) {
       console.error("Error processing video file:", error);
 
-      if (Platform.OS === "web") {
-        return { uri: fileUri, size: selectedFile?.size || 0 };
-      }
-
-      const info = await FileSystem.getInfoAsync(fileUri);
-      return { uri: fileUri, size: info.size || 0 };
+      let safeUri = await ensureFilePath(fileUri);
+      const info = await FileSystem.getInfoAsync(safeUri);
+      return { uri: safeUri, size: info.size || 0 };
     }
   };
 
