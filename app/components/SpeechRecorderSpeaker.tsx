@@ -22,6 +22,7 @@ import { Camera as ExpoCamera } from "expo-camera";
 import { Video as VideoCompressor } from "react-native-compressor";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
+import CompressionMethod from "react-native-compressor";
 
 interface SpeechRecorderSpeakerProps {
   onRecordingComplete?: (recordingData: any) => void;
@@ -438,25 +439,30 @@ const SpeechRecorderSpeaker = ({
   const compressVideo = async (videoUri: string): Promise<string> => {
     console.log("Starting video compression...");
 
-    let safeUri = await ensureFilePath(videoUri); // ⭐ FIX
-    let originalFileInfo = await FileSystem.getInfoAsync(safeUri);
-    console.log(
-      `Original size: ${(originalFileInfo.size / (1024 * 1024)).toFixed(2)} MB`,
-    );
+    let safeUri = await ensureFilePath(videoUri);
+    let fileInfo = await FileSystem.getInfoAsync(safeUri);
+    let sizeMB = fileInfo.size / (1024 * 1024);
+
+    if (sizeMB <= 5) {
+      console.log("Video already under 5 MB. Skipping compression.");
+      return safeUri;
+    }
 
     let attempt = 0;
-    let bitrate = 2000;
-    let maxSize = 720;
+    let maxAttempts = 10;
+    let bitrate = 1200; // start lower
+    let maxSize = 480; // start smaller
+    let frameRate = 30; // optional control
     let compressedUri = safeUri;
-    let compressedSizeMB = originalFileInfo.size / (1024 * 1024);
 
-    while (compressedSizeMB > 20 && attempt < 5) {
+    while (sizeMB > 5 && attempt < maxAttempts) {
       attempt++;
-      bitrate = Math.max(300, Math.floor(bitrate * 0.6));
+      bitrate = Math.max(300, Math.floor(bitrate * 0.7));
       maxSize = Math.max(240, Math.floor(maxSize * 0.8));
+      frameRate = Math.max(15, Math.floor(frameRate * 0.85));
 
       console.log(
-        `Compression attempt ${attempt}: bitrate=${bitrate}, maxSize=${maxSize}`,
+        `Attempt ${attempt}: bitrate=${bitrate}, maxSize=${maxSize}, frameRate=${frameRate}`,
       );
 
       try {
@@ -465,7 +471,8 @@ const SpeechRecorderSpeaker = ({
           {
             bitrate,
             maxSize,
-            compressionMethod: "auto",
+            frameRate,
+            compressionMethod: CompressionMethod.AUTO,
             minimumFileSizeForCompress: 0,
           },
           (progress) => {
@@ -473,23 +480,26 @@ const SpeechRecorderSpeaker = ({
           },
         );
 
-        compressedUri = await ensureFilePath(result); // ⭐ FIX
+        compressedUri = await ensureFilePath(result);
+        fileInfo = await FileSystem.getInfoAsync(compressedUri);
+        sizeMB = fileInfo.size / (1024 * 1024);
 
-        const compressedFileInfo = await FileSystem.getInfoAsync(compressedUri);
-        compressedSizeMB = compressedFileInfo.size / (1024 * 1024);
+        console.log(`Attempt ${attempt} result: ${sizeMB.toFixed(2)} MB`);
 
-        console.log(
-          `Attempt ${attempt} result: ${compressedSizeMB.toFixed(2)} MB`,
-        );
-
-        if (compressedSizeMB <= 20) {
-          console.log("✅ Compression successful under 20 MB");
+        if (sizeMB <= 5) {
+          console.log("✅ Compression successful under 5 MB");
           break;
         }
-      } catch (error) {
-        console.error("Compression error:", error);
+      } catch (err) {
+        console.error("Compression error:", err);
         break;
       }
+    }
+
+    if (sizeMB > 5) {
+      console.warn(
+        "⚠️ Could not compress video under 5 MB without extreme quality loss",
+      );
     }
 
     return compressedUri;

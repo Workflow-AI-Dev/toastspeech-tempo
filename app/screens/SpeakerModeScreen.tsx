@@ -36,6 +36,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { BASE_URL } from "../config/api";
+import * as FileSystem from "expo-file-system";
 
 interface SpeakerModeScreenProps {
   onBack?: () => void;
@@ -113,9 +114,9 @@ export default function SpeakerModeScreen({
   }, []);
 
   const isAudioLocked = limits?.remaining_audio_speeches === 0;
-  const isVideoLocked = limits?.remaining_video_speeches === 0 || plan === "casual";
+  const isVideoLocked =
+    limits?.remaining_video_speeches === 0 || plan === "casual";
   const isUploadLocked = limits?.total_remaining_speeches === 0;
-
 
   const handleRecordingComplete = (data) => {
     setRecordingData(data); // Save recording file info
@@ -149,52 +150,53 @@ export default function SpeakerModeScreen({
     token,
   }) => {
     try {
-      const formData = new FormData();
-
       if (Platform.OS === "web") {
-        // Fetch actual file blob from URI for web
+        const formData = new FormData();
         const res = await fetch(fileUri);
         const blob = await res.blob();
-
         const file = new File([blob], fileName, { type: mimeType });
         formData.append("file", file);
-      } else {
-        // React Native FormData expects this format
-        formData.append("file", {
-          uri: fileUri,
-          name: fileName,
-          type: mimeType,
+        formData.append("task_type", taskType);
+        formData.append("mode_type", modeType);
+        formData.append("speech_type", speechType);
+        formData.append("speech_details", JSON.stringify(speechDetails));
+
+        const response = await fetch(`${BASE_URL}/speech/process_file`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
         });
+
+        if (!response.ok) throw new Error(await response.text());
+        const data = await response.json();
+        return await pollForResults(data.task_id, token);
+      } else {
+        // Mobile upload using expo-file-system
+        const result = await FileSystem.uploadAsync(
+          `${BASE_URL}/speech/process_file`,
+          fileUri,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            httpMethod: "POST",
+            fieldName: "file",
+            mimeType,
+            uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+            parameters: {
+              task_type: taskType,
+              mode_type: modeType,
+              speech_type: speechType,
+              speech_details: JSON.stringify(speechDetails),
+            },
+          },
+        );
+
+        if (result.status < 200 || result.status >= 300) {
+          throw new Error(`Upload failed with status ${result.status}`);
+        }
+
+        const data = JSON.parse(result.body);
+        return await pollForResults(data.task_id, token);
       }
-
-      formData.append("task_type", taskType);
-      formData.append("mode_type", modeType);
-      formData.append("speech_type", speechType);
-      formData.append("speech_details", JSON.stringify(speechDetails));
-
-      const initialResponse = await fetch(`${BASE_URL}/speech/process_file`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!initialResponse.ok) {
-        const err = await initialResponse.text();
-        throw new Error(err || "Initial upload request failed");
-      }
-
-      const initialData = await initialResponse.json();
-      console.log("✅ Processing started:", initialData);
-
-      const taskId = initialData.task_id;
-      if (!taskId) {
-        throw new Error("Task ID not received from backend");
-      }
-
-      // Step 2 & 3: Polling for results
-      return await pollForResults(taskId, token);
     } catch (err) {
       console.error("❌ Upload error:", err);
       throw err;
@@ -205,12 +207,15 @@ export default function SpeakerModeScreen({
     return new Promise((resolve, reject) => {
       const pollInterval = setInterval(async () => {
         try {
-          const statusResponse = await fetch(`${BASE_URL}/speech/status/${taskId}`, {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
+          const statusResponse = await fetch(
+            `${BASE_URL}/speech/status/${taskId}`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
             },
-          });
+          );
 
           if (!statusResponse.ok) {
             const err = await statusResponse.text();
@@ -262,7 +267,7 @@ export default function SpeakerModeScreen({
       const mappedResults = {
         overallScore: finalData.summary?.Metadata?.overall_score ?? 0,
         pace: finalData.analytics?.speaker_analysis?.[0]?.words_per_minute || 0,
-        fillerWords: 0, // Gemini may not return this yet
+        fillerWords: 0,
         emotionalDelivery: 0,
         clarity: 0,
         confidence: 0,
@@ -276,7 +281,8 @@ export default function SpeakerModeScreen({
           const seconds = Math.floor(totalSpeakingSeconds % 60);
           return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
         })(),
-        avgPause: finalData.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
+        avgPause:
+          finalData.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
         pausesData: finalData.analytics?.pauses || [],
         fillerData: finalData.analytics?.filler_words || [],
         crutchData: finalData.analytics?.crutch_phrases || [],
@@ -918,7 +924,9 @@ export default function SpeakerModeScreen({
                   </Text>
                   {isAudioLocked && (
                     <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
-                      <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
+                      <Text className="text-xs font-bold text-gray-600">
+                        LOCKED
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -987,25 +995,34 @@ export default function SpeakerModeScreen({
               <View
                 className="rounded-2xl p-4 mr-4"
                 style={{
-                  backgroundColor: theme === "dark" ? colors.surface : "#f3e8ff",
+                  backgroundColor:
+                    theme === "dark" ? colors.surface : "#f3e8ff",
                 }}
               >
                 <Video size={28} color={colors.accent} />
               </View>
               <View className="flex-1">
                 <View className="flex-row items-center">
-                  <Text className="text-xl font-bold" style={{ color: colors.text }}>
+                  <Text
+                    className="text-xl font-bold"
+                    style={{ color: colors.text }}
+                  >
                     Record Video
                   </Text>
 
                   {isVideoLocked && (
                     <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
-                      <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
+                      <Text className="text-xs font-bold text-gray-600">
+                        LOCKED
+                      </Text>
                     </View>
                   )}
                 </View>
 
-                <Text className="text-base" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="text-base"
+                  style={{ color: colors.textSecondary }}
+                >
                   Record with camera and microphone
                 </Text>
               </View>
@@ -1016,13 +1033,22 @@ export default function SpeakerModeScreen({
               className="rounded-2xl p-4"
               style={{ backgroundColor: colors.surface }}
             >
-              <Text className="font-semibold mb-2" style={{ color: colors.text }}>
+              <Text
+                className="font-semibold mb-2"
+                style={{ color: colors.text }}
+              >
                 Perfect for:
               </Text>
-              <Text className="text-sm mb-1" style={{ color: colors.textSecondary }}>
+              <Text
+                className="text-sm mb-1"
+                style={{ color: colors.textSecondary }}
+              >
                 • Complete presentation analysis
               </Text>
-              <Text className="text-sm mb-1" style={{ color: colors.textSecondary }}>
+              <Text
+                className="text-sm mb-1"
+                style={{ color: colors.textSecondary }}
+              >
                 • Body language feedback
               </Text>
               <Text className="text-sm" style={{ color: colors.textSecondary }}>
@@ -1073,10 +1099,12 @@ export default function SpeakerModeScreen({
                   Upload Recording
                 </Text>
                 {isUploadLocked && (
-                    <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
-                      <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
-                    </View>
-                  )}
+                  <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
+                    <Text className="text-xs font-bold text-gray-600">
+                      LOCKED
+                    </Text>
+                  </View>
+                )}
                 <Text
                   className="text-base"
                   style={{ color: colors.textSecondary }}
@@ -1113,7 +1141,6 @@ export default function SpeakerModeScreen({
               </Text>
             </View>
           </TouchableOpacity>
-        
         </View>
       </ScrollView>
     </View>
