@@ -435,74 +435,50 @@ const SpeechRecorderSpeaker = ({
     }
   };
 
-  // Video compression with safe path
   const compressVideo = async (videoUri: string): Promise<string> => {
-    console.log("Starting video compression...");
+    console.log("🚀 Starting one-pass video compression...");
 
-    let safeUri = await ensureFilePath(videoUri);
-    let fileInfo = await FileSystem.getInfoAsync(safeUri);
-    let sizeMB = fileInfo.size / (1024 * 1024);
+    const safeUri = await ensureFilePath(videoUri);
+    const fileInfo = await FileSystem.getInfoAsync(safeUri);
+    const sizeMB = fileInfo.size / (1024 * 1024);
 
     if (sizeMB <= 5) {
-      console.log("Video already under 5 MB. Skipping compression.");
+      console.log("✅ Video already under 5 MB. Skipping compression.");
       return safeUri;
     }
 
-    let attempt = 0;
-    let maxAttempts = 10;
-    let bitrate = 1200; // start lower
-    let maxSize = 480; // start smaller
-    let frameRate = 30; // optional control
-    let compressedUri = safeUri;
-
-    while (sizeMB > 5 && attempt < maxAttempts) {
-      attempt++;
-      bitrate = Math.max(300, Math.floor(bitrate * 0.7));
-      maxSize = Math.max(240, Math.floor(maxSize * 0.8));
-      frameRate = Math.max(15, Math.floor(frameRate * 0.85));
-
-      console.log(
-        `Attempt ${attempt}: bitrate=${bitrate}, maxSize=${maxSize}, frameRate=${frameRate}`,
+    try {
+      const result = await VideoCompressor.compress(
+        safeUri,
+        {
+          compressionMethod: "manual",
+          bitrate: 400, // kbps — tuned for small file size
+          maxSize: 480, // resolution cap
+        },
+        (progress) => {
+          console.log(`Compression progress: ${Math.round(progress * 100)}%`);
+        },
       );
 
-      try {
-        const result = await VideoCompressor.compress(
-          safeUri,
-          {
-            bitrate,
-            maxSize,
-            frameRate,
-            compressionMethod: CompressionMethod.AUTO,
-            minimumFileSizeForCompress: 0,
-          },
-          (progress) => {
-            console.log(`Compression progress: ${Math.round(progress * 100)}%`);
-          },
+      const compressedUri = await ensureFilePath(result);
+      const compressedInfo = await FileSystem.getInfoAsync(compressedUri);
+      const finalMB = compressedInfo.size / (1024 * 1024);
+
+      console.log(`🎯 Final compressed size: ${finalMB.toFixed(2)} MB`);
+
+      if (finalMB > 5) {
+        console.warn(
+          "⚠️ Still above 5 MB — may need a second pass if strict limit is required.",
         );
-
-        compressedUri = await ensureFilePath(result);
-        fileInfo = await FileSystem.getInfoAsync(compressedUri);
-        sizeMB = fileInfo.size / (1024 * 1024);
-
-        console.log(`Attempt ${attempt} result: ${sizeMB.toFixed(2)} MB`);
-
-        if (sizeMB <= 5) {
-          console.log("✅ Compression successful under 5 MB");
-          break;
-        }
-      } catch (err) {
-        console.error("Compression error:", err);
-        break;
+      } else {
+        console.log("✅ Successfully compressed under 5 MB in one pass!");
       }
-    }
 
-    if (sizeMB > 5) {
-      console.warn(
-        "⚠️ Could not compress video under 5 MB without extreme quality loss",
-      );
+      return compressedUri;
+    } catch (err) {
+      console.error("❌ Compression error:", err);
+      return safeUri;
     }
-
-    return compressedUri;
   };
 
   // Main processor
