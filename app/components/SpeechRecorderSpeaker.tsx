@@ -15,12 +15,11 @@ import {
   FileText,
 } from "lucide-react-native";
 import { Platform } from "react-native";
-
 import * as Haptics from "expo-haptics";
 import * as DocumentPicker from "expo-document-picker";
 import { Audio } from "expo-av";
 import { Camera as ExpoCamera } from "expo-camera";
-import { Video as VideoCompressor } from 'react-native-compressor'; 
+import { Video as VideoCompressor } from "react-native-compressor";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
 
@@ -77,7 +76,6 @@ const SpeechRecorderSpeaker = ({
       return () => clearInterval(interval);
     }
   }, [isProcessing, recordingState]);
-
 
   // Animation value for audio visualization
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
@@ -152,7 +150,6 @@ const SpeechRecorderSpeaker = ({
       if (interval) clearInterval(interval);
     };
   }, [recordingState, pulseAnim]);
-
 
   const handleStartRecording = async () => {
     try {
@@ -331,12 +328,18 @@ const SpeechRecorderSpeaker = ({
       let allowedTypes: string[] = [];
       let allowedExtensions: string[] = [];
 
-      if (limits.remaining_audio_speeches > 0 || limits.remaining_audio_practice > 0) {
+      if (
+        limits.remaining_audio_speeches > 0 ||
+        limits.remaining_audio_practice > 0
+      ) {
         allowedTypes = [...allowedTypes, ...audioTypes];
         allowedExtensions = [...allowedExtensions, ...audioExts];
       }
 
-      if (limits.remaining_video_speeches > 0 || limits.remaining_video_practice > 0) {
+      if (
+        limits.remaining_video_speeches > 0 ||
+        limits.remaining_video_practice > 0
+      ) {
         allowedTypes = [...allowedTypes, ...videoTypes];
         allowedExtensions = [...allowedExtensions, ...videoExts];
       }
@@ -345,28 +348,30 @@ const SpeechRecorderSpeaker = ({
         Alert.alert(
           "No Uploads Remaining",
           "You don't have any remaining audio or video uploads available.",
-          [{ text: "OK" }]
+          [{ text: "OK" }],
         );
         return;
       }
-          
+
       const result = await DocumentPicker.getDocumentAsync({
         type: allowedTypes,
         copyToCacheDirectory: true,
       });
 
-
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
         const fileExtension = file.name.split(".").pop()?.toLowerCase() || "";
 
-        if (!allowedTypes.includes(file.mimeType || "") && !allowedExtensions.includes(fileExtension)) {
+        if (
+          !allowedTypes.includes(file.mimeType || "") &&
+          !allowedExtensions.includes(fileExtension)
+        ) {
           Alert.alert(
             "Unsupported File",
             `This file type is not supported.\nPlease upload a valid audio/video file.`,
-            [{ text: "OK" }]
+            [{ text: "OK" }],
           );
-          console.log('unsupported file')
+          console.log("unsupported file");
           return;
         }
 
@@ -376,7 +381,7 @@ const SpeechRecorderSpeaker = ({
         try {
           // Always process and compress the uploaded file
           const { uri: processedUri, size: processedSize } =
-            await processVideoFile(file.uri, file.name);
+            await processVideoFile(file.uri, file.name, file.mimeType); // ⭐ FIX: pass mimeType
 
           const fileSizeInMB = processedSize / (1024 * 1024);
           console.log(
@@ -428,12 +433,12 @@ const SpeechRecorderSpeaker = ({
     console.log("Starting video compression...");
     const originalFileInfo = await FileSystem.getInfoAsync(videoUri);
     console.log(
-      `Original size: ${(originalFileInfo.size / (1024 * 1024)).toFixed(2)} MB`
+      `Original size: ${(originalFileInfo.size / (1024 * 1024)).toFixed(2)} MB`,
     );
 
     let attempt = 0;
     let bitrate = 2000; // start at ~2 Mbps
-    let maxSize = 720;  // start HD-ish
+    let maxSize = 720; // start HD-ish
     let compressedUri = videoUri;
     let compressedSizeMB = originalFileInfo.size / (1024 * 1024);
 
@@ -443,28 +448,28 @@ const SpeechRecorderSpeaker = ({
       maxSize = Math.max(240, Math.floor(maxSize * 0.8)); // progressively lower resolution
 
       console.log(
-        `Compression attempt ${attempt}: bitrate=${bitrate} kbps, maxSize=${maxSize}`
+        `Compression attempt ${attempt}: bitrate=${bitrate} kbps, maxSize=${maxSize}`,
       );
 
       try {
         const result = await VideoCompressor.compress(
           videoUri,
           {
-            bitrate,             // kbps
-            maxSize,             // target dimension
+            bitrate, // kbps
+            maxSize, // target dimension
             compressionMethod: "auto",
             minimumFileSizeForCompress: 0,
           },
           (progress) => {
             console.log(`Compression progress: ${Math.round(progress * 100)}%`);
-          }
+          },
         );
 
         const compressedFileInfo = await FileSystem.getInfoAsync(result);
         compressedSizeMB = compressedFileInfo.size / (1024 * 1024);
 
         console.log(
-          `Attempt ${attempt} result: ${compressedSizeMB.toFixed(2)} MB`
+          `Attempt ${attempt} result: ${compressedSizeMB.toFixed(2)} MB`,
         );
 
         compressedUri = result;
@@ -481,7 +486,7 @@ const SpeechRecorderSpeaker = ({
 
     if (compressedSizeMB > 20) {
       console.warn(
-        `⚠️ Final video still over 20MB (${compressedSizeMB.toFixed(2)} MB)`
+        `⚠️ Final video still over 20MB (${compressedSizeMB.toFixed(2)} MB)`,
       );
     }
 
@@ -492,6 +497,7 @@ const SpeechRecorderSpeaker = ({
   const processVideoFile = async (
     fileUri: string,
     fileName?: string,
+    mimeType?: string, // ⭐ FIX: accept mimeType directly
   ): Promise<{ uri: string; size: number }> => {
     try {
       const isWeb = Platform.OS === "web";
@@ -502,28 +508,34 @@ const SpeechRecorderSpeaker = ({
         const hasExt = name
           ? videoExtensions.includes(name.split(".").pop()?.toLowerCase() || "")
           : false;
-        return hasExt;
+
+        return mimeType?.startsWith("video/") || hasExt;
       };
 
-      const isVideo = isVideoFile(selectedFile?.mimeType, fileName);
+      const isVideo = isVideoFile(mimeType, fileName); // ⭐ FIX: use passed mimeType
 
       if (isWeb) {
         // ⚡ Web: cannot use FileSystem, just return the file as-is
         return {
           uri: fileUri,
-          size: selectedFile?.size || 0, // DocumentPicker gives you size on web
+          size: selectedFile?.size || 0, // DocumentPicker gives size on web
         };
       }
 
       if (!isVideo) {
         // Audio file: just return size
         const info = await FileSystem.getInfoAsync(fileUri);
+        console.log("Audio file info:", info); // ⭐ Debug
         return { uri: fileUri, size: info.size || 0 };
       }
 
       // ✅ Native video compression path
       const compressedUri = await compressVideo(fileUri);
+
+      console.log("Compressed URI:", compressedUri); // ⭐ Debug
+
       const fileInfo = await FileSystem.getInfoAsync(compressedUri);
+      console.log("Compressed file info:", fileInfo); // ⭐ Debug
 
       return { uri: compressedUri, size: fileInfo.size || 0 };
     } catch (error) {
@@ -537,8 +549,6 @@ const SpeechRecorderSpeaker = ({
       return { uri: fileUri, size: info.size || 0 };
     }
   };
-
-
 
   const getRecordingIcon = () => {
     switch (recordingMethod) {
@@ -570,9 +580,10 @@ const SpeechRecorderSpeaker = ({
       case "upload":
         // Define supported formats based on limits
         let formats = [];
-        
+
         if (limits.remaining_audio_speeches > 0) formats.push("MP3", "WAV");
-        if (limits.remaining_video_speeches > 0) formats.push("MP4", "MOV", "AVI");
+        if (limits.remaining_video_speeches > 0)
+          formats.push("MP4", "MOV", "AVI");
         if (plan !== "casual") formats.push("M4A"); // M4A is not allowed for casual users
 
         const uniqueFormats = [...new Set(formats)]; // remove duplicates just in case
@@ -582,7 +593,6 @@ const SpeechRecorderSpeaker = ({
         return "Tap the mic to start recording";
     }
   };
-
 
   return (
     <View className="bg-gradient-to-b from-purple-50 to-indigo-50 w-full h-[500px] rounded-2xl overflow-hidden">
