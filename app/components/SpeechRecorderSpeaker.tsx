@@ -94,27 +94,21 @@ const SpeechRecorderSpeaker = ({
 
   const requestPermissions = async () => {
     try {
+      // Expo Audio
       const { status: audioStatus } = await Audio.requestPermissionsAsync();
-      setHasAudioPermission(audioStatus === "granted");
+      let audioGranted = audioStatus === "granted";
 
-      if (recordingMethod === "video") {
-        let cameraStatus = "denied";
-        let microphoneStatus = "denied";
+      if (recordingMethod === "video" && Platform.OS !== "web") {
+        const camStatus = await CameraComponent.requestCameraPermission();
+        const micStatus = await CameraComponent.requestMicrophonePermission();
 
-        if (Platform.OS !== "web") {
-          cameraStatus = await CameraComponent.requestCameraPermission();
-          microphoneStatus =
-            await CameraComponent.requestMicrophonePermission();
-        }
+        setHasCameraPermission(camStatus === "authorized");
 
-        setHasCameraPermission(cameraStatus === "authorized");
-        setHasAudioPermission(microphoneStatus === "authorized");
-
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-        });
+        // Normalize mic status for both platforms
+        audioGranted = audioGranted || micStatus === "authorized";
       }
+
+      setHasAudioPermission(audioGranted);
 
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
@@ -173,14 +167,22 @@ const SpeechRecorderSpeaker = ({
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      if (!hasAudioPermission) {
+      // Request mic permission immediately
+      const { status: audioStatus } = await Audio.requestPermissionsAsync();
+      if (audioStatus !== "granted") {
         Alert.alert("Permission Required", "Microphone access is required.");
         return;
       }
 
-      if (recordingMethod === "video" && !hasCameraPermission) {
-        Alert.alert("Permission Required", "Camera access is required.");
-        return;
+      if (recordingMethod === "video") {
+        if (!hasCameraPermission) {
+          const camStatus = await CameraComponent.requestCameraPermission();
+          if (camStatus !== "authorized") {
+            Alert.alert("Permission Required", "Camera access is required.");
+            return;
+          }
+          setHasCameraPermission(true);
+        }
       }
 
       if (recordingMethod === "audio") {
