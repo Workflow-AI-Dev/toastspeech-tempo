@@ -94,31 +94,47 @@ const SpeechRecorderSpeaker = ({
 
   const requestPermissions = async () => {
     try {
-      // Expo Audio
-      const { status: audioStatus } = await Audio.requestPermissionsAsync();
+      // AUDIO PERMISSION
+      const { status: audioStatus } = await Audio.getPermissionsAsync();
       let audioGranted = audioStatus === "granted";
 
+      // VIDEO PERMISSION (only if video recording is selected and not web)
+      let camGranted = false;
       if (recordingMethod === "video" && Platform.OS !== "web") {
-        const camStatus = await CameraComponent.requestCameraPermission();
-        const micStatus = await CameraComponent.requestMicrophonePermission();
+        const camStatus = await CameraComponent.getCameraPermissionStatus();
+        const micStatus = await CameraComponent.getMicrophonePermissionStatus();
 
-        setHasCameraPermission(camStatus === "authorized");
+        camGranted = camStatus === "authorized";
+        const micGranted = micStatus === "authorized";
 
-        // Normalize mic status for both platforms
-        audioGranted = audioGranted || micStatus === "authorized";
+        // Request only if not authorized
+        if (!camGranted) {
+          const newCamStatus = await CameraComponent.requestCameraPermission();
+          camGranted = newCamStatus === "authorized";
+        }
+        if (!micGranted) {
+          const newMicStatus =
+            await CameraComponent.requestMicrophonePermission();
+          audioGranted = audioGranted || newMicStatus === "authorized";
+        }
+
+        setHasCameraPermission(camGranted);
       }
 
       setHasAudioPermission(audioGranted);
 
+      // Set audio mode for recording
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
+
+      console.log(`Permissions: Audio=${audioGranted}, Camera=${camGranted}`);
     } catch (err) {
       console.error("Permission error:", err);
       Alert.alert(
         "Permission Error",
-        "Check camera/mic permissions in Settings.",
+        "Unable to get camera/mic permissions. Please check your settings.",
       );
     }
   };
@@ -167,24 +183,44 @@ const SpeechRecorderSpeaker = ({
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      // Request mic permission immediately
-      const { status: audioStatus } = await Audio.requestPermissionsAsync();
-      if (audioStatus !== "granted") {
-        Alert.alert("Permission Required", "Microphone access is required.");
-        return;
-      }
-
-      if (recordingMethod === "video") {
-        if (!hasCameraPermission) {
-          const camStatus = await CameraComponent.requestCameraPermission();
-          if (camStatus !== "authorized") {
-            Alert.alert("Permission Required", "Camera access is required.");
-            return;
-          }
-          setHasCameraPermission(true);
+      // AUDIO CHECK
+      const audioPerm = await Audio.getPermissionsAsync();
+      if (audioPerm.status !== "granted") {
+        const newAudio = await Audio.requestPermissionsAsync();
+        if (newAudio.status !== "granted") {
+          Alert.alert("Permission Required", "Microphone access is required.");
+          return;
         }
       }
 
+      // VIDEO CHECK
+      if (recordingMethod === "video" && Platform.OS !== "web") {
+        let camStatus = await CameraComponent.getCameraPermissionStatus();
+        let micStatus = await CameraComponent.getMicrophonePermissionStatus();
+
+        if (camStatus !== "authorized") {
+          const newCamStatus = await CameraComponent.requestCameraPermission();
+          camStatus = newCamStatus;
+        }
+        if (micStatus !== "authorized") {
+          const newMicStatus =
+            await CameraComponent.requestMicrophonePermission();
+          micStatus = newMicStatus;
+        }
+
+        if (camStatus !== "authorized" || micStatus !== "authorized") {
+          Alert.alert(
+            "Permission Required",
+            "Camera and microphone access are required for video recording.",
+          );
+          return;
+        }
+
+        setHasCameraPermission(true);
+        setHasAudioPermission(true);
+      }
+
+      // START RECORDING
       if (recordingMethod === "audio") {
         const { recording: newRecording } = await Audio.Recording.createAsync(
           Audio.RecordingOptionsPresets.HIGH_QUALITY,
@@ -201,7 +237,6 @@ const SpeechRecorderSpeaker = ({
             setIsRecordingVideo(false);
             setRecordingState("uploading");
 
-            // Pass video through existing processing pipeline
             const { uri: processedUri, size } = await processVideoFile(
               video.path,
             );
