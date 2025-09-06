@@ -6,7 +6,6 @@ import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
 import * as DocumentPicker from "expo-document-picker";
 import { Audio } from "expo-av";
-import { Camera as ExpoCamera } from "expo-camera";
 import { Video as VideoCompressor } from "react-native-compressor";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
@@ -23,6 +22,18 @@ interface SpeechRecorderSpeakerProps {
   recordingMethod?: "audio" | "video" | "upload" | null;
   plan: string;
   limits: {};
+}
+
+let CameraComponent: any;
+let useCameraDevices: any;
+
+if (Platform.OS !== "web") {
+  const visionCamera = require("react-native-vision-camera");
+  CameraComponent = visionCamera.Camera;
+  useCameraDevices = visionCamera.useCameraDevices;
+} else {
+  CameraComponent = () => null;
+  useCameraDevices = () => ({}); // returns empty object on web
 }
 
 const SpeechRecorderSpeaker = ({
@@ -43,7 +54,7 @@ const SpeechRecorderSpeaker = ({
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
-  const expoCameraRef = useRef<ExpoCamera>(null);
+  const cameraRef = useRef<any>(null);
   const [recordedVideoUri, setRecordedVideoUri] = useState<string | null>(null);
   const processingMessages = [
     "Processing file...",
@@ -56,10 +67,8 @@ const SpeechRecorderSpeaker = ({
   const [messageIndex, setMessageIndex] = useState(0);
   type CameraDirection = "front" | "back";
   const [cameraType, setCameraType] = useState<CameraDirection>("front");
-
-  const toggleCamera = () => {
-    setCameraType((prev) => (prev === "front" ? "back" : "front"));
-  };
+  const devices = useCameraDevices();
+  const device = devices ? devices[cameraType] : undefined;
 
   useEffect(() => {
     if (isProcessing || recordingState === "uploading") {
@@ -79,17 +88,32 @@ const SpeechRecorderSpeaker = ({
     requestPermissions();
   }, []);
 
+  const toggleCamera = () => {
+    setCameraType((prev) => (prev === "front" ? "back" : "front"));
+  };
+
   const requestPermissions = async () => {
     try {
       const { status: audioStatus } = await Audio.requestPermissionsAsync();
       setHasAudioPermission(audioStatus === "granted");
 
       if (recordingMethod === "video") {
-        const { status: cameraStatus } =
-          await ExpoCamera.requestCameraPermissionsAsync();
-        setHasCameraPermission(cameraStatus === "granted");
+        let cameraStatus = "denied";
+        let microphoneStatus = "denied";
 
-        await MediaLibrary.requestPermissionsAsync();
+        if (Platform.OS !== "web") {
+          cameraStatus = await CameraComponent.requestCameraPermission();
+          microphoneStatus =
+            await CameraComponent.requestMicrophonePermission();
+        }
+
+        setHasCameraPermission(cameraStatus === "authorized");
+        setHasAudioPermission(microphoneStatus === "authorized");
+
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
       }
 
       await Audio.setAudioModeAsync({
@@ -164,13 +188,38 @@ const SpeechRecorderSpeaker = ({
           Audio.RecordingOptionsPresets.HIGH_QUALITY,
         );
         setRecording(newRecording);
-      } else if (recordingMethod === "video" && expoCameraRef.current) {
+      } else if (recordingMethod === "video" && cameraRef.current && device) {
         setIsRecordingVideo(true);
-        const video = await expoCameraRef.current.recordAsync({
-          quality: ExpoCamera.Constants.VideoQuality["480p"],
-          maxDuration: 300,
+        setRecordingState("recording");
+
+        await cameraRef.current.startRecording({
+          flash: "off",
+          onRecordingFinished: async (video) => {
+            setRecordedVideoUri(video.path);
+            setIsRecordingVideo(false);
+            setRecordingState("uploading");
+
+            // Pass video through existing processing pipeline
+            const { uri: processedUri, size } = await processVideoFile(
+              video.path,
+            );
+
+            setRecordingState("completed");
+            onRecordingComplete({
+              duration: timer,
+              timestamp: new Date(),
+              method: "video",
+              recordingUri: processedUri,
+              fileSize: size,
+            });
+          },
+          onRecordingError: (error) => {
+            console.error("Recording error:", error);
+            Alert.alert("Recording Error", "Unable to record video.");
+            setIsRecordingVideo(false);
+            setRecordingState("idle");
+          },
         });
-        setRecordedVideoUri(video.uri);
       }
 
       setRecordingState("recording");
@@ -211,10 +260,12 @@ const SpeechRecorderSpeaker = ({
         await recording.stopAndUnloadAsync();
         recordingUri = recording.getURI();
         setRecording(null);
-      } else if (recordingMethod === "video" && isRecordingVideo) {
-        await expoCameraRef.current?.stopRecording();
-        setIsRecordingVideo(false);
-        recordingUri = recordedVideoUri;
+      } else if (
+        recordingMethod === "video" &&
+        isRecordingVideo &&
+        cameraRef.current
+      ) {
+        await cameraRef.current.stopRecording(); // triggers onRecordingFinished
       }
 
       setRecordingState("uploading");
@@ -558,14 +609,15 @@ const SpeechRecorderSpeaker = ({
             {/* Video preview for video recording */}
             {Platform.OS !== "web" &&
             recordingMethod === "video" &&
-            hasCameraPermission ? (
+            hasCameraPermission &&
+            device ? (
               <View className="flex-1 w-full relative">
-                {/* Camera fills 90% of screen */}
-                <ExpoCamera
-                  ref={expoCameraRef}
+                <CameraComponent
+                  ref={cameraRef}
                   style={{ flex: 1 }}
-                  type={cameraType}
-                  ratio="16:9"
+                  device={device}
+                  isActive={isRecordingVideo} // keeps preview on only while recording
+                  video={true}
                 />
 
                 {/* Overlay: Controls */}
