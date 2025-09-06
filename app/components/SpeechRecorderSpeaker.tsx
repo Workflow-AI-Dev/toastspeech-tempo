@@ -5,14 +5,9 @@ import {
   Pause,
   Square,
   Loader,
-  CheckCircle,
   Zap,
-  Target,
-  Award,
-  TrendingUp,
   Video,
   Upload,
-  FileText,
 } from "lucide-react-native";
 import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -22,7 +17,6 @@ import { Camera as ExpoCamera } from "expo-camera";
 import { Video as VideoCompressor } from "react-native-compressor";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
-import CompressionMethod from "react-native-compressor";
 
 interface SpeechRecorderSpeakerProps {
   onRecordingComplete?: (recordingData: any) => void;
@@ -67,6 +61,12 @@ const SpeechRecorderSpeaker = ({
   ];
 
   const [messageIndex, setMessageIndex] = useState(0);
+  type CameraDirection = "front" | "back";
+  const [cameraType, setCameraType] = useState<CameraDirection>("front");
+
+  const toggleCamera = () => {
+    setCameraType((prev) => (prev === "front" ? "back" : "front"));
+  };
 
   useEffect(() => {
     if (isProcessing || recordingState === "uploading") {
@@ -156,53 +156,33 @@ const SpeechRecorderSpeaker = ({
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      // Check permissions first
       if (!hasAudioPermission) {
-        Alert.alert(
-          "Permission Required",
-          "Microphone access is required for recording. Please enable it in Settings.",
-          [{ text: "OK" }],
-        );
+        Alert.alert("Permission Required", "Microphone access is required.");
         return;
       }
 
       if (recordingMethod === "video" && !hasCameraPermission) {
-        Alert.alert(
-          "Permission Required",
-          "Camera access is required for video recording. Please enable it in Settings.",
-          [{ text: "OK" }],
-        );
+        Alert.alert("Permission Required", "Camera access is required.");
         return;
       }
 
       if (recordingMethod === "audio") {
-        // Start audio recording
         const { recording: newRecording } = await Audio.Recording.createAsync(
           Audio.RecordingOptionsPresets.HIGH_QUALITY,
         );
         setRecording(newRecording);
-      } else if (recordingMethod === "video") {
-        const video = await expoCameraRef.current?.recordAsync({
+      } else if (recordingMethod === "video" && expoCameraRef.current) {
+        setIsRecordingVideo(true);
+        const video = await expoCameraRef.current.recordAsync({
           quality: ExpoCamera.Constants.VideoQuality["480p"],
           maxDuration: 300,
         });
-        if (video?.uri) {
-          setIsRecordingVideo(true);
-          setRecordedVideoUri(video.uri);
-        } else {
-          Alert.alert("Recording Error", "Could not start video recording.");
-          return;
-        }
+        setRecordedVideoUri(video.uri);
       }
 
       setRecordingState("recording");
     } catch (error) {
       console.error("Error starting recording:", error);
-      Alert.alert(
-        "Recording Error",
-        "Unable to start recording. Please try again.",
-        [{ text: "OK" }],
-      );
     }
   };
 
@@ -211,30 +191,20 @@ const SpeechRecorderSpeaker = ({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       if (recordingState === "recording") {
-        if (recording && recordingMethod === "audio") {
+        if (recordingMethod === "audio" && recording) {
           await recording.pauseAsync();
-        } else if (recordingMethod === "video" && isRecordingVideo) {
-          // Vision Camera doesn't support pause/resume, so we stop and restart
-          await expoCameraRef.current?.stopRecording();
-          setIsRecordingVideo(false);
-        }
-        setRecordingState("paused");
-      } else if (recordingState === "paused") {
-        if (recording && recordingMethod === "audio") {
-          await recording.startAsync();
+          setRecordingState("paused");
         } else if (recordingMethod === "video") {
-          // Restart video recording
-          const video = await expoCameraRef.current?.recordAsync({
-            quality: ExpoCamera.Constants.VideoQuality["480p"],
-            maxDuration: 300,
-          });
-          setIsRecordingVideo(true);
-          setRecordedVideoUri(video.uri);
+          Alert.alert("Pause Unavailable", "Video pause is not supported.");
         }
-        setRecordingState("recording");
+      } else if (recordingState === "paused") {
+        if (recordingMethod === "audio" && recording) {
+          await recording.startAsync();
+          setRecordingState("recording");
+        }
       }
     } catch (error) {
-      console.error("Error pausing/resuming recording:", error);
+      console.error("Error pausing/resuming:", error);
     }
   };
 
@@ -242,7 +212,7 @@ const SpeechRecorderSpeaker = ({
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      let recordingUri = null;
+      let recordingUri: string | null = null;
 
       if (recording && recordingMethod === "audio") {
         await recording.stopAndUnloadAsync();
@@ -251,65 +221,37 @@ const SpeechRecorderSpeaker = ({
       } else if (recordingMethod === "video" && isRecordingVideo) {
         await expoCameraRef.current?.stopRecording();
         setIsRecordingVideo(false);
-        recordingUri = recordedVideoUri; // Use the URI captured when recording started
+        recordingUri = recordedVideoUri;
       }
 
-      setRecordingState("uploading"); // Show processing state
+      setRecordingState("uploading");
 
-      // Process and compress the file if needed
       if (recordingUri) {
-        try {
-          const { uri: processedUri, size: fileSize } =
-            await processVideoFile(recordingUri);
+        const { uri: processedUri, size: fileSize } =
+          await processVideoFile(recordingUri);
 
-          setRecordingState("completed");
+        setRecordingState("completed");
 
-          // Send recording data with processed file URI
-          setTimeout(() => {
-            onRecordingComplete({
-              duration: timer,
-              timestamp: new Date(),
-              method: recordingMethod,
-              recordingUri: processedUri,
-              fileSize: fileSize,
-            });
-          }, 1000);
-        } catch (error) {
-          console.error("Error processing recorded file:", error);
-          setRecordingState("completed");
-
-          // Fallback to original file
-          setTimeout(() => {
-            onRecordingComplete({
-              duration: timer,
-              timestamp: new Date(),
-              method: recordingMethod,
-              recordingUri: processedUri,
-              fileName: file.name,
-              fileSize: processedSize,
-              mimeType: file.mimeType,
-            });
-          }, 1000);
-        }
+        onRecordingComplete({
+          duration: timer,
+          timestamp: new Date(),
+          method: recordingMethod,
+          recordingUri: processedUri,
+          fileSize,
+        });
       } else {
         setRecordingState("completed");
-        setTimeout(() => {
-          onRecordingComplete({
-            duration: timer,
-            timestamp: new Date(),
-            method: recordingMethod,
-            recordingUri: null,
-            fileSize: null,
-          });
-        }, 1000);
+        onRecordingComplete({
+          duration: timer,
+          timestamp: new Date(),
+          method: recordingMethod,
+          recordingUri: null,
+          fileSize: null,
+        });
       }
     } catch (error) {
       console.error("Error stopping recording:", error);
-      Alert.alert(
-        "Recording Error",
-        "Unable to stop recording. Please try again.",
-        [{ text: "OK" }],
-      );
+      Alert.alert("Recording Error", "Unable to stop recording.");
     }
   };
 
@@ -546,7 +488,7 @@ const SpeechRecorderSpeaker = ({
   const getRecordingTitle = () => {
     switch (recordingMethod) {
       case "video":
-        return "Video + Audio Recording";
+        return "Video Recording";
       case "upload":
         return "Upload Recording";
       default:
@@ -566,9 +508,9 @@ const SpeechRecorderSpeaker = ({
         if (limits.remaining_audio_speeches > 0) formats.push("MP3", "WAV");
         if (limits.remaining_video_speeches > 0)
           formats.push("MP4", "MOV", "AVI");
-        if (plan !== "casual") formats.push("M4A"); // M4A is not allowed for casual users
+        if (plan !== "casual") formats.push("M4A");
 
-        const uniqueFormats = [...new Set(formats)]; // remove duplicates just in case
+        const uniqueFormats = [...new Set(formats)];
         return `Tap to select a file from your device\nSupported: ${uniqueFormats.join(", ")}`;
 
       default:
@@ -623,15 +565,79 @@ const SpeechRecorderSpeaker = ({
             {/* Video preview for video recording */}
             {Platform.OS !== "web" &&
             recordingMethod === "video" &&
-            hasCameraPermission &&
-            Platform.OS !== "web" ? (
-              <View className="h-48 w-full rounded-2xl overflow-hidden mb-8">
+            hasCameraPermission ? (
+              <View className="flex-1 w-full relative">
+                {/* Camera fills 90% of screen */}
                 <ExpoCamera
                   ref={expoCameraRef}
                   style={{ flex: 1 }}
-                  type={ExpoCamera.Constants.Type.front}
+                  type={cameraType}
                   ratio="16:9"
                 />
+
+                {/* Overlay: Controls */}
+                <View
+                  style={{
+                    position: "absolute",
+                    bottom: 30,
+                    left: 0,
+                    right: 0,
+                    flexDirection: "row",
+                    justifyContent: "space-around",
+                    alignItems: "center",
+                  }}
+                >
+                  {/* Pause/Resume (disabled for video) */}
+                  <TouchableOpacity
+                    onPress={handlePauseRecording}
+                    style={{
+                      backgroundColor: "white",
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {recordingState === "recording" ? (
+                      <Pause size={28} color="#7c3aed" />
+                    ) : (
+                      <Mic size={28} color="#7c3aed" />
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Stop */}
+                  <TouchableOpacity
+                    onPress={handleStopRecording}
+                    style={{
+                      backgroundColor: "red",
+                      width: 80,
+                      height: 80,
+                      borderRadius: 40,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Square size={36} color="white" />
+                  </TouchableOpacity>
+
+                  {/* Flip Camera */}
+                  <TouchableOpacity
+                    onPress={toggleCamera}
+                    style={{
+                      backgroundColor: "rgba(0,0,0,0.6)",
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text style={{ color: "white", fontWeight: "bold" }}>
+                      Flip
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : recordingMethod === "video" && Platform.OS === "web" ? (
               <View className="h-32 w-full items-center justify-center bg-yellow-100 rounded-2xl p-4 mb-8">
@@ -683,23 +689,6 @@ const SpeechRecorderSpeaker = ({
               >
                 <Square size={32} color="white" />
               </TouchableOpacity>
-            </View>
-
-            <View className="mt-8 bg-white/50 rounded-2xl p-4 items-center">
-              <Text className="text-lg font-bold text-gray-800">
-                {recordingState === "recording"
-                  ? recordingMethod === "video"
-                    ? "🎥 Recording Video..."
-                    : "🔴 Recording Audio..."
-                  : "⏸️ Paused"}
-              </Text>
-              <Text className="text-gray-600 text-center mt-1">
-                {recordingState === "recording"
-                  ? recordingMethod === "video"
-                    ? "Look at the camera and speak clearly!"
-                    : "Speak clearly and confidently!"
-                  : "Tap mic to resume recording"}
-              </Text>
             </View>
           </View>
         )}
