@@ -1,14 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { View, Text, TouchableOpacity, Animated, Alert } from "react-native";
-import {
-  Mic,
-  Pause,
-  Square,
-  Loader,
-  Zap,
-  Video,
-  Upload,
-} from "lucide-react-native";
+import { Mic, Pause, Square, Loader, Zap, Upload } from "lucide-react-native";
+import { Video as VideoIcon } from "lucide-react-native";
 import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
 import * as DocumentPicker from "expo-document-picker";
@@ -477,7 +470,7 @@ const SpeechRecorderSpeaker = ({
   const getRecordingIcon = () => {
     switch (recordingMethod) {
       case "video":
-        return <Video size={40} color="white" />;
+        return <VideoIcon size={40} color="white" />;
       case "upload":
         return <Upload size={40} color="white" />;
       default:
@@ -524,7 +517,7 @@ const SpeechRecorderSpeaker = ({
       <View className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 items-center">
         <View className="flex-row items-center">
           {recordingMethod === "video" ? (
-            <Video size={24} color="white" />
+            <VideoIcon size={24} color="white" />
           ) : recordingMethod === "upload" ? (
             <Upload size={24} color="white" />
           ) : (
