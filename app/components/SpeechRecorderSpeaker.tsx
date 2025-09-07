@@ -183,41 +183,21 @@ const SpeechRecorderSpeaker = ({
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      // AUDIO CHECK
-      const audioPerm = await Audio.getPermissionsAsync();
-      if (audioPerm.status !== "granted") {
-        const newAudio = await Audio.requestPermissionsAsync();
-        if (newAudio.status !== "granted") {
-          Alert.alert("Permission Required", "Microphone access is required.");
-          return;
-        }
+      // Check permissions from the component's state, which was set on mount.
+      if (
+        recordingMethod === "video" &&
+        (!hasCameraPermission || !hasAudioPermission)
+      ) {
+        Alert.alert(
+          "Permission Required",
+          "Camera and microphone access are required for video recording. Please enable them in your app settings.",
+        );
+        return;
       }
 
-      // VIDEO CHECK
-      if (recordingMethod === "video" && Platform.OS !== "web") {
-        let camStatus = await CameraComponent.getCameraPermissionStatus();
-        let micStatus = await CameraComponent.getMicrophonePermissionStatus();
-
-        if (camStatus !== "authorized") {
-          const newCamStatus = await CameraComponent.requestCameraPermission();
-          camStatus = newCamStatus;
-        }
-        if (micStatus !== "authorized") {
-          const newMicStatus =
-            await CameraComponent.requestMicrophonePermission();
-          micStatus = newMicStatus;
-        }
-
-        if (camStatus !== "authorized" || micStatus !== "authorized") {
-          Alert.alert(
-            "Permission Required",
-            "Camera and microphone access are required for video recording.",
-          );
-          return;
-        }
-
-        setHasCameraPermission(true);
-        setHasAudioPermission(true);
+      if (recordingMethod === "audio" && !hasAudioPermission) {
+        Alert.alert("Permission Required", "Microphone access is required.");
+        return;
       }
 
       // START RECORDING
@@ -226,6 +206,7 @@ const SpeechRecorderSpeaker = ({
           Audio.RecordingOptionsPresets.HIGH_QUALITY,
         );
         setRecording(newRecording);
+        setRecordingState("recording");
       } else if (recordingMethod === "video" && cameraRef.current && device) {
         setIsRecordingVideo(true);
         setRecordingState("recording");
