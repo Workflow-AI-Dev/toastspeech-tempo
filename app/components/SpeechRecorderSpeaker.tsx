@@ -39,7 +39,7 @@ if (Platform.OS !== "web") {
 const SpeechRecorderSpeaker = ({
   onRecordingComplete = () => {},
   isProcessing = false,
-  recordingMethod = "audio",onRecordingFinished
+  recordingMethod = "audio",
   plan,
   limits,
 }: SpeechRecorderSpeakerProps) => {
@@ -217,7 +217,6 @@ const SpeechRecorderSpeaker = ({
           },
         });
       }
-
     } catch (error) {
       console.error("Error starting recording:", error);
     }
@@ -708,7 +707,7 @@ const SpeechRecorderSpeaker = ({
                   />
                 ))}
               </View>
-            )}
+            ) : null}
 
             {/* Recording controls */}
             <View className="flex-row justify-center items-center space-x-8">
