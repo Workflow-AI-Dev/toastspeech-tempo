@@ -183,22 +183,22 @@ const SpeechRecorderSpeaker = ({
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      // Check permissions from the component's state, which was set on mount.
-      if (
-        recordingMethod === "video" &&
-        (!hasCameraPermission || !hasAudioPermission)
-      ) {
-        Alert.alert(
-          "Permission Required",
-          "Camera and microphone access are required for video recording. Please enable them in your app settings.",
-        );
-        return;
-      }
+      // // Check permissions from the component's state, which was set on mount.
+      // if (
+      //   recordingMethod === "video" &&
+      //   (!hasCameraPermission || !hasAudioPermission)
+      // ) {
+      //   Alert.alert(
+      //     "Permission Required",
+      //     "Camera and microphone access are required for video recording. Please enable them in your app settings.",
+      //   );
+      //   return;
+      // }
 
-      if (recordingMethod === "audio" && !hasAudioPermission) {
-        Alert.alert("Permission Required", "Microphone access is required.");
-        return;
-      }
+      // if (recordingMethod === "audio" && !hasAudioPermission) {
+      //   Alert.alert("Permission Required", "Microphone access is required.");
+      //   return;
+      // }
 
       // START RECORDING
       if (recordingMethod === "audio") {
