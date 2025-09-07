@@ -39,7 +39,7 @@ if (Platform.OS !== "web") {
 const SpeechRecorderSpeaker = ({
   onRecordingComplete = () => {},
   isProcessing = false,
-  recordingMethod = "audio",
+  recordingMethod = "audio",onRecordingFinished
   plan,
   limits,
 }: SpeechRecorderSpeakerProps) => {
@@ -140,13 +140,11 @@ const SpeechRecorderSpeaker = ({
   };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    if (recordingState === "recording") {
-      interval = setInterval(() => {
+    if (recordingState === "recording" && recordingMethod === "audio") {
+      // Only animate for audio recordings
+      const interval = setInterval(() => {
         setTimer((prev) => prev + 1);
 
-        // Simulate audio levels
         setAudioLevels((prev) => {
           const newLevels = [...prev];
           newLevels.shift();
@@ -155,7 +153,6 @@ const SpeechRecorderSpeaker = ({
         });
       }, 1000);
 
-      // Start pulsing animation
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -170,35 +167,16 @@ const SpeechRecorderSpeaker = ({
           }),
         ]),
       ).start();
+
+      return () => clearInterval(interval);
     } else {
       pulseAnim.setValue(1);
     }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [recordingState, pulseAnim]);
+  }, [recordingState, recordingMethod, pulseAnim]);
 
   const handleStartRecording = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      // // Check permissions from the component's state, which was set on mount.
-      // if (
-      //   recordingMethod === "video" &&
-      //   (!hasCameraPermission || !hasAudioPermission)
-      // ) {
-      //   Alert.alert(
-      //     "Permission Required",
-      //     "Camera and microphone access are required for video recording. Please enable them in your app settings.",
-      //   );
-      //   return;
-      // }
-
-      // if (recordingMethod === "audio" && !hasAudioPermission) {
-      //   Alert.alert("Permission Required", "Microphone access is required.");
-      //   return;
-      // }
 
       // START RECORDING
       if (recordingMethod === "audio") {
@@ -240,7 +218,6 @@ const SpeechRecorderSpeaker = ({
         });
       }
 
-      setRecordingState("recording");
     } catch (error) {
       console.error("Error starting recording:", error);
     }
@@ -634,7 +611,7 @@ const SpeechRecorderSpeaker = ({
                   ref={cameraRef}
                   style={{ flex: 1 }}
                   device={device}
-                  isActive={isRecordingVideo} // keeps preview on only while recording
+                  isActive={isRecordingVideo}
                   video={true}
                 />
 
@@ -642,7 +619,7 @@ const SpeechRecorderSpeaker = ({
                 <View
                   style={{
                     position: "absolute",
-                    bottom: 30,
+                    bottom: 40,
                     left: 0,
                     right: 0,
                     flexDirection: "row",
@@ -709,7 +686,7 @@ const SpeechRecorderSpeaker = ({
                   Please use audio recording or upload a file instead.
                 </Text>
               </View>
-            ) : (
+            ) : recordingMethod === "audio" ? (
               /* Audio visualization */
               <View className="h-32 w-full flex-row items-end justify-center mb-8 bg-white/30 rounded-2xl p-4">
                 {audioLevels.map((level, index) => (
