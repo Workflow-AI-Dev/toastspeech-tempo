@@ -6,8 +6,8 @@ import {
   ScrollView,
   Dimensions,
   Modal,
-  StyleSheet, 
-  Animated, 
+  StyleSheet,
+  Animated,
   Easing,
 } from "react-native";
 import {
@@ -26,16 +26,16 @@ import {
   Type,
   Info,
   ScrollText,
-  Unplug, 
-  Megaphone, 
+  Unplug,
+  Megaphone,
   Smile,
-  VolumeX, 
-  MessageCircleQuestion, 
+  VolumeX,
+  MessageCircleQuestion,
   X,
   Check,
-  ChevronDown, 
+  ChevronDown,
   ChevronUp,
-  RefreshCcw
+  RefreshCcw,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import { BarChart, LineChart, PieChart } from "react-native-chart-kit";
@@ -161,7 +161,7 @@ interface QuickFeedbackProps {
       point: string;
     };
     Connections_score: number;
-    OverallInsights:{
+    OverallInsights: {
       type: string;
       title: string;
       description: string;
@@ -183,36 +183,38 @@ const QuickFeedback = ({
 }: QuickFeedbackProps) => {
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
-  const isDark = theme === 'dark';
+  const isDark = theme === "dark";
 
   const [selectedTab, setSelectedTab] = useState("Key Insights");
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [infoContent, setInfoContent] = useState<
-    typeof infoModalContent[keyof typeof infoModalContent] | null
+    (typeof infoModalContent)[keyof typeof infoModalContent] | null
   >(null);
   // State for managing tooltip visibility and content
   const [tooltipVisible, setTooltipVisible] = useState(false);
-  const [tooltipContent, setTooltipContent] = useState('');
+  const [tooltipContent, setTooltipContent] = useState("");
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 }); // To position the tooltip
-  
+
   const [showAllGrammarTypes, setShowAllGrammarTypes] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
   const [animationValue] = useState(new Animated.Value(0));
 
   useEffect(() => {
-      Animated.timing(animationValue, {
-        toValue: showAllGrammarTypes ? 1 : 0,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
-    }, [showAllGrammarTypes]);
+    Animated.timing(animationValue, {
+      toValue: showAllGrammarTypes ? 1 : 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [showAllGrammarTypes]);
 
-    const height = animationValue.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, contentHeight],
-    });
+  const height = animationValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, contentHeight],
+  });
 
-  const [expandedWords, setExpandedWords] = useState<Record<string, boolean>>({});
+  const [expandedWords, setExpandedWords] = useState<Record<string, boolean>>(
+    {},
+  );
   const toggleExpand = (word: string) => {
     setExpandedWords((prev) => ({
       ...prev,
@@ -221,14 +223,17 @@ const QuickFeedback = ({
   };
 
   const showTooltip = (content: string, event: any) => {
-          setTooltipContent(content);
-          setTooltipPosition({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY });
-          setTooltipVisible(true);
-        };
+    setTooltipContent(content);
+    setTooltipPosition({
+      x: event.nativeEvent.pageX,
+      y: event.nativeEvent.pageY,
+    });
+    setTooltipVisible(true);
+  };
 
   const hideTooltip = () => {
     setTooltipVisible(false);
-    setTooltipContent('');
+    setTooltipContent("");
   };
 
   const infoModalContent = {
@@ -384,8 +389,7 @@ const QuickFeedback = ({
     },
   };
 
-
-// ... Your existing Modal component structure ...
+  // ... Your existing Modal component structure ...
   const tabs = [
     "Key Insights",
     "Speech Patterns",
@@ -433,7 +437,7 @@ const QuickFeedback = ({
                   key={index}
                   className="rounded-2xl p-2 mb-3"
                   style={{
-                    backgroundColor: theme === "dark" ? "#1f2937" : "#f8fafc",
+                    backgroundColor: theme === "dark" ? "#0d0d0dff" : "#f8fafc",
                   }}
                 >
                   <View className="flex-row items-start">
@@ -463,7 +467,7 @@ const QuickFeedback = ({
             </View>
           </View>
         );
-      
+
       case "Pauses":
         const pausesData = analysisResults.pausesData || [];
         const totalPauses = pausesData.length;
@@ -494,7 +498,7 @@ const QuickFeedback = ({
               data: barChartDataValues,
               colors: barChartLabels.map((_, i) => (opacity = 1) => {
                 const hue = (i * 137.508) % 360;
-                return `hsla(${hue}, 70%, ${theme === 'dark' ? '60%' : '50%'}, ${opacity})`;
+                return `hsla(${hue}, 70%, ${theme === "dark" ? "60%" : "50%"}, ${opacity})`;
               }),
             },
           ],
@@ -516,8 +520,8 @@ const QuickFeedback = ({
             stroke: colors.primary,
           },
           axisLabelColor: colors.textSecondary,
-          axisLineColor: theme === 'dark' ? colors.borderDark : colors.border,
-          gridLineColor: theme === 'dark' ? colors.borderDark : colors.border,
+          axisLineColor: theme === "dark" ? colors.borderDark : colors.border,
+          gridLineColor: theme === "dark" ? colors.borderDark : colors.border,
         };
 
         return (
@@ -698,7 +702,7 @@ const QuickFeedback = ({
             )}
           </View>
         );
-        
+
       case "Vocal Variety":
         //pitch
         const pitchData = analysisResults.pitchData || [];
@@ -709,7 +713,10 @@ const QuickFeedback = ({
         const pitchLabels = pitchData.map((p) => {
           const roundedTime = Math.round(p.time);
 
-          if (roundedTime % labelInterval === 0 && !shownLabels.has(roundedTime)) {
+          if (
+            roundedTime % labelInterval === 0 &&
+            !shownLabels.has(roundedTime)
+          ) {
             shownLabels.add(roundedTime);
             return `${roundedTime}s`;
           } else {
@@ -717,15 +724,14 @@ const QuickFeedback = ({
           }
         });
 
-
         const pitchValues = pitchData.map((p) => p.pitch); // just the pitch in Hz
 
         // Chart configuration for both charts
         const chartConfig2 = {
-          backgroundColor: colors.card, 
+          backgroundColor: colors.card,
           backgroundGradientFrom: colors.card,
           backgroundGradientTo: colors.card,
-          decimalPlaces: 1, 
+          decimalPlaces: 1,
           color: (opacity = 1) => colors.primary, // Default color for lines/bars
           labelColor: (opacity = 1) => colors.textSecondary,
           style: {
@@ -752,7 +758,10 @@ const QuickFeedback = ({
           : 0;
         const stdPitch = hasValidPitches
           ? Math.sqrt(
-              validPitches.reduce((acc, p) => acc + Math.pow(p - meanPitch, 2), 0) / validPitches.length
+              validPitches.reduce(
+                (acc, p) => acc + Math.pow(p - meanPitch, 2),
+                0,
+              ) / validPitches.length,
             )
           : 0;
 
@@ -773,7 +782,6 @@ const QuickFeedback = ({
           vocalLabel = "🎭 Expressive";
           labelColor = theme === "dark" ? "#34d399" : "#047857"; // green-ish
         }
-
 
         return (
           <View>
@@ -842,13 +850,13 @@ const QuickFeedback = ({
                   <View
                     className="flex-1 rounded-2xl p-4 mr-2"
                     style={{
-                      backgroundColor: theme === "dark" ? "#1d4ed8" : "#eff6ff", 
+                      backgroundColor: theme === "dark" ? "#1d4ed8" : "#eff6ff",
                     }}
                   >
                     <Text
                       className="text-lg font-bold mb-1"
                       style={{
-                        color: theme === "dark" ? "#93c5fd" : "#1d4ed8", 
+                        color: theme === "dark" ? "#93c5fd" : "#1d4ed8",
                       }}
                     >
                       {pitchRangeText}
@@ -856,7 +864,7 @@ const QuickFeedback = ({
                     <Text
                       className="text-sm font-medium"
                       style={{
-                        color: theme === "dark" ? "#60a5fa" : "#3b82f6", 
+                        color: theme === "dark" ? "#60a5fa" : "#3b82f6",
                       }}
                     >
                       Pitch Range(Hz)
@@ -867,13 +875,13 @@ const QuickFeedback = ({
                   <View
                     className="flex-1 rounded-2xl p-4 mx-1"
                     style={{
-                      backgroundColor: theme === "dark" ? "#047857" : "#ecfdf5", 
+                      backgroundColor: theme === "dark" ? "#047857" : "#ecfdf5",
                     }}
                   >
                     <Text
                       className="text-lg font-bold mb-1"
                       style={{
-                        color: theme === "dark" ? "#6ee7b7" : "#047857", 
+                        color: theme === "dark" ? "#6ee7b7" : "#047857",
                       }}
                     >
                       {stdPitchText}
@@ -881,7 +889,7 @@ const QuickFeedback = ({
                     <Text
                       className="text-sm font-medium"
                       style={{
-                        color: theme === "dark" ? "#a7f3d0" : "#065f46", 
+                        color: theme === "dark" ? "#a7f3d0" : "#065f46",
                       }}
                     >
                       Pitch Deviation
@@ -907,11 +915,15 @@ const QuickFeedback = ({
                   >
                     Pitch Over Time (Hz)
                   </Text>
-                 <View className="flex-row"  style={{ marginLeft: -20 }}>
+                  <View className="flex-row" style={{ marginLeft: -20 }}>
                     {/* Fake Y-axis */}
-                    <View style={{ width: 40, justifyContent: 'space-between' }}>
+                    <View
+                      style={{ width: 40, justifyContent: "space-between" }}
+                    >
                       {[...Array(5)].map((_, i) => {
-                        const yVal = Math.round(maxPitch - (i * (maxPitch - minPitch) / 4));
+                        const yVal = Math.round(
+                          maxPitch - (i * (maxPitch - minPitch)) / 4,
+                        );
                         return (
                           <Text
                             key={i}
@@ -929,7 +941,10 @@ const QuickFeedback = ({
                     </View>
 
                     {/* Scrollable Chart */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                    >
                       <View style={{ marginLeft: -55 }}>
                         <LineChart
                           data={{
@@ -937,22 +952,28 @@ const QuickFeedback = ({
                             datasets: [
                               {
                                 data: pitchData.map((p) => p.pitch),
-                                color: (opacity = 1) => `rgba(59,130,246,${opacity})`, // blue pitch line
+                                color: (opacity = 1) =>
+                                  `rgba(59,130,246,${opacity})`, // blue pitch line
                                 strokeWidth: 2,
                               },
                               {
                                 data: pitchData.map(() => meanPitch), // flat line
-                                color: (opacity = 1) => `rgba(234, 179, 8, ${opacity})`, // yellow
+                                color: (opacity = 1) =>
+                                  `rgba(234, 179, 8, ${opacity})`, // yellow
                                 strokeWidth: 2,
                                 withDots: false,
                               },
                             ],
                           }}
-                          width={Math.max(screenWidth - 48 + 40, pitchData.length * 12)} // add back what you clipped
+                          width={Math.max(
+                            screenWidth - 48 + 40,
+                            pitchData.length * 12,
+                          )} // add back what you clipped
                           height={200}
                           chartConfig={{
                             ...chartConfig2,
-                            color: (opacity = 1) => `rgba(59,130,246,${opacity})`,
+                            color: (opacity = 1) =>
+                              `rgba(59,130,246,${opacity})`,
                             propsForDots: {
                               r: "2",
                               strokeWidth: "1",
@@ -969,13 +990,12 @@ const QuickFeedback = ({
                       </View>
                     </ScrollView>
                   </View>
-
                 </View>
               </>
             )}
           </View>
         );
-      
+
       case "Speech Patterns":
         // Merge data
         const fillerWords = analysisResults.fillerData.map((item) => item.word);
@@ -1134,11 +1154,15 @@ const QuickFeedback = ({
                           color: theme === "dark" ? "#60a5fa" : "#1d4ed8",
                         }}
                       >
-                        <Text style={{ fontSize: 16 }}>🔵</Text> Filler Words ({totalFillers})
+                        <Text style={{ fontSize: 16 }}>🔵</Text> Filler Words (
+                        {totalFillers})
                       </Text>
                       <View className="flex-row flex-wrap">
                         {Object.entries(fillerCounts).map(([word, count]) => {
-                          const matchingEntries = analysisResults.fillerData.filter((item) => item.word === word);
+                          const matchingEntries =
+                            analysisResults.fillerData.filter(
+                              (item) => item.word === word,
+                            );
                           const isExpanded = expandedWords[word];
 
                           return (
@@ -1147,25 +1171,42 @@ const QuickFeedback = ({
                                 onPress={() => toggleExpand(word)}
                                 className="rounded-full px-3 py-1 mr-2 mb-1 flex-row items-center"
                                 style={{
-                                  backgroundColor: theme === "dark" ? "#3b82f6" : "#dbeafe",
+                                  backgroundColor:
+                                    theme === "dark" ? "#3b82f6" : "#dbeafe",
                                   maxWidth: "100%",
                                   flexWrap: "wrap",
                                 }}
                               >
                                 <Text
                                   className="text-sm font-medium mr-2 flex-shrink"
-                                  style={{ color: theme === "dark" ? "#fff" : "#1e40af" }}
+                                  style={{
+                                    color:
+                                      theme === "dark" ? "#fff" : "#1e40af",
+                                  }}
                                 >
                                   {word} ({count})
                                 </Text>
                                 {isExpanded ? (
-                                  <ChevronUp size={14} color={theme === "dark" ? "#fff" : "#1e40af"} />
+                                  <ChevronUp
+                                    size={14}
+                                    color={
+                                      theme === "dark" ? "#fff" : "#1e40af"
+                                    }
+                                  />
                                 ) : (
-                                  <ChevronDown size={14} color={theme === "dark" ? "#fff" : "#1e40af"} />
+                                  <ChevronDown
+                                    size={14}
+                                    color={
+                                      theme === "dark" ? "#fff" : "#1e40af"
+                                    }
+                                  />
                                 )}
                               </TouchableOpacity>
                               {isExpanded && (
-                                <View className="ml-4 mt-1 space-y-1 pr-2" style={{ maxWidth: "95%" }}>
+                                <View
+                                  className="ml-4 mt-1 space-y-1 pr-2"
+                                  style={{ maxWidth: "95%" }}
+                                >
                                   {matchingEntries.map((entry, idx) => (
                                     <Text
                                       key={idx}
@@ -1201,11 +1242,15 @@ const QuickFeedback = ({
                           color: theme === "dark" ? "#c084fc" : "#7c3aed",
                         }}
                       >
-                        <Text style={{ fontSize: 16 }}>🟣</Text> Crutch Phrases ({totalCrutch})
+                        <Text style={{ fontSize: 16 }}>🟣</Text> Crutch Phrases
+                        ({totalCrutch})
                       </Text>
                       <View className="flex-row flex-wrap">
                         {Object.entries(crutchCounts).map(([phrase, count]) => {
-                          const matchingEntries = analysisResults.crutchData.filter((item) => item.phrase === phrase);
+                          const matchingEntries =
+                            analysisResults.crutchData.filter(
+                              (item) => item.phrase === phrase,
+                            );
                           const isExpanded = expandedWords[phrase];
 
                           return (
@@ -1214,7 +1259,8 @@ const QuickFeedback = ({
                                 onPress={() => toggleExpand(phrase)}
                                 className="rounded-full px-3 py-1 mr-2 mb-1 flex-row items-center"
                                 style={{
-                                  backgroundColor: theme === "dark" ? "#8b5cf6" : "#ede9fe",
+                                  backgroundColor:
+                                    theme === "dark" ? "#8b5cf6" : "#ede9fe",
                                   maxWidth: "100%",
                                   flexWrap: "wrap",
                                 }}
@@ -1222,19 +1268,33 @@ const QuickFeedback = ({
                                 <Text
                                   className="text-sm font-medium mr-2"
                                   style={{
-                                    color: theme === "dark" ? "#fff" : "#6b21a8",
+                                    color:
+                                      theme === "dark" ? "#fff" : "#6b21a8",
                                   }}
                                 >
                                   {phrase} ({count})
                                 </Text>
                                 {isExpanded ? (
-                                  <ChevronUp size={14} color={theme === "dark" ? "#fff" : "#6b21a8"} />
+                                  <ChevronUp
+                                    size={14}
+                                    color={
+                                      theme === "dark" ? "#fff" : "#6b21a8"
+                                    }
+                                  />
                                 ) : (
-                                  <ChevronDown size={14} color={theme === "dark" ? "#fff" : "#6b21a8"} />
+                                  <ChevronDown
+                                    size={14}
+                                    color={
+                                      theme === "dark" ? "#fff" : "#6b21a8"
+                                    }
+                                  />
                                 )}
                               </TouchableOpacity>
                               {isExpanded && (
-                                <View className="ml-4 mt-1 space-y-1 pr-2" style={{ maxWidth: "95%" }}>
+                                <View
+                                  className="ml-4 mt-1 space-y-1 pr-2"
+                                  style={{ maxWidth: "95%" }}
+                                >
                                   {matchingEntries.map((entry, idx) => (
                                     <Text
                                       key={idx}
@@ -1274,7 +1334,10 @@ const QuickFeedback = ({
                       </Text>
                       <View className="flex-row flex-wrap">
                         {Object.entries(repeatCounts).map(([word, count]) => {
-                          const matchingEntries = analysisResults.repeatedPhrases.filter((item) => item.word === word);
+                          const matchingEntries =
+                            analysisResults.repeatedPhrases.filter(
+                              (item) => item.word === word,
+                            );
                           const isExpanded = expandedWords[word];
 
                           return (
@@ -1283,25 +1346,42 @@ const QuickFeedback = ({
                                 onPress={() => toggleExpand(word)}
                                 className="rounded-full px-3 py-1 mr-2 mb-1 flex-row items-center"
                                 style={{
-                                  backgroundColor: theme === "dark" ? "#3b82f6" : "#dbeafe",
+                                  backgroundColor:
+                                    theme === "dark" ? "#3b82f6" : "#dbeafe",
                                   maxWidth: "100%",
                                   flexWrap: "wrap",
                                 }}
                               >
                                 <Text
                                   className="text-sm font-medium mr-2 flex-shrink"
-                                  style={{ color: theme === "dark" ? "#fff" : "#1e40af" }}
+                                  style={{
+                                    color:
+                                      theme === "dark" ? "#fff" : "#1e40af",
+                                  }}
                                 >
                                   {word} ({count})
                                 </Text>
                                 {isExpanded ? (
-                                  <ChevronUp size={14} color={theme === "dark" ? "#fff" : "#1e40af"} />
+                                  <ChevronUp
+                                    size={14}
+                                    color={
+                                      theme === "dark" ? "#fff" : "#1e40af"
+                                    }
+                                  />
                                 ) : (
-                                  <ChevronDown size={14} color={theme === "dark" ? "#fff" : "#1e40af"} />
+                                  <ChevronDown
+                                    size={14}
+                                    color={
+                                      theme === "dark" ? "#fff" : "#1e40af"
+                                    }
+                                  />
                                 )}
                               </TouchableOpacity>
                               {isExpanded && (
-                                <View className="ml-4 mt-1 space-y-1 pr-2" style={{ maxWidth: "95%" }}>
+                                <View
+                                  className="ml-4 mt-1 space-y-1 pr-2"
+                                  style={{ maxWidth: "95%" }}
+                                >
                                   {matchingEntries.map((entry, idx) => (
                                     <Text
                                       key={idx}
@@ -1350,7 +1430,10 @@ const QuickFeedback = ({
         const totalMistakes = grammarMistakes.length;
         const mistakeTypes = Object.keys(groupedMistakes).length;
 
-        const renderMistakeTypeCard = (type: string, mistakes: typeof grammarMistakes) => (
+        const renderMistakeTypeCard = (
+          type: string,
+          mistakes: typeof grammarMistakes,
+        ) => (
           <>
             <Text
               className="text-base font-bold mb-3"
@@ -1404,7 +1487,6 @@ const QuickFeedback = ({
             ))}
           </>
         );
-
 
         return (
           <View>
@@ -1519,60 +1601,66 @@ const QuickFeedback = ({
                 {/* Grammar Issues as Cards */}
                 <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
                   {/* First 3 types (always visible) */}
-                {Object.entries(groupedMistakes)
-                  .slice(0, 3)
-                  .map(([type, mistakes], groupIndex) => (
-                    <View key={type} className="mb-2">
-                      {renderMistakeTypeCard(type, mistakes)}
-                    </View>
-                  ))}
-
-                {/* Expandable section */}
-                {Object.entries(groupedMistakes).length > 3 && (
-                  <>
-                    <Animated.View style={{ height, overflow: "hidden" }}>
-                      <View
-                        onLayout={(e) => setContentHeight(e.nativeEvent.layout.height)}
-                      >
-                        {Object.entries(groupedMistakes)
-                          .slice(3)
-                          .map(([type, mistakes]) => (
-                            <View key={type} className="mb-2">
-                              {renderMistakeTypeCard(type, mistakes)}
-                            </View>
-                          ))}
+                  {Object.entries(groupedMistakes)
+                    .slice(0, 3)
+                    .map(([type, mistakes], groupIndex) => (
+                      <View key={type} className="mb-2">
+                        {renderMistakeTypeCard(type, mistakes)}
                       </View>
-                    </Animated.View>
+                    ))}
 
-
-                    <TouchableOpacity
-                      onPress={() => setShowAllGrammarTypes((prev) => !prev)}
-                      className="self-center px-4 py-2 rounded-full"
-                      style={{
-                        backgroundColor: theme === "dark" ? "#374151" : "#f3f4f6", 
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      <View className="flex-row items-center">
-                        <Text
-                          className="text-sm font-semibold mr-2"
-                          style={{
-                            color: theme === "dark" ? "#e5e7eb" : "#374151", 
-                          }}
+                  {/* Expandable section */}
+                  {Object.entries(groupedMistakes).length > 3 && (
+                    <>
+                      <Animated.View style={{ height, overflow: "hidden" }}>
+                        <View
+                          onLayout={(e) =>
+                            setContentHeight(e.nativeEvent.layout.height)
+                          }
                         >
-                          {showAllGrammarTypes ? "Show Less" : "View All"}
-                        </Text>
-                        {showAllGrammarTypes ? (
-                          <ChevronUp size={18} color={theme === "dark" ? "#e5e7eb" : "#6b7280"} /> 
-                        ) : (
-                          <ChevronDown size={18} color={theme === "dark" ? "#e5e7eb" : "#6b7280"} />
-                        )}
-                      </View>
-                    </TouchableOpacity>
+                          {Object.entries(groupedMistakes)
+                            .slice(3)
+                            .map(([type, mistakes]) => (
+                              <View key={type} className="mb-2">
+                                {renderMistakeTypeCard(type, mistakes)}
+                              </View>
+                            ))}
+                        </View>
+                      </Animated.View>
 
-
-                  </>
-                )}
+                      <TouchableOpacity
+                        onPress={() => setShowAllGrammarTypes((prev) => !prev)}
+                        className="self-center px-4 py-2 rounded-full"
+                        style={{
+                          backgroundColor:
+                            theme === "dark" ? "#374151" : "#f3f4f6",
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <View className="flex-row items-center">
+                          <Text
+                            className="text-sm font-semibold mr-2"
+                            style={{
+                              color: theme === "dark" ? "#e5e7eb" : "#374151",
+                            }}
+                          >
+                            {showAllGrammarTypes ? "Show Less" : "View All"}
+                          </Text>
+                          {showAllGrammarTypes ? (
+                            <ChevronUp
+                              size={18}
+                              color={theme === "dark" ? "#e5e7eb" : "#6b7280"}
+                            />
+                          ) : (
+                            <ChevronDown
+                              size={18}
+                              color={theme === "dark" ? "#e5e7eb" : "#6b7280"}
+                            />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </ScrollView>
               </>
             )}
@@ -1580,35 +1668,40 @@ const QuickFeedback = ({
             {/* Tooltip Modal - Ensure this is outside the conditional rendering and at the end */}
             {tooltipVisible && ( // Only render modal if visible to avoid unnecessary overhead
               <Modal
-                  transparent={true}
-                  visible={tooltipVisible}
-                  onRequestClose={hideTooltip}
+                transparent={true}
+                visible={tooltipVisible}
+                onRequestClose={hideTooltip}
               >
-                  <TouchableOpacity
-                      style={StyleSheet.absoluteFillObject} // Occupy entire screen for dismissing
-                      onPress={hideTooltip}
-                      activeOpacity={1} // Prevents opacity change on press
+                <TouchableOpacity
+                  style={StyleSheet.absoluteFillObject} // Occupy entire screen for dismissing
+                  onPress={hideTooltip}
+                  activeOpacity={1} // Prevents opacity change on press
+                >
+                  <View
+                    style={[
+                      styles.tooltipContainer,
+                      {
+                        // Adjust these values based on actual visual testing for optimal placement
+                        top: tooltipPosition.y + 10,
+                        // Dynamically adjust left to attempt to center the tooltip over the touch point
+                        // This assumes styles.tooltipContainer.maxWidth is 200 (200 / 2 = 100)
+                        left:
+                          tooltipPosition.x -
+                          (styles.tooltipContainer.maxWidth / 2 || 100),
+                        backgroundColor:
+                          theme === "dark" ? "#334155" : "#fefefe",
+                        borderColor: theme === "dark" ? "#475569" : "#cbd5e1",
+                        borderWidth: 1,
+                      },
+                    ]}
                   >
-                      <View
-                          style={[
-                              styles.tooltipContainer,
-                              {
-                                  // Adjust these values based on actual visual testing for optimal placement
-                                  top: tooltipPosition.y + 10,
-                                  // Dynamically adjust left to attempt to center the tooltip over the touch point
-                                  // This assumes styles.tooltipContainer.maxWidth is 200 (200 / 2 = 100)
-                                  left: tooltipPosition.x - (styles.tooltipContainer.maxWidth / 2 || 100),
-                                  backgroundColor: theme === "dark" ? "#334155" : "#fefefe",
-                                  borderColor: theme === "dark" ? "#475569" : "#cbd5e1",
-                                  borderWidth: 1,
-                              },
-                          ]}
-                      >
-                          <Text style={{ color: colors.text, fontSize: 13, padding: 8 }}>
-                              {tooltipContent}
-                          </Text>
-                      </View>
-                  </TouchableOpacity>
+                    <Text
+                      style={{ color: colors.text, fontSize: 13, padding: 8 }}
+                    >
+                      {tooltipContent}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
               </Modal>
             )}
           </View>
@@ -1639,7 +1732,10 @@ const QuickFeedback = ({
             : [];
 
         // Group sentences by element type
-        const elementSentences: Record<string, { timestamp: string; sentence: string }[]> = {};
+        const elementSentences: Record<
+          string,
+          { timestamp: string; sentence: string }[]
+        > = {};
 
         environData.forEach((item) => {
           const rawKey = item.element_type || "";
@@ -1655,7 +1751,6 @@ const QuickFeedback = ({
           });
         });
 
-
         // Override with actual data
         environData.forEach((item) => {
           const rawKey = item.element_type || "";
@@ -1670,7 +1765,9 @@ const QuickFeedback = ({
         });
 
         const environLabels = expectedElements; // All 5 labels
-        const elementCountValues = environLabels.map((el) => elementCounts[el] || 0);
+        const elementCountValues = environLabels.map(
+          (el) => elementCounts[el] || 0,
+        );
 
         const totalEnvironDuration = Object.values(elementDurations).reduce(
           (a, b) => a + b,
@@ -1691,7 +1788,7 @@ const QuickFeedback = ({
           labels: sorted.map((item) =>
             item.label
               .replace(/_/g, " ")
-              .replace(/\b\w/g, (c) => c.toUpperCase())
+              .replace(/\b\w/g, (c) => c.toUpperCase()),
           ),
           datasets: [
             {
@@ -1774,37 +1871,43 @@ const QuickFeedback = ({
                   >
                     Frequency by Element Type
                   </Text>
-                  <View  style={{ marginLeft: -23 }}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <BarChart
-                      data={barChartData2}
-                      width={Math.max(screenWidth - 48, environLabels.length * 100)}
-                      height={200}
-                      fromZero
-                      segments={3} // or 4 if your data is higher
-                      formatYLabel={(value) => {
-                        const num = Number(value);
-                        return Number.isInteger(num) ? `${num}` : ''; // only show whole numbers
-                      }}
-                      chartConfig={{
-                        backgroundColor: colors.card,
-                        backgroundGradientFrom: colors.card,
-                        backgroundGradientTo: colors.card,
-                        color: (opacity = 1) => `rgba(245, 158, 11, ${opacity})`,
-                        labelColor: (opacity = 1) => colors.textSecondary,
-                        style: { borderRadius: 16 },
-                        propsForBackgroundLines: {
-                          stroke: colors.border,
-                        },
-                        decimalPlaces: 0,
-                      }}
-                      style={{
-                        marginVertical: 8,
-                        borderRadius: 16,
-                      }}
-                    />
-
-                  </ScrollView>
+                  <View style={{ marginLeft: -23 }}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                    >
+                      <BarChart
+                        data={barChartData2}
+                        width={Math.max(
+                          screenWidth - 48,
+                          environLabels.length * 100,
+                        )}
+                        height={200}
+                        fromZero
+                        segments={3} // or 4 if your data is higher
+                        formatYLabel={(value) => {
+                          const num = Number(value);
+                          return Number.isInteger(num) ? `${num}` : ""; // only show whole numbers
+                        }}
+                        chartConfig={{
+                          backgroundColor: colors.card,
+                          backgroundGradientFrom: colors.card,
+                          backgroundGradientTo: colors.card,
+                          color: (opacity = 1) =>
+                            `rgba(245, 158, 11, ${opacity})`,
+                          labelColor: (opacity = 1) => colors.textSecondary,
+                          style: { borderRadius: 16 },
+                          propsForBackgroundLines: {
+                            stroke: colors.border,
+                          },
+                          decimalPlaces: 0,
+                        }}
+                        style={{
+                          marginVertical: 8,
+                          borderRadius: 16,
+                        }}
+                      />
+                    </ScrollView>
                   </View>
                 </View>
 
@@ -1817,9 +1920,8 @@ const QuickFeedback = ({
                     Detected Elements
                   </Text>
                   {Object.entries(elementDurations)
-                  .filter(([, duration]) => duration > 0)
-                  .map(
-                    ([element, duration], index) => {
+                    .filter(([, duration]) => duration > 0)
+                    .map(([element, duration], index) => {
                       const percentage = (
                         (duration / totalEnvironDuration) *
                         100
@@ -1841,7 +1943,8 @@ const QuickFeedback = ({
                                 className="text-base font-bold mb-1"
                                 style={{ color: colors.text }}
                               >
-                                {element.charAt(0).toUpperCase() + element.slice(1).replace(/_/g, " ")}
+                                {element.charAt(0).toUpperCase() +
+                                  element.slice(1).replace(/_/g, " ")}
                               </Text>
                               <Text
                                 className="text-sm mb-2"
@@ -1867,16 +1970,49 @@ const QuickFeedback = ({
                           </View>
                         </View>
                       );
-                    },
-                  )}
+                    })}
                 </View>
               </>
             )}
           </View>
         );
-    
     }
   };
+
+  const getScoreStyle = (score: number, theme: "light" | "dark") => {
+    if (score >= 90) {
+      return {
+        bg: theme === "dark" ? "#14532d" : "#dcfce7",
+        scoreColor: theme === "dark" ? "#4ade80" : "#10b981",
+        text: "#ffffff",
+        msg: "Excellent Performance",
+      };
+    }
+    if (score >= 80) {
+      return {
+        bg: theme === "dark" ? "#1e3a8a" : "#dbeafe",
+        scoreColor: theme === "dark" ? "#60a5fa" : "#3b82f6",
+        text: "#ffffff",
+        msg: "Great Effort",
+      };
+    }
+    if (score >= 70) {
+      return {
+        bg: theme === "dark" ? "#78350f" : "#fef3c7",
+        scoreColor: theme === "dark" ? "#fbbf24" : "#f59e0b",
+        text: "#ffffff",
+        msg: "Good Progress",
+      };
+    }
+    return {
+      bg: theme === "dark" ? "#7f1d1d" : "#fee2e2",
+      scoreColor: theme === "dark" ? "#f87171" : "#ef4444",
+      text: "#ffffff",
+      msg: "Keep Growing",
+    };
+  };
+
+  const s = getScoreStyle(analysisResults.overallScore, theme);
 
   return (
     <View className="p-3">
@@ -1895,27 +2031,23 @@ const QuickFeedback = ({
         <View className="items-center mb-6">
           <View
             className="rounded-full w-24 h-24 items-center justify-center mb-4"
-            style={{
-              backgroundColor: theme === "dark" ? "#14532d" : "#dcfce7",
-            }}
+            style={{ backgroundColor: s.bg }}
           >
             <Text
               className="text-4xl font-bold"
-              style={{
-                color: theme === "dark" ? "#4ade80" : "#10b981",
-              }}
+              style={{ color: s.scoreColor }}
             >
               {analysisResults.overallScore}
             </Text>
           </View>
-          <Text
-            className="text-2xl font-bold mb-2"
-            style={{ color: colors.text }}
-          >
-            Excellent Performance!
+
+          <Text className="text-2xl font-bold mb-2" style={{ color: s.text }}>
+            {s.msg}
           </Text>
+
           {analysisResults.improvement?.trim().toLowerCase() !== "n/a" &&
-          analysisResults.improvement && (() => {
+            analysisResults.improvement &&
+            (() => {
               const isNegative = analysisResults.improvement.includes("-");
               const Icon = isNegative ? TrendingDown : TrendingUp;
               const color = isNegative ? "#f87171" : "#4ade80";
@@ -1928,7 +2060,7 @@ const QuickFeedback = ({
                   </Text>
                 </View>
               );
-          })()}
+            })()}
         </View>
 
         <View className="flex-row justify-between">
@@ -2084,10 +2216,7 @@ const QuickFeedback = ({
                 {item.action}
               </Text>
               <View className="flex-row items-center mb-2">
-                <Clock
-                  size={14}
-                  color={isDark ? "#a7f3d0" : "#065f46"}
-                />
+                <Clock size={14} color={isDark ? "#a7f3d0" : "#065f46"} />
                 <Text
                   className="text-sm ml-1"
                   style={{ color: isDark ? "#a7f3d0" : "#065f46" }}
@@ -2113,7 +2242,9 @@ const QuickFeedback = ({
                     Impact
                   </Text>
                 </View>
-                <Text style={{ color: isDark ? colors.textSecondary : "#4b5563" }}>
+                <Text
+                  style={{ color: isDark ? colors.textSecondary : "#4b5563" }}
+                >
                   {item.impact}
                 </Text>
               </View>
@@ -2160,10 +2291,7 @@ const QuickFeedback = ({
                 {item.action}
               </Text>
               <View className="flex-row items-center mb-2">
-                <Clock
-                  size={14}
-                  color={isDark ? "#fcd34d" : "#92400e"}
-                />
+                <Clock size={14} color={isDark ? "#fcd34d" : "#92400e"} />
                 <Text
                   className="text-sm ml-1"
                   style={{ color: isDark ? "#fcd34d" : "#92400e" }}
@@ -2189,7 +2317,9 @@ const QuickFeedback = ({
                     Suggestion
                   </Text>
                 </View>
-                <Text style={{ color: isDark ? colors.textSecondary : "#4b5563" }}>
+                <Text
+                  style={{ color: isDark ? colors.textSecondary : "#4b5563" }}
+                >
                   {item.suggestion}
                 </Text>
               </View>
@@ -2230,7 +2360,10 @@ const QuickFeedback = ({
               onPress={() => setShowInfoModal(false)}
               className="self-end p-2 -mt-2 -mr-2"
             >
-              <Text className="text-2xl font-bold" style={{ color: colors.textSecondary }}>
+              <Text
+                className="text-2xl font-bold"
+                style={{ color: colors.textSecondary }}
+              >
                 &times;
               </Text>
             </TouchableOpacity>
@@ -2242,20 +2375,29 @@ const QuickFeedback = ({
                     className="rounded-full p-3 mr-3"
                     style={{ backgroundColor: colors.primary, opacity: 0.2 }}
                   >
-                    <Info size={24} color='#ffff' />
+                    <Info size={24} color="#ffff" />
                   </View>
-                  <Text className="text-2xl font-bold" style={{ color: colors.text }}>
+                  <Text
+                    className="text-2xl font-bold"
+                    style={{ color: colors.text }}
+                  >
                     {infoContent.title}
                   </Text>
                 </View>
-                <Text className="text-base mb-4" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="text-base mb-4"
+                  style={{ color: colors.textSecondary }}
+                >
                   {infoContent.description}
                 </Text>
 
                 {infoContent.bullets?.map((bullet, index) => (
                   <View key={index} className="flex-row items-start mb-3">
                     <View className="mr-3 mt-1">{bullet.icon}</View>
-                    <Text className="flex-1 text-base" style={{ color: colors.text }}>
+                    <Text
+                      className="flex-1 text-base"
+                      style={{ color: colors.text }}
+                    >
                       {bullet.text}
                     </Text>
                   </View>
@@ -2263,20 +2405,32 @@ const QuickFeedback = ({
 
                 {infoContent.sections?.map((section, sectionIndex) => (
                   <View key={sectionIndex} className="mb-4">
-                    <Text className="font-semibold text-lg mb-2" style={{ color: colors.text }}>
+                    <Text
+                      className="font-semibold text-lg mb-2"
+                      style={{ color: colors.text }}
+                    >
                       {section.title}
                     </Text>
                     {Array.isArray(section.content) ? (
                       section.content.map((item, itemIndex) => (
-                        <View key={itemIndex} className="flex-row items-start mb-2">
+                        <View
+                          key={itemIndex}
+                          className="flex-row items-start mb-2"
+                        >
                           <View className="mr-3 mt-1">{item.icon}</View>
-                          <Text className="flex-1 text-base" style={{ color: colors.textSecondary }}>
+                          <Text
+                            className="flex-1 text-base"
+                            style={{ color: colors.textSecondary }}
+                          >
                             {item.text}
                           </Text>
                         </View>
                       ))
                     ) : (
-                      <Text className="text-base" style={{ color: colors.textSecondary }}>
+                      <Text
+                        className="text-base"
+                        style={{ color: colors.textSecondary }}
+                      >
                         {section.content}
                       </Text>
                     )}
@@ -2290,10 +2444,7 @@ const QuickFeedback = ({
               className="mt-6 py-3 rounded-full items-center shadow-lg"
               style={{ backgroundColor: colors.primary }}
             >
-              <Text
-                className="text-base font-bold"
-                style={{ color: "#fff" }}
-              >
+              <Text className="text-base font-bold" style={{ color: "#fff" }}>
                 Got It!
               </Text>
             </TouchableOpacity>
@@ -2306,17 +2457,16 @@ const QuickFeedback = ({
 
 export default QuickFeedback;
 
-
 const styles = StyleSheet.create({
-    tooltipContainer: {
-        position: 'absolute',
-        borderRadius: 8,
-        maxWidth: 200, // Important for the 'left' calculation
-        zIndex: 1000,
-        elevation: 5, // Android shadow
-        shadowColor: '#000', // iOS shadow
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-    },
+  tooltipContainer: {
+    position: "absolute",
+    borderRadius: 8,
+    maxWidth: 200,
+    zIndex: 1000,
+    elevation: 5, // Android shadow
+    shadowColor: "#000", // iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
 });

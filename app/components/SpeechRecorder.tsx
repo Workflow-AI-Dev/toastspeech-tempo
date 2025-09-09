@@ -5,23 +5,15 @@ import {
   Pause,
   Square,
   Loader,
-  CheckCircle,
   Zap,
-  Target,
-  Award,
-  TrendingUp,
   Video,
   Upload,
-  FileText,
 } from "lucide-react-native";
 import { Platform } from "react-native";
-
 import * as Haptics from "expo-haptics";
 import * as DocumentPicker from "expo-document-picker";
 import { Audio } from "expo-av";
-import { Camera as ExpoCamera } from "expo-camera";
-import { Video as VideoCompressor } from 'react-native-compressor'; 
-import * as MediaLibrary from "expo-media-library";
+import { Video as VideoCompressor } from "react-native-compressor";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -35,12 +27,26 @@ interface SpeechRecorderProps {
     overallScore: number;
   };
   recordingMethod?: "audio" | "video" | "upload" | null;
+  plan: string;
+}
+
+let CameraComponent: any;
+let useCameraDevices: any;
+
+if (Platform.OS !== "web") {
+  const visionCamera = require("react-native-vision-camera");
+  CameraComponent = visionCamera.Camera;
+  useCameraDevices = visionCamera.useCameraDevices;
+} else {
+  CameraComponent = () => null;
+  useCameraDevices = () => ({});
 }
 
 const SpeechRecorder = ({
   onRecordingComplete = () => {},
   isProcessing = false,
   recordingMethod = "audio",
+  plan,
 }: SpeechRecorderProps) => {
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "paused" | "completed" | "uploading"
@@ -52,13 +58,34 @@ const SpeechRecorder = ({
   const [hasAudioPermission, setHasAudioPermission] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const cameraRef = useRef<Camera>(null);
+  const cameraRef = useRef<any>(null);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [pendingRecordingData, setPendingRecordingData] = useState<any>(null);
 
   // Animation value for audio visualization
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
+
+  const [messageIndex, setMessageIndex] = useState(0);
+  type CameraDirection = "front" | "back";
+  const [cameraType, setCameraType] = useState<CameraDirection>("front");
+  const devices = useCameraDevices();
+  const device = devices ? devices[cameraType] : undefined;
+  const [recordedVideoUri, setRecordedVideoUri] = useState<string | null>(null);
+  const [limits, setLimits] = useState(null);
+
+  const toggleCamera = () => {
+    setCameraType((prev) => (prev === "front" ? "back" : "front"));
+  };
+
+  useEffect(() => {
+    (async () => {
+      const savedLimits = await AsyncStorage.getItem("limits");
+      if (savedLimits) {
+        setLimits(JSON.parse(savedLimits));
+      }
+    })();
+  }, []);
 
   // Request permissions on component mount
   useEffect(() => {
@@ -73,33 +100,57 @@ const SpeechRecorder = ({
 
   const requestPermissions = async () => {
     try {
-      const { status: audioStatus } = await Audio.requestPermissionsAsync();
-      setHasAudioPermission(audioStatus === "granted");
+      // AUDIO PERMISSION
+      const { status: audioStatus } = await Audio.getPermissionsAsync();
+      let audioGranted = audioStatus === "granted";
 
-      const { status: cameraStatus } =
-        await ExpoCamera.requestCameraPermissionsAsync();
-      setHasCameraPermission(cameraStatus === "granted");
+      // VIDEO PERMISSION (only if video recording is selected and not web)
+      let camGranted = false;
+      if (recordingMethod === "video" && Platform.OS !== "web") {
+        const camStatus = await CameraComponent.getCameraPermissionStatus();
+        const micStatus = await CameraComponent.getMicrophonePermissionStatus();
 
-      await MediaLibrary.requestPermissionsAsync();
+        camGranted = camStatus === "authorized";
+        const micGranted = micStatus === "authorized";
 
+        // Request only if not authorized
+        if (!camGranted) {
+          const newCamStatus = await CameraComponent.requestCameraPermission();
+          camGranted = newCamStatus === "authorized";
+        }
+        if (!micGranted) {
+          const newMicStatus =
+            await CameraComponent.requestMicrophonePermission();
+          audioGranted = audioGranted || newMicStatus === "authorized";
+        }
+
+        setHasCameraPermission(camGranted);
+      }
+
+      setHasAudioPermission(audioGranted);
+
+      // Set audio mode for recording
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
-    } catch (error) {
-      console.error("Permission error:", error);
-      Alert.alert("Permission Error", "Failed to get required permissions.");
+
+      console.log(`Permissions: Audio=${audioGranted}, Camera=${camGranted}`);
+    } catch (err) {
+      console.error("Permission error:", err);
+      Alert.alert(
+        "Permission Error",
+        "Unable to get camera/mic permissions. Please check your settings.",
+      );
     }
   };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    if (recordingState === "recording") {
-      interval = setInterval(() => {
+    if (recordingState === "recording" && recordingMethod === "audio") {
+      // Only animate for audio recordings
+      const interval = setInterval(() => {
         setTimer((prev) => prev + 1);
 
-        // Simulate audio levels
         setAudioLevels((prev) => {
           const newLevels = [...prev];
           newLevels.shift();
@@ -108,7 +159,6 @@ const SpeechRecorder = ({
         });
       }, 1000);
 
-      // Start pulsing animation
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -123,14 +173,12 @@ const SpeechRecorder = ({
           }),
         ]),
       ).start();
+
+      return () => clearInterval(interval);
     } else {
       pulseAnim.setValue(1);
     }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [recordingState, pulseAnim]);
+  }, [recordingState, recordingMethod, pulseAnim]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -171,53 +219,47 @@ const SpeechRecorder = ({
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      // Check permissions first
-      if (!hasAudioPermission) {
-        Alert.alert(
-          "Permission Required",
-          "Microphone access is required for recording. Please enable it in Settings.",
-          [{ text: "OK" }],
-        );
-        return;
-      }
-
-      if (recordingMethod === "video" && !hasCameraPermission) {
-        Alert.alert(
-          "Permission Required",
-          "Camera access is required for video recording. Please enable it in Settings.",
-          [{ text: "OK" }],
-        );
-        return;
-      }
-
+      // START RECORDING
       if (recordingMethod === "audio") {
-        // Start audio recording
         const { recording: newRecording } = await Audio.Recording.createAsync(
           Audio.RecordingOptionsPresets.HIGH_QUALITY,
         );
         setRecording(newRecording);
-      } else if (recordingMethod === "video") {
-        if (cameraRef.current) {
-          setIsRecordingVideo(true);
-          const videoRecording = await cameraRef.current.recordAsync({
-            maxDuration: 180,
-            quality: ExpoCamera.Constants.VideoQuality["480p"],
-          });
+        setRecordingState("recording");
+      } else if (recordingMethod === "video" && cameraRef.current && device) {
+        setIsRecordingVideo(true);
+        setRecordingState("recording");
 
-          console.log("Video recorded:", videoRecording.uri);
-          // Process this file
-          setIsRecordingVideo(false);
-        }
+        await cameraRef.current.startRecording({
+          flash: "off",
+          onRecordingFinished: async (video) => {
+            setRecordedVideoUri(video.path);
+            setIsRecordingVideo(false);
+            setRecordingState("uploading");
+
+            const { uri: processedUri, size } = await processVideoFile(
+              video.path,
+            );
+
+            setRecordingState("completed");
+            onRecordingComplete({
+              duration: timer,
+              timestamp: new Date(),
+              method: "video",
+              recordingUri: processedUri,
+              fileSize: size,
+            });
+          },
+          onRecordingError: (error) => {
+            console.error("Recording error:", error);
+            Alert.alert("Recording Error", "Unable to record video.");
+            setIsRecordingVideo(false);
+            setRecordingState("idle");
+          },
+        });
       }
-
-      setRecordingState("recording");
     } catch (error) {
       console.error("Error starting recording:", error);
-      Alert.alert(
-        "Recording Error",
-        "Unable to start recording. Please try again.",
-        [{ text: "OK" }],
-      );
     }
   };
 
@@ -226,53 +268,28 @@ const SpeechRecorder = ({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       if (recordingState === "recording") {
-        if (recording && recordingMethod === "audio") {
+        if (recordingMethod === "audio" && recording) {
           await recording.pauseAsync();
-        } else if (
-          recordingMethod === "video" &&
-          cameraRef.current &&
-          isRecordingVideo
-        ) {
-          // Vision Camera doesn't support pause/resume, so we stop and restart
-          await cameraRef.current.stopRecording();
-          setIsRecordingVideo(false);
+          setRecordingState("paused");
+        } else if (recordingMethod === "video") {
+          Alert.alert("Pause Unavailable", "Video pause is not supported.");
         }
-        setRecordingState("paused");
       } else if (recordingState === "paused") {
-        if (recording && recordingMethod === "audio") {
-          await recording.resumeAsync();
-        } else if (recordingMethod === "video" && cameraRef.current && device) {
-          // Restart video recording
-          setIsRecordingVideo(true);
-          cameraRef.current.startRecording({
-            flash: "off",
-            onRecordingFinished: (video) => {
-              console.log("Video recorded:", video.path);
-              setIsRecordingVideo(false);
-            },
-            onRecordingError: (error) => {
-              console.error("Recording error:", error);
-              setIsRecordingVideo(false);
-            },
-            videoCodec: "h264",
-            videoBitRate: "low",
-          });
+        if (recordingMethod === "audio" && recording) {
+          await recording.startAsync();
+          setRecordingState("recording");
         }
-        setRecordingState("recording");
       }
     } catch (error) {
-      console.error("Error pausing/resuming recording:", error);
+      console.error("Error pausing/resuming:", error);
     }
   };
 
   const handleStopRecording = async () => {
-    let processedUri = null;
-    let fileSize = 0;
-
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      let recordingUri = null;
+      let recordingUri: string | null = null;
 
       if (recording && recordingMethod === "audio") {
         await recording.stopAndUnloadAsync();
@@ -280,109 +297,113 @@ const SpeechRecorder = ({
         setRecording(null);
       } else if (
         recordingMethod === "video" &&
-        cameraRef.current &&
-        isRecordingVideo
+        isRecordingVideo &&
+        cameraRef.current
       ) {
-        // Stop video recording with Vision Camera
-        await cameraRef.current.stopRecording();
-        setIsRecordingVideo(false);
-        // The recordingUri will be set in the onRecordingFinished callback
-        // For now, we'll use a placeholder and handle it in the processing
+        await cameraRef.current.stopRecording(); // triggers onRecordingFinished
       }
 
-      setRecordingState("uploading"); // Show processing state
+      setRecordingState("uploading");
 
-      // Process and compress the file if needed
       if (recordingUri) {
-        try {
-          const fileType = getFileType(recordingUri);
-          console.log("Recording stopped.");
-          console.log("URI:", recordingUri);
-          console.log("File type:", fileType);
+        const { uri: processedUri, size: fileSize } =
+          await processVideoFile(recordingUri);
 
-          const { uri, size } = await processVideoFile(recordingUri);
-          processedUri = uri;
-          fileSize = size;
+        setRecordingState("completed");
 
-          setRecordingState("completed");
-          const fallbackUri = processedUri || (selectedFile?.uri ?? null);
-
-          // Send recording data with processed file URI
-          setTimeout(() => {
-            setPendingRecordingData({
-              duration: timer,
-              timestamp: new Date(),
-              method: recordingMethod,
-              recordingUri: fallbackUri,
-              fileSize: fileSize,
-              fileType: fileType,
-            });
-            setShowConfirmationModal(true);
-          }, 1000);
-        } catch (error) {
-          console.error("Error processing recorded file:", error);
-          setRecordingState("completed");
-
-          const fallbackUri = processedUri || (selectedFile?.uri ?? null);
-
-          // Fallback to original file
-          setTimeout(() => {
-            setPendingRecordingData({
-              duration: timer,
-              timestamp: new Date(),
-              method: recordingMethod,
-              recordingUri: fallbackUri,
-              fileSize: fileSize,
-            });
-            setShowConfirmationModal(true);
-          }, 1000);
-        }
+        onRecordingComplete({
+          duration: timer,
+          timestamp: new Date(),
+          method: recordingMethod,
+          recordingUri: processedUri,
+          fileSize,
+        });
       } else {
         setRecordingState("completed");
-        const fallbackUri = processedUri || (selectedFile?.uri ?? null);
-        setTimeout(() => {
-          setPendingRecordingData({
-            duration: timer,
-            timestamp: new Date(),
-            method: recordingMethod,
-            recordingUri: fallbackUri,
-            fileSize: fileSize,
-          });
-          setShowConfirmationModal(true);
-        }, 1000);
+        onRecordingComplete({
+          duration: timer,
+          timestamp: new Date(),
+          method: recordingMethod,
+          recordingUri: null,
+          fileSize: null,
+        });
       }
     } catch (error) {
       console.error("Error stopping recording:", error);
-      Alert.alert(
-        "Recording Error",
-        "Unable to stop recording. Please try again.",
-        [{ text: "OK" }],
-      );
+      Alert.alert("Recording Error", "Unable to stop recording.");
     }
   };
 
+  const ensureFilePath = async (uri: string): Promise<string> => {
+    if (uri.startsWith("content://")) {
+      console.log("⚠️ Got content:// URI, copying to cache...");
+      const destPath = FileSystem.cacheDirectory + "upload_" + Date.now();
+      await FileSystem.copyAsync({ from: uri, to: destPath });
+      return destPath;
+    }
+    return uri;
+  };
+
   const handleFileUpload = async () => {
-    console.log("test");
     let processedUri = null;
     let fileSize = 0;
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+      // Base sets for file types/extensions
+      const audioTypes = ["audio/mpeg", "audio/wav", "audio/m4a", "audio/mp4"];
+      const audioExts = ["mp3", "wav", "m4a"];
+
+      const videoTypes = ["video/mp4", "video/mov", "video/avi"];
+      const videoExts = ["mp4", "mov", "avi"];
+
+      // Decide allowed types/extensions based on remaining limits
+      let allowedTypes: string[] = [];
+      let allowedExtensions: string[] = [];
+
+      console.log(limits);
+
+      if (limits.remaining_audio_eval > 0) {
+        allowedTypes = [...allowedTypes, ...audioTypes];
+        allowedExtensions = [...allowedExtensions, ...audioExts];
+      }
+
+      if (limits.remaining_video_eval > 0) {
+        allowedTypes = [...allowedTypes, ...videoTypes];
+        allowedExtensions = [...allowedExtensions, ...videoExts];
+      }
+
+      if (allowedTypes.length === 0) {
+        Alert.alert(
+          "No Uploads Remaining",
+          "You don't have any remaining audio or video uploads available.",
+          [{ text: "OK" }],
+        );
+        return;
+      }
+
       const result = await DocumentPicker.getDocumentAsync({
-        type: [
-          "audio/mpeg",
-          "audio/wav",
-          "audio/m4a",
-          "audio/mp4",
-          "video/mp4",
-          "video/mov",
-          "video/avi",
-        ],
+        type: allowedTypes,
         copyToCacheDirectory: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
+        const fileExtension = file.name.split(".").pop()?.toLowerCase() || "";
+
+        if (
+          !allowedTypes.includes(file.mimeType || "") &&
+          !allowedExtensions.includes(fileExtension)
+        ) {
+          Alert.alert(
+            "Unsupported File",
+            `This file type is not supported.\nPlease upload a valid audio/video file.`,
+            [{ text: "OK" }],
+          );
+          console.log("unsupported file");
+          return;
+        }
+
         setSelectedFile(file);
         setRecordingState("uploading");
 
@@ -393,14 +414,10 @@ const SpeechRecorder = ({
 
         try {
           // Always process and compress the uploaded file
-          const processed = await processVideoFile(file.uri, file.name);
-          processedUri = processed.uri;
-          fileSize = processed.size;
+          const { uri: processedUri, size: processedSize } =
+            await processVideoFile(file.uri, file.name, file.mimeType);
 
-          const fileSizeInMB = fileSize / (1024 * 1024);
-          console.log(
-            `Final processed file size: ${fileSizeInMB.toFixed(2)} MB`,
-          );
+          console.log("✅ Processed file ready:", processedUri, processedSize);
 
           setRecordingState("completed");
           const fallbackUri = processedUri || selectedFile?.uri;
@@ -419,7 +436,7 @@ const SpeechRecorder = ({
               duration: timer,
               timestamp: new Date(),
               method: recordingMethod,
-              recordingUri: fallbackUri, // ✅ fallbackUri is guaranteed valid now
+              recordingUri: fallbackUri,
               fileSize: fileSize,
               fileType: fileType,
             });
@@ -454,47 +471,49 @@ const SpeechRecorder = ({
     }
   };
 
-  // Video compression function using react-native-compressor
   const compressVideo = async (videoUri: string): Promise<string> => {
-    console.log("Starting video compression...");
-    const originalFileInfo = await FileSystem.getInfoAsync(videoUri);
-    console.log(`Original video size: ${ (originalFileInfo.size / (1024 * 1024)).toFixed(2)} MB`);
+    console.log("🚀 Starting one-pass video compression...");
 
-    const outputUri = `${FileSystem.cacheDirectory}compressed_video_${Date.now()}.mp4`;
+    const safeUri = await ensureFilePath(videoUri);
+    const fileInfo = await FileSystem.getInfoAsync(safeUri);
+    const sizeMB = fileInfo.size / (1024 * 1024);
+
+    if (sizeMB <= 5) {
+      console.log("✅ Video already under 5 MB. Skipping compression.");
+      return safeUri;
+    }
 
     try {
       const result = await VideoCompressor.compress(
-        videoUri,
+        safeUri,
         {
-          bitrate: 500, // Target bitrate in kbps
-          maxSize: 720, // Max dimension (width or height)
-          minimumFileSizeForCompress: 0, // Compress even small files
-          // The next two options help control file size but aren't direct "max size" in MB
-          // quality: 'low', // You can try 'low', 'medium', 'high'
-          compressionMethod: 'auto', // 'auto', 'fast', 'manual'
+          compressionMethod: "manual",
+          bitrate: 400, // kbps — tuned for small file size
+          maxSize: 480, // resolution cap
         },
         (progress) => {
           console.log(`Compression progress: ${Math.round(progress * 100)}%`);
-        }
+        },
       );
 
-      const compressedFileInfo = await FileSystem.getInfoAsync(result);
-      const compressedSizeMB = (compressedFileInfo.size / (1024 * 1024));
+      const compressedUri = await ensureFilePath(result);
+      const compressedInfo = await FileSystem.getInfoAsync(compressedUri);
+      const finalMB = compressedInfo.size / (1024 * 1024);
 
-      console.log(`Compression successful!`);
-      console.log(`Compressed video URI: ${result}`);
-      console.log(`Compressed video size: ${compressedSizeMB.toFixed(2)} MB`);
+      console.log(`🎯 Final compressed size: ${finalMB.toFixed(2)} MB`);
 
-      if (compressedSizeMB > 20) {
-        console.warn(`Compressed file size (${compressedSizeMB.toFixed(2)} MB) is over 20MB.`);
-        // You might want to handle this case, e.g., re-compress with stricter settings or alert the user.
-        // For now, we'll proceed with the larger file.
+      if (finalMB > 5) {
+        console.warn(
+          "⚠️ Still above 5 MB — may need a second pass if strict limit is required.",
+        );
+      } else {
+        console.log("✅ Successfully compressed under 5 MB in one pass!");
       }
 
-      return result;
-    } catch (error) {
-      console.error("Video compression failed:", error);
-      throw new Error("Video compression failed");
+      return compressedUri;
+    } catch (err) {
+      console.error("❌ Compression error:", err);
+      return safeUri;
     }
   };
 
@@ -502,38 +521,50 @@ const SpeechRecorder = ({
   const processVideoFile = async (
     fileUri: string,
     fileName?: string,
+    mimeType?: string,
   ): Promise<{ uri: string; size: number }> => {
     try {
       const isWeb = Platform.OS === "web";
 
-      // Detect if it's a video file
-      const isVideo = fileName
-        ? fileName.toLowerCase().includes(".mp4") ||
-          fileName.toLowerCase().includes(".mov") ||
-          fileName.toLowerCase().includes(".avi")
-        : fileUri.toLowerCase().includes(".mp4") ||
-          fileUri.toLowerCase().includes(".mov") ||
-          fileUri.toLowerCase().includes(".avi");
+      const isVideoFile = (mimeType?: string, name?: string) => {
+        const videoExtensions = ["mp4", "mov", "avi"];
+        const hasExt = name
+          ? videoExtensions.includes(name.split(".").pop()?.toLowerCase() || "")
+          : false;
+        return mimeType?.startsWith("video/") || hasExt;
+      };
 
-      if (!isVideo || isWeb) {
-        // ✅ Skip compression and FileSystem if on web or audio file
-        return {
-          uri: fileUri,
-          size: selectedFile?.size || 0, // fallback to file.size from picker
-        };
+      const isVideo = isVideoFile(mimeType, fileName);
+
+      if (isWeb) {
+        return { uri: fileUri, size: selectedFile?.size || 0 };
       }
 
-      // ✅ Native only — compress video
-      const compressedUri = await compressVideo(fileUri);
+      let safeUri = await ensureFilePath(fileUri);
+
+      if (!isVideo) {
+        const info = await FileSystem.getInfoAsync(safeUri);
+        console.log("Audio file info:", info);
+        return { uri: safeUri, size: info.size || 0 };
+      }
+
+      const compressedUri = await compressVideo(safeUri);
+      console.log("Compressed URI:", compressedUri);
+
       const fileInfo = await FileSystem.getInfoAsync(compressedUri);
+      console.log("Compressed file info:", fileInfo);
+
+      if (!fileInfo.exists) {
+        throw new Error("Compressed file not found");
+      }
 
       return { uri: compressedUri, size: fileInfo.size || 0 };
     } catch (error) {
       console.error("Error processing video file:", error);
-      return {
-        uri: fileUri,
-        size: selectedFile?.size || 0, // fallback again
-      };
+
+      let safeUri = await ensureFilePath(fileUri);
+      const info = await FileSystem.getInfoAsync(safeUri);
+      return { uri: safeUri, size: info.size || 0 };
     }
   };
 
@@ -645,14 +676,78 @@ const SpeechRecorder = ({
             recordingMethod === "video" &&
             hasCameraPermission &&
             device ? (
-              <View className="h-48 w-full rounded-2xl overflow-hidden mb-8">
-                <ExpoCamera
+              <View className="flex-1 w-full relative">
+                <CameraComponent
                   ref={cameraRef}
                   style={{ flex: 1 }}
-                  type={ExpoCamera.Constants.Type.front}
-                  ratio="16:9"
-                  useCamera2Api={true}
+                  device={device}
+                  isActive={isRecordingVideo}
+                  video={true}
                 />
+
+                {/* Overlay: Controls */}
+                <View
+                  style={{
+                    position: "absolute",
+                    bottom: 40,
+                    left: 0,
+                    right: 0,
+                    flexDirection: "row",
+                    justifyContent: "space-around",
+                    alignItems: "center",
+                  }}
+                >
+                  {/* Pause/Resume (disabled for video) */}
+                  <TouchableOpacity
+                    onPress={handlePauseRecording}
+                    style={{
+                      backgroundColor: "white",
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {recordingState === "recording" ? (
+                      <Pause size={28} color="#7c3aed" />
+                    ) : (
+                      <Mic size={28} color="#7c3aed" />
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Stop */}
+                  <TouchableOpacity
+                    onPress={handleStopRecording}
+                    style={{
+                      backgroundColor: "red",
+                      width: 80,
+                      height: 80,
+                      borderRadius: 40,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Square size={36} color="white" />
+                  </TouchableOpacity>
+
+                  {/* Flip Camera */}
+                  <TouchableOpacity
+                    onPress={toggleCamera}
+                    style={{
+                      backgroundColor: "rgba(0,0,0,0.6)",
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text style={{ color: "white", fontWeight: "bold" }}>
+                      Flip
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : recordingMethod === "video" && Platform.OS === "web" ? (
               <View className="h-32 w-full items-center justify-center bg-yellow-100 rounded-2xl p-4 mb-8">

@@ -13,19 +13,10 @@ import {
   Mic,
   Video,
   Award,
-  TrendingUp,
-  Clock,
   Target,
-  Zap,
-  Star,
   CheckCircle,
-  AlertCircle,
-  Lightbulb,
   Upload,
   FileText,
-  User,
-  Calendar,
-  BookOpen,
   ChevronRight,
 } from "lucide-react-native";
 import SpeechRecorder from "../components/SpeechRecorderSpeaker";
@@ -338,7 +329,7 @@ export default function SpeakerModeScreen({
           borderBottomWidth: 0.5,
         }}
       >
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="flex-row items-center justify-between mb-4 mt-4">
           <TouchableOpacity
             onPress={onBack}
             className="rounded-full p-2"
@@ -533,7 +524,7 @@ export default function SpeakerModeScreen({
           borderBottomWidth: 0.5,
         }}
       >
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="flex-row items-center justify-between mb-4 mt-4">
           <TouchableOpacity
             onPress={() => setCurrentStep("speechType")}
             className="rounded-full p-2"
@@ -611,10 +602,10 @@ export default function SpeakerModeScreen({
                   className="font-semibold mt-2"
                   style={{ color: colors.primary }}
                 >
-                  Tap to upload PDF or image
+                  Tap to upload PDF
                 </Text>
                 <Text
-                  className="text-sm mt-1"
+                  className="text-sm mt-1 text-center"
                   style={{ color: colors.textSecondary }}
                 >
                   Optional - you can fill details manually below
@@ -843,7 +834,7 @@ export default function SpeakerModeScreen({
           borderBottomWidth: 0.5,
         }}
       >
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="flex-row items-center justify-between mb-4 mt-4">
           <TouchableOpacity
             onPress={() => setCurrentStep("speechDetails")}
             className="rounded-full p-2"
@@ -1156,7 +1147,7 @@ export default function SpeakerModeScreen({
           borderBottomWidth: 0.5,
         }}
       >
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="flex-row items-center justify-between mb-4 mt-4">
           <TouchableOpacity
             onPress={() => setCurrentStep("recordingMethod")}
             className="rounded-full p-2"
@@ -1289,7 +1280,7 @@ export default function SpeakerModeScreen({
           borderBottomWidth: 0.5,
         }}
       >
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="flex-row items-center justify-between mb-4 mt-4">
           <TouchableOpacity
             onPress={() => setCurrentStep("record")}
             className="rounded-full p-2"

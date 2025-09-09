@@ -5,35 +5,16 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
   ActivityIndicator,
-  TextInput
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronRight,
   Clock,
-  Star,
-  Edit3,
-  Trash2,
   ArrowLeft,
   Calendar,
-  Trophy,
   TrendingUp,
   TrendingDown,
-  Mic,
-  Play,
-  Award,
-  BookOpen,
-  Filter,
-  Search,
-  BarChart3,
-  Target,
-  Zap,
-  CheckCircle,
-  AlertCircle,
-  Inbox,
-  X
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import QuickFeedback from "./QuickFeedback";
@@ -75,9 +56,7 @@ const parseDateString = (input: unknown): Date | null => {
   if (typeof input !== "string" || !input.trim()) return null;
 
   try {
-    const iso = input
-      .replace(" ", "T")
-      .replace(/(\.\d{3})\d+/, "$1"); 
+    const iso = input.replace(" ", "T").replace(/(\.\d{3})\d+/, "$1");
 
     const d = new Date(iso);
     return isNaN(d.getTime()) ? null : d;
@@ -85,7 +64,6 @@ const parseDateString = (input: unknown): Date | null => {
     return null;
   }
 };
-
 
 const formatDate = (input: string) => {
   const d = parseDateString(input);
@@ -97,8 +75,6 @@ const formatDate = (input: string) => {
     year: "numeric",
   });
 };
-
-
 
 export default function SpeechLibrary({
   searchQuery,
@@ -124,7 +100,12 @@ export default function SpeechLibrary({
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isSearchActive, setIsSearchActive] = useState(false);
-  const hasActiveFilters = searchQuery || speechTypeFilter || durationFilter || scoreRange || dateRange;
+  const hasActiveFilters =
+    searchQuery ||
+    speechTypeFilter ||
+    durationFilter ||
+    scoreRange ||
+    dateRange;
 
   // Helper function to check if duration matches filter
   const matchesDurationFilter = (duration: string, filter: string | null) => {
@@ -192,29 +173,27 @@ export default function SpeechLibrary({
     }
   };
 
-
   useEffect(() => {
     const fetchSpeeches = async () => {
       setIsLoading(true);
       try {
-      const token = await AsyncStorage.getItem("auth_token");
+        const token = await AsyncStorage.getItem("auth_token");
 
-      const response = await fetch(`${BASE_URL}/speech/all`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+        const response = await fetch(`${BASE_URL}/speech/all`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch speeches");
-      }
+        if (!response.ok) {
+          throw new Error("Failed to fetch speeches");
+        }
 
-      const data = await response.json();
-      console.log("✅ Loaded speeches from Supabase", data.speeches);
+        const data = await response.json();
+        console.log("✅ Loaded speeches from Supabase", data.speeches);
 
-      const transformed = data.speeches
-        .map((speech, idx, arr) => {
+        const transformed = data.speeches.map((speech, idx, arr) => {
           const metadata = speech.summary?.Metadata || {};
           const currentScore = metadata.overall_score || 0;
           const previousScore =
@@ -261,7 +240,7 @@ export default function SpeechLibrary({
           };
         });
 
-      setSpeeches(transformed);
+        setSpeeches(transformed);
       } catch (err) {
         console.error("❌ Failed to load speeches:", err);
       } finally {
@@ -271,14 +250,20 @@ export default function SpeechLibrary({
     fetchSpeeches();
   }, []);
 
-   // Use useMemo to filter the data whenever the props or data changes
+  // Use useMemo to filter the data whenever the props or data changes
   const filteredSpeeches = useMemo(() => {
     return speeches.filter((speech) => {
       // Apply all the filters using the props
-      if (searchQuery && !speech.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (
+        searchQuery &&
+        !speech.title.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
         return false;
       }
-      if (speechTypeFilter && speech.category.toLowerCase() !== speechTypeFilter.toLowerCase()) {
+      if (
+        speechTypeFilter &&
+        speech.category.toLowerCase() !== speechTypeFilter.toLowerCase()
+      ) {
         return false;
       }
       if (!matchesDurationFilter(speech.duration, durationFilter)) {
@@ -343,25 +328,6 @@ export default function SpeechLibrary({
       .map((s) => parseDurationToSeconds(s.duration))
       .reduce((sum, val) => sum + val, 0);
 
-    // Calculate streak (consecutive days with speeches)
-    // Get unique speech dates sorted ascending (in yyyy-mm-dd)
-    // const datesSet = new Set(
-    //   speeches.map((s) => new Date(s.date).toISOString().slice(0, 10)),
-    // );
-    // const uniqueDates = Array.from(datesSet).sort();
-
-    // let streak = 1;
-    // for (let i = uniqueDates.length - 1; i > 0; i--) {
-    //   const currDate = new Date(uniqueDates[i]);
-    //   const prevDate = new Date(uniqueDates[i - 1]);
-    //   const diffDays =
-    //     (currDate.getTime() - prevDate.getTime()) / (1000 * 3600 * 24);
-    //   if (diffDays === 1) {
-    //     streak++;
-    //   } else {
-    //     break; // streak broken
-    //   }
-    // }
     const streak = 0;
 
     return {
@@ -399,7 +365,6 @@ export default function SpeechLibrary({
         return;
       }
       setSpeeches((prev) => prev.filter((speech) => speech.id !== speechId));
-
     } catch (error) {
       console.error("Delete failed:", error);
     }
@@ -410,142 +375,142 @@ export default function SpeechLibrary({
 
     return (
       <View className="px-6">
-      <TouchableOpacity
-        className="rounded-3xl p-5 mb-4 shadow-lg"
-        style={{
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderWidth: 0.5,
-          shadowColor: theme === "dark" ? "#000" : "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-          shadowRadius: 12,
-          elevation: 8,
-        }}
-        onPress={() => setSelectedSpeech(item)}
-        onLongPress={() => handleDeleteSpeech(item.id)}
-      >
-        {/* Header Row */}
-        <View className="flex-row items-start justify-between mb-3">
-          <View className="flex-1 mr-3">
-            <Text
-              className="text-xl font-bold mb-1"
-              style={{ color: colors.text }}
-            >
-              {item.title}
-            </Text>
-            <View className="flex-row items-center">
-              <View
-                className="rounded-full py-1 mr-2"
-                style={{
-                  backgroundColor:
-                    theme === "dark" ? colors.surface : "#f3f4f6",
-                }}
+        <TouchableOpacity
+          className="rounded-3xl p-5 mb-4 shadow-lg"
+          style={{
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            borderWidth: 0.5,
+            shadowColor: theme === "dark" ? "#000" : "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: theme === "dark" ? 0.3 : 0.1,
+            shadowRadius: 12,
+            elevation: 8,
+          }}
+          onPress={() => setSelectedSpeech(item)}
+          onLongPress={() => handleDeleteSpeech(item.id)}
+        >
+          {/* Header Row */}
+          <View className="flex-row items-start justify-between mb-3">
+            <View className="flex-1 mr-3">
+              <Text
+                className="text-xl font-bold mb-1"
+                style={{ color: colors.text }}
               >
-                <Text
-                  className="text-xs font-semibold"
-                  style={{ color: colors.primary }}
+                {item.title}
+              </Text>
+              <View className="flex-row items-center">
+                <View
+                  className="rounded-full py-1 mr-2"
+                  style={{
+                    backgroundColor:
+                      theme === "dark" ? colors.surface : "#f3f4f6",
+                  }}
                 >
-                  {item.category}
+                  <Text
+                    className="text-xs font-semibold"
+                    style={{ color: colors.primary }}
+                  >
+                    {item.category}
+                  </Text>
+                </View>
+                <Calendar size={12} color={colors.textSecondary} />
+                <Text
+                  className="text-xs ml-1"
+                  style={{ color: colors.textSecondary }}
+                >
+                  {item.date}
                 </Text>
               </View>
-              <Calendar size={12} color={colors.textSecondary} />
+            </View>
+
+            {/* Score Badge */}
+            <View
+              className="rounded-2xl px-4 py-2 items-center justify-center min-w-[60px]"
+              style={{ backgroundColor: scoreColors.bg }}
+            >
               <Text
-                className="text-xs ml-1"
-                style={{ color: colors.textSecondary }}
+                className="text-2xl font-bold"
+                style={{ color: scoreColors.text }}
               >
-                {item.date}
+                {item.score}
+              </Text>
+              <Text
+                className="text-xs font-medium"
+                style={{ color: scoreColors.text }}
+              >
+                SCORE
               </Text>
             </View>
           </View>
 
-          {/* Score Badge */}
-          <View
-            className="rounded-2xl px-4 py-2 items-center justify-center min-w-[60px]"
-            style={{ backgroundColor: scoreColors.bg }}
-          >
-            <Text
-              className="text-2xl font-bold"
-              style={{ color: scoreColors.text }}
-            >
-              {item.score}
-            </Text>
-            <Text
-              className="text-xs font-medium"
-              style={{ color: scoreColors.text }}
-            >
-              SCORE
-            </Text>
-          </View>
-        </View>
+          {/* Metrics Row */}
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center flex-1">
+              <View className="flex-row items-center mr-4">
+                <Clock size={14} color={colors.textSecondary} />
+                <Text
+                  className="text-sm ml-1 font-medium"
+                  style={{ color: colors.textSecondary }}
+                >
+                  {item.duration}
+                </Text>
+              </View>
 
-        {/* Metrics Row */}
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center flex-1">
-            <View className="flex-row items-center mr-4">
-              <Clock size={14} color={colors.textSecondary} />
-              <Text
-                className="text-sm ml-1 font-medium"
-                style={{ color: colors.textSecondary }}
-              >
-                {item.duration}
-              </Text>
+              <View className="flex-row items-center">
+                {item.improvement === "N/A" ? (
+                  <>
+                    <TrendingUp size={14} color="#9ca3af" /> {/* Gray */}
+                    <Text className="text-sm ml-1 font-medium text-gray-400">
+                      New
+                    </Text>
+                  </>
+                ) : parseInt(item.improvement) > 0 ? (
+                  <>
+                    <TrendingUp size={14} color="#10b981" />
+                    <Text className="text-sm ml-1 font-bold text-green-500">
+                      {item.improvement}
+                    </Text>
+                  </>
+                ) : parseInt(item.improvement) < 0 ? (
+                  <>
+                    <TrendingDown size={14} color="#ef4444" />
+                    <Text className="text-sm ml-1 font-bold text-red-500">
+                      {item.improvement}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <TrendingUp size={14} color="#9ca3af" />
+                    <Text className="text-sm ml-1 font-medium text-gray-400">
+                      ±0
+                    </Text>
+                  </>
+                )}
+              </View>
             </View>
 
-            <View className="flex-row items-center">
-              {item.improvement === "N/A" ? (
-                <>
-                  <TrendingUp size={14} color="#9ca3af" /> {/* Gray */}
-                  <Text className="text-sm ml-1 font-medium text-gray-400">
-                    New
-                  </Text>
-                </>
-              ) : parseInt(item.improvement) > 0 ? (
-                <>
-                  <TrendingUp size={14} color="#10b981" />
-                  <Text className="text-sm ml-1 font-bold text-green-500">
-                    {item.improvement}
-                  </Text>
-                </>
-              ) : parseInt(item.improvement) < 0 ? (
-                <>
-                  <TrendingDown size={14} color="#ef4444" />
-                  <Text className="text-sm ml-1 font-bold text-red-500">
-                    {item.improvement}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <TrendingUp size={14} color="#9ca3af" />
-                  <Text className="text-sm ml-1 font-medium text-gray-400">
-                    ±0
-                  </Text>
-                </>
-              )}
-            </View>
+            <ChevronRight size={20} color={colors.textSecondary} />
           </View>
 
-          <ChevronRight size={20} color={colors.textSecondary} />
-        </View>
-
-        {/* Progress Bar */}
-        <View className="mt-3">
-          <View
-            className="h-1 rounded-full"
-            style={{
-              backgroundColor: theme === "dark" ? colors.surface : "#f3f4f6",
-            }}
-          >
+          {/* Progress Bar */}
+          <View className="mt-3">
             <View
               className="h-1 rounded-full"
               style={{
-                backgroundColor: scoreColors.icon,
-                width: `${item.score}%`,
+                backgroundColor: theme === "dark" ? colors.surface : "#f3f4f6",
               }}
-            />
+            >
+              <View
+                className="h-1 rounded-full"
+                style={{
+                  backgroundColor: scoreColors.icon,
+                  width: `${item.score}%`,
+                }}
+              />
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -572,7 +537,7 @@ export default function SpeechLibrary({
       repeatedPhrases: selectedSpeech.repeatedPhrases,
       grammarData: selectedSpeech.grammarData,
       environData: selectedSpeech.environData,
-      pitchData: selectedSpeech.pitchData
+      pitchData: selectedSpeech.pitchData,
     };
 
     const feedback = {
@@ -651,19 +616,18 @@ export default function SpeechLibrary({
         </View>
 
         <ScrollView className="flex-1">
-          <View className="p-6">
+          <View className="p-1 mt-2">
             <Text
-              className="text-2xl font-bold mb-2 text-center"
+              className="text-2xl font-bold text-center"
               style={{ color: colors.text }}
             >
               {selectedSpeech.title}
             </Text>
             <Text
-              className="text-center mb-8 text-base"
+              className="text-center text-base"
               style={{ color: colors.textSecondary }}
             >
-              Recorded on {selectedSpeech.date} •{" "}
-              {selectedSpeech.category}
+              Recorded on {selectedSpeech.date} • {selectedSpeech.category}
             </Text>
 
             {/* Quick Feedback */}
@@ -690,39 +654,46 @@ export default function SpeechLibrary({
     if (filteredSpeeches.length === 0) {
       return (
         <View className="flex-1 justify-center items-center px-6 py-12">
-          <Text className="text-xl font-bold mb-2" style={{ color: colors.text }}>No Speeches Found</Text>
+          <Text
+            className="text-xl font-bold mb-2"
+            style={{ color: colors.text }}
+          >
+            No Speeches Found
+          </Text>
           <Text className="text-center" style={{ color: colors.textSecondary }}>
-            {searchQuery ? "Try a different search or clear your filters." : "You haven't recorded any speeches yet."}
+            {searchQuery
+              ? "Try a different search or clear your filters."
+              : "You haven't recorded any speeches yet."}
           </Text>
         </View>
       );
     }
-  }
+  };
 
   if (selectedSpeech) {
     return renderDetailView();
   }
 
-   return (
+  return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <FlatList
         data={filteredSpeeches}
         renderItem={renderSpeechItem}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
-        <LibraryHeader
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          isSearchActive={isSearchActive}
-          setIsSearchActive={setIsSearchActive}
-          isFilterModalVisible={isFilterModalVisible}
-          setIsFilterModalVisible={setIsFilterModalVisible}
-          hasActiveFilters={hasActiveFilters}
-          stats={stats}
-        />
-      }
+          <LibraryHeader
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            isSearchActive={isSearchActive}
+            setIsSearchActive={setIsSearchActive}
+            isFilterModalVisible={isFilterModalVisible}
+            setIsFilterModalVisible={setIsFilterModalVisible}
+            hasActiveFilters={hasActiveFilters}
+            stats={stats}
+          />
+        }
         ListFooterComponent={<View style={{ height: 20 }} />}
         ListEmptyComponent={() => {
           if (isLoading) {
@@ -737,11 +708,19 @@ export default function SpeechLibrary({
           } else {
             return (
               <View className="flex-1 justify-center items-center px-6 py-12">
-                <Text className="text-xl font-bold mb-2" style={{ color: colors.text }}>
+                <Text
+                  className="text-xl font-bold mb-2"
+                  style={{ color: colors.text }}
+                >
                   No Speeches Found
                 </Text>
-                <Text className="text-center" style={{ color: colors.textSecondary }}>
-                  {searchQuery ? "Try a different search or clear your filters." : "You haven't recorded any speeches yet."}
+                <Text
+                  className="text-center"
+                  style={{ color: colors.textSecondary }}
+                >
+                  {searchQuery
+                    ? "Try a different search or clear your filters."
+                    : "You haven't recorded any speeches yet."}
                 </Text>
               </View>
             );

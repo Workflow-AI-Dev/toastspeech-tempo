@@ -64,13 +64,13 @@ interface ProfileSettingsProps {
 
 // DiceBear avatar styles
 const avatarStyles = [
-    "avataaars",
-    "adventurer",
-    "big-smile",
-    "lorelei",
-    "micah",
-    "personas",
-  ];
+  "avataaars",
+  "adventurer",
+  "big-smile",
+  "lorelei",
+  "micah",
+  "personas",
+];
 
 const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"];
 const ageGroups = ["18-25", "26-35", "36-45", "46-55", "56-65", "65+"];
@@ -89,7 +89,7 @@ const generateAvatarUrl = (
   seed: string,
   style: string = "avataaars",
 ): string => {
-  return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&size=80&backgroundColor=transparent`;
+  return `https://api.dicebear.com/7.x/${style}/png?seed=${seed}&size=80&backgroundColor=transparent`;
 };
 
 export default function ProfileSettings({
@@ -114,7 +114,9 @@ export default function ProfileSettings({
   const [weeklyReports, setWeeklyReports] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(user.avatar || "felix");
-  const [selectedAvatarStyle, setSelectedAvatarStyle] = useState(user.avatarStyle || "avataaars");
+  const [selectedAvatarStyle, setSelectedAvatarStyle] = useState(
+    user.avatarStyle || "avataaars",
+  );
   const [avatarSeeds, setAvatarSeeds] = useState<string[]>([]);
   const [isShuffling, setIsShuffling] = useState(false);
   const router = useRouter();
@@ -136,21 +138,20 @@ export default function ProfileSettings({
 
   // Initialize avatar seeds on component mount
   const curatedAvatarSeeds = [
-      "felix",
-      "luna",
-      "maximus",
-      "pixelpete",
-      "nimbus",
-      "echo",
-      "blip",
-      "zara",
-      "orbit",
-    ];
-  
-  
-    useEffect(() => {
-      setAvatarSeeds(curatedAvatarSeeds);
-    }, []);
+    "felix",
+    "luna",
+    "maximus",
+    "pixelpete",
+    "nimbus",
+    "echo",
+    "blip",
+    "zara",
+    "orbit",
+  ];
+
+  useEffect(() => {
+    setAvatarSeeds(curatedAvatarSeeds);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -161,65 +162,64 @@ export default function ProfileSettings({
   };
 
   const fetchProfile = async () => {
-      try {
-        const token = await AsyncStorage.getItem("auth_token");
-        if (!token) {
-          console.warn("No access token found");
-          return;
-        }
-
-        const response = await fetch(`${BASE_URL}/auth/me`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        const data = await response.json();
-
-        console.log("✅ Profile fetched:", data);
-        setProfileData(data);
-        setSelectedAvatar(data.avatar || "felix");
-        setSelectedAvatarStyle(data.avatar_style || "avataaars");
-      } catch (err) {
-        console.error("❌ Error fetching profile:", err);
-      } finally{
-        setIsLoading(false);
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (!token) {
+        console.warn("No access token found");
+        return;
       }
-    };
+
+      const response = await fetch(`${BASE_URL}/auth/me`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      console.log("✅ Profile fetched:", data);
+      setProfileData(data);
+      setSelectedAvatar(data.avatar || "felix");
+      setSelectedAvatarStyle(data.avatar_style || "avataaars");
+    } catch (err) {
+      console.error("❌ Error fetching profile:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchProfile();
   }, []);
 
   const fetchMetrics = async () => {
-      try {
-        const token = await AsyncStorage.getItem("auth_token");
-        if (!token) {
-          console.warn("No access token found");
-          return;
-        }
-
-        const res = await fetch(`${BASE_URL}/user/user-metrics`, { 
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`, 
-              'Content-Type': 'application/json',
-            },
-        });
-        
-        const data = await res.json();
-
-        console.log("✅ Metrics fetched:", data);
-        setMetrics(data);
-      } catch (err) {
-        console.error("❌ Error fetching metrics:", err);
-      } finally {
-        setIsLoading(false);
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (!token) {
+        console.warn("No access token found");
+        return;
       }
-    };
 
+      const res = await fetch(`${BASE_URL}/user/user-metrics`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await res.json();
+
+      console.log("✅ Metrics fetched:", data);
+      setMetrics(data);
+    } catch (err) {
+      console.error("❌ Error fetching metrics:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchMetrics();
@@ -262,19 +262,10 @@ export default function ProfileSettings({
     }
   };
 
-  // const handleShuffleAvatars = () => {
-  //   setIsShuffling(true);
-  //   setTimeout(() => {
-  //     setAvatarSeeds(generateRandomSeeds(12));
-  //     setIsShuffling(false);
-  //   }, 300);
-  // };
-
   const handleStyleChange = (style: string) => {
     setSelectedAvatarStyle(style);
     // setAvatarSeeds(generateRandomSeeds(12));
   };
-  
 
   const startEditing = () => {
     setIsEditing(true);
@@ -329,10 +320,10 @@ export default function ProfileSettings({
     try {
       const token = await AsyncStorage.getItem("auth_token");
       const response = await fetch(`${BASE_URL}/user/privacy-settings`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${token}`, 
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -357,7 +348,7 @@ export default function ProfileSettings({
     }
   }, [privacyVisible]);
 
-   if (isLoading) {
+  if (isLoading) {
     return (
       <SafeAreaView
         className="flex-1 justify-center items-center mt-9" // Centers content both horizontally and vertically
@@ -365,23 +356,32 @@ export default function ProfileSettings({
       >
         <ActivityIndicator size="large" color={colors.primary} />
         {/* Provides clear visual separation and emphasis for the loading message */}
-        <Text style={{ color: colors.text, marginTop: 16, fontSize: 16, fontWeight: '600' }}>
+        <Text
+          style={{
+            color: colors.text,
+            marginTop: 16,
+            fontSize: 16,
+            fontWeight: "600",
+          }}
+        >
           Loading profile data...
         </Text>
       </SafeAreaView>
     );
   }
 
-
-  const handlePrivacySave = async (audioConsent: boolean, videoConsent: boolean) => {
+  const handlePrivacySave = async (
+    audioConsent: boolean,
+    videoConsent: boolean,
+  ) => {
     try {
       const token = await AsyncStorage.getItem("auth_token");
 
       const response = await fetch(`${BASE_URL}/user/update-privacy`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json", 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           store_audio: audioConsent,
@@ -400,7 +400,7 @@ export default function ProfileSettings({
       await AsyncStorage.setItem("consent_video", JSON.stringify(videoConsent));
 
       console.log("Privacy settings saved!");
-      setPrivacyVisible(false)
+      setPrivacyVisible(false);
     } catch (error) {
       console.error("Error saving privacy settings:", error);
     }
@@ -419,7 +419,9 @@ export default function ProfileSettings({
         {
           icon: Crown,
           title: "Change Subscription",
-          description: "Current Plan - " + `${profileData?.current_plan_id?.charAt(0).toUpperCase()}${profileData?.current_plan_id?.slice(1)}`,
+          description:
+            "Current Plan - " +
+            `${profileData?.current_plan_id?.charAt(0).toUpperCase()}${profileData?.current_plan_id?.slice(1)}`,
           onPress: () => {
             router.push("/subscription");
           },
@@ -429,7 +431,9 @@ export default function ProfileSettings({
           icon: Shield,
           title: "Privacy & Security",
           description: "Manage your privacy settings",
-          onPress: () => {setPrivacyVisible(true)},
+          onPress: () => {
+            setPrivacyVisible(true);
+          },
         },
       ],
     },
@@ -503,7 +507,9 @@ export default function ProfileSettings({
     {
       icon: Trophy,
       label: "Avg Score",
-      value: metrics?.average_score ? Math.round(metrics.average_score).toString() : "0",
+      value: metrics?.average_score
+        ? Math.round(metrics.average_score).toString()
+        : "0",
       color: "#10b981",
       bgColor: "#d1fae5",
     },
@@ -536,28 +542,12 @@ export default function ProfileSettings({
             </TouchableOpacity>
 
             <View className="items-center">
-              {isEditing ? (
-                <TextInput
-                  value={editedName}
-                  onChangeText={setEditedName}
-                  style={{
-                    color: colors.text,
-                    fontSize: 20,
-                    fontWeight: "bold",
-                    borderBottomWidth: 1,
-                    borderColor: colors.border,
-                    paddingVertical: 4,
-                    minWidth: 200,
-                  }}
-                />
-              ) : (
-                <Text
-                  className="text-2xl font-bold mb-1"
-                  style={{ color: colors.text }}
-                >
-                  {profileData?.name || "Loading..."}
-                </Text>
-              )}
+              <Text
+                className="text-2xl font-bold mb-1"
+                style={{ color: colors.text }}
+              >
+                {profileData?.name || "Loading..."}
+              </Text>
 
               <Text className="mb-4" style={{ color: colors.textSecondary }}>
                 Member since{" "}
@@ -889,7 +879,7 @@ export default function ProfileSettings({
             <View className="space-y-3">
               {/* Email Info Card */}
               <View
-                className="rounded-2xl p-4"
+                className="rounded-2xl p-4 mb-2"
                 style={{ backgroundColor: colors.surface }}
               >
                 <View className="flex-row items-center">
@@ -918,7 +908,7 @@ export default function ProfileSettings({
 
               {/* Gender Info Card */}
               <View
-                className="rounded-2xl p-4"
+                className="rounded-2xl p-4 mb-2"
                 style={{ backgroundColor: colors.surface }}
               >
                 <View className="flex-row items-center">
@@ -947,7 +937,7 @@ export default function ProfileSettings({
 
               {/* Age Group Info Card */}
               <View
-                className="rounded-2xl p-4"
+                className="rounded-2xl p-4 mb-2"
                 style={{ backgroundColor: colors.surface }}
               >
                 <View className="flex-row items-center">
@@ -1097,7 +1087,10 @@ export default function ProfileSettings({
                   onPress={() => setPrivacyVisible(false)}
                   className="self-end p-2 -mt-2 -mr-2"
                 >
-                  <Text className="text-2xl font-bold" style={{ color: colors.textSecondary }}>
+                  <Text
+                    className="text-2xl font-bold"
+                    style={{ color: colors.textSecondary }}
+                  >
                     &times;
                   </Text>
                 </TouchableOpacity>
@@ -1110,21 +1103,31 @@ export default function ProfileSettings({
                   >
                     <Shield size={24} color="#fff" />
                   </View>
-                  <Text className="text-2xl font-bold" style={{ color: colors.text }}>
+                  <Text
+                    className="text-2xl font-bold"
+                    style={{ color: colors.text }}
+                  >
                     Privacy & Security
                   </Text>
                 </View>
 
                 {/* Description */}
-                <Text className="text-base mb-4" style={{ color: colors.textSecondary }}>
-                  Your data is safe with us. We do not save any speech audio or video files in our database without your consent.
-                  If you'd like to revisit speeches later, you can allow storage below.
-                  For your privacy, saved files are automatically deleted after 30 days.
+                <Text
+                  className="text-base mb-4"
+                  style={{ color: colors.textSecondary }}
+                >
+                  Your data is safe with us. We do not save any speech audio or
+                  video files in our database without your consent. If you'd
+                  like to revisit speeches later, you can allow storage below.
+                  For your privacy, saved files are automatically deleted after
+                  30 days.
                 </Text>
 
                 {/* Toggles */}
                 <View className="flex-row justify-between items-center mb-4">
-                  <Text className="text-base" style={{ color: colors.text }}>Allow Audio Storage</Text>
+                  <Text className="text-base" style={{ color: colors.text }}>
+                    Allow Audio Storage
+                  </Text>
                   <Switch
                     value={audioConsent}
                     onValueChange={setAudioConsent}
@@ -1133,7 +1136,9 @@ export default function ProfileSettings({
                 </View>
 
                 <View className="flex-row justify-between items-center mb-4">
-                  <Text className="text-base" style={{ color: colors.text }}>Allow Video Storage</Text>
+                  <Text className="text-base" style={{ color: colors.text }}>
+                    Allow Video Storage
+                  </Text>
                   <Switch
                     value={videoConsent}
                     onValueChange={setVideoConsent}
@@ -1147,7 +1152,10 @@ export default function ProfileSettings({
                   className="mt-6 py-3 rounded-full items-center shadow-lg"
                   style={{ backgroundColor: colors.primary }}
                 >
-                  <Text className="text-base font-bold" style={{ color: "#fff" }}>
+                  <Text
+                    className="text-base font-bold"
+                    style={{ color: "#fff" }}
+                  >
                     Save Preferences
                   </Text>
                 </TouchableOpacity>
@@ -1155,7 +1163,6 @@ export default function ProfileSettings({
             </View>
           </Modal>
         )}
-
 
         {/* App Version */}
         <View className="px-6 py-6">
@@ -1171,7 +1178,7 @@ export default function ProfileSettings({
       {/* Avatar Selection Modal */}
       <Modal
         visible={showAvatarModal}
-        transparent={true}
+        transparent
         animationType="slide"
         onRequestClose={() => setShowAvatarModal(false)}
       >
@@ -1246,35 +1253,19 @@ export default function ProfileSettings({
               </ScrollView>
             </View>
 
-            {/* Shuffle Button */}
-            {/*<TouchableOpacity
-              className="flex-row items-center justify-center p-4 rounded-2xl mb-6"
-              style={{ backgroundColor: colors.primary }}
-              onPress={handleShuffleAvatars}
-              disabled={isShuffling}
-            >
-              <Shuffle
-                size={20}
-                color="white"
-                style={{
-                  transform: [{ rotate: isShuffling ? "180deg" : "0deg" }],
-                }}
-              />
-              <Text className="text-white font-semibold ml-2">
-                {isShuffling ? "Shuffling..." : "Shuffle New Avatars"}
-              </Text>
-            </TouchableOpacity>*/}
-
             {/* Avatar Grid */}
             <ScrollView showsVerticalScrollIndicator={false}>
               <View className="flex-row flex-wrap justify-between">
                 {avatarSeeds.map((seed, index) => {
-                  const isSelected = selectedAvatar === seed && selectedAvatarStyle === profileData?.avatar_style
+                  const isSelected =
+                    selectedAvatar === seed &&
+                    selectedAvatarStyle === profileData?.avatar_style;
                   const avatarSize = (width - 80) / 3 - 12;
+
                   return (
                     <TouchableOpacity
                       key={`${seed}-${index}`}
-                      className={`rounded-2xl items-center justify-center mb-4 border-3 overflow-hidden relative`}
+                      className="rounded-2xl mb-4 border overflow-hidden relative"
                       style={{
                         backgroundColor: isSelected
                           ? colors.primary + "20"
@@ -1284,10 +1275,10 @@ export default function ProfileSettings({
                           : colors.border,
                         width: avatarSize,
                         height: avatarSize,
-                        opacity: isShuffling ? 0.5 : 1,
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                       onPress={() => handleAvatarSelect(seed)}
-                      disabled={isShuffling}
                     >
                       <Image
                         source={{
@@ -1325,8 +1316,12 @@ export default function ProfileSettings({
                 Preview:
               </Text>
               <View
-                className="rounded-full w-16 h-16 overflow-hidden border-2"
-                style={{ borderColor: colors.primary }}
+                className="rounded-full overflow-hidden border-2"
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderColor: colors.primary,
+                }}
               >
                 <Image
                   source={{
@@ -1335,7 +1330,7 @@ export default function ProfileSettings({
                       profileData?.avatar_style,
                     ),
                   }}
-                  className="w-full h-full"
+                  style={{ width: 64, height: 64 }}
                   resizeMode="cover"
                 />
               </View>

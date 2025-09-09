@@ -105,7 +105,7 @@ export default function SignUpScreen() {
     seed: string,
     style: string = "avataaars",
   ): string => {
-    return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&size=80&backgroundColor=transparent`;
+    return `https://api.dicebear.com/7.x/${style}/png?seed=${seed}&size=80&backgroundColor=transparent`;
   };
 
   // Instead of generating randomly
@@ -121,28 +121,18 @@ export default function SignUpScreen() {
     "orbit",
   ];
 
-
   useEffect(() => {
     setAvatarSeeds(curatedAvatarSeeds);
   }, []);
 
-  
   const handleAvatarSelect = (avatarSeed: string) => {
     setSelectedAvatar(avatarSeed);
-    console.log(selectedAvatar)
+    console.log(selectedAvatar);
     setFormData({
       ...formData,
       avatar: avatarSeed,
       avatar_style: selectedAvatarStyle,
     });
-  };
-
-  const handleShuffleAvatars = () => {
-    // setIsShuffling(true);
-    // setTimeout(() => {
-    //   setAvatarSeeds(generateRandomSeeds(12));
-    //   setIsShuffling(false);
-    // }, 300);
   };
 
   const handleStyleChange = (style: string) => {
@@ -297,29 +287,27 @@ export default function SignUpScreen() {
   };
 
   const nextStep = () => {
-  let isValid = true;
+    let isValid = true;
 
-  switch (currentStep) {
-    case 1:
-      isValid = validateStep1();
-      break;
-    case 3:
-      isValid = validateStep3();
-      break;
-    case 4:
-      isValid = validateStep4();
-      break;
-    default:
-      // step 2 or unknown step: no validation
-      isValid = true;
-  }
+    switch (currentStep) {
+      case 1:
+        isValid = validateStep1();
+        break;
+      case 3:
+        isValid = validateStep3();
+        break;
+      case 4:
+        isValid = validateStep4();
+        break;
+      default:
+        // step 2 or unknown step: no validation
+        isValid = true;
+    }
 
-  if (isValid && currentStep < 5) {
-    setCurrentStep(currentStep + 1);
-  }
-
-};
-
+    if (isValid && currentStep < 5) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
 
   const handleGoogleSignUp = async () => {
     setIsGoogleLoading(true);
@@ -358,7 +346,7 @@ export default function SignUpScreen() {
     if (!validateAllSteps()) return;
 
     setIsLoading(true);
-    console.log(formData)
+    console.log(formData);
 
     try {
       if (!isGoogleUser) {
@@ -404,7 +392,7 @@ export default function SignUpScreen() {
           custom_purpose: formData.customPurpose,
           avatar: formData.avatar,
           avatar_style: formData.avatar_style,
-          store_audio: formData.store_audio ?? false, 
+          store_audio: formData.store_audio ?? false,
           store_video: formData.store_video ?? false,
         }),
       });
@@ -440,7 +428,7 @@ export default function SignUpScreen() {
     "Select Avatar",
     "Tell us about you",
     "Your goals",
-    "Your privacy preferences", 
+    "Your privacy preferences",
   ];
 
   return (
@@ -618,11 +606,14 @@ export default function SignUpScreen() {
         )}
 
         {currentStep === 2 && (
-         <View>
+          <View>
             <Text className="text-base font-medium text-gray-800">
               Pick your vibe
             </Text>
-            <Text className="text-sm mb-3 text-gray-600">No pressure, you can always switch it up in your profile settings later!</Text>
+            <Text className="text-sm mb-3 text-gray-600">
+              No pressure, you can always switch it up in your profile settings
+              later!
+            </Text>
 
             <ScrollView
               horizontal
@@ -633,16 +624,22 @@ export default function SignUpScreen() {
                 <TouchableOpacity
                   key={style}
                   onPress={() => handleStyleChange(style)}
-                  className={`px-4 py-2 rounded-full border mr-2 ${
-                    selectedAvatarStyle === style
-                      ? "bg-black border-black"
-                      : "bg-white border-gray-300"
-                  }`}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor:
+                      selectedAvatarStyle === style ? "#000" : "#ccc",
+                    backgroundColor:
+                      selectedAvatarStyle === style ? "#000" : "#fff",
+                    marginRight: 8,
+                  }}
                 >
                   <Text
-                    className={`text-sm ${
-                      selectedAvatarStyle === style ? "text-white" : "text-black"
-                    }`}
+                    style={{
+                      color: selectedAvatarStyle === style ? "#fff" : "#000",
+                    }}
                   >
                     {style}
                   </Text>
@@ -655,26 +652,35 @@ export default function SignUpScreen() {
                 <TouchableOpacity
                   key={seed}
                   onPress={() => handleAvatarSelect(seed)}
-                  className={`m-2 rounded-full border-2 ${
-                    selectedAvatar === seed ? "border-black" : "border-transparent"
-                  }`}
+                  style={{
+                    margin: 4,
+                    borderRadius: 40,
+                    borderWidth: selectedAvatar === seed ? 2 : 0,
+                    borderColor: "#000",
+                    overflow: "hidden",
+                  }}
                 >
                   <Image
                     source={{
                       uri: generateAvatarUrl(seed, selectedAvatarStyle),
                     }}
-                    style={{ width: 80, height: 80, borderRadius: 40 }}
+                    style={{ width: 80, height: 80 }}
                   />
+                  {selectedAvatar === seed && (
+                    <View
+                      style={{
+                        position: "absolute",
+                        top: 4,
+                        right: 4,
+                        backgroundColor: "black",
+                        borderRadius: 8,
+                        padding: 2,
+                      }}
+                    ></View>
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
-
-            {/* <TouchableOpacity
-              className="mt-4 px-4 py-3 bg-gray-100 rounded-xl border border-gray-300 items-center"
-              onPress={handleShuffleAvatars}
-            >
-              <Text className="text-black font-medium">Shuffle Avatars</Text>
-            </TouchableOpacity> */}
           </View>
         )}
 
@@ -844,19 +850,20 @@ export default function SignUpScreen() {
               Your data is safe with us.
             </Text>
             <Text className="text-sm text-gray-600">
-              We do not save any speech audio or video files in our database without your consent.
-              If you'd like to revisit speeches later, you can allow storage below.
-              For your privacy, saved files are automatically deleted after 30 days.
+              We do not save any speech audio or video files in our database
+              without your consent. If you'd like to revisit speeches later, you
+              can allow storage below. For your privacy, saved files are
+              automatically deleted after 30 days.
             </Text>
 
             <TouchableOpacity
-              onPress={() => { 
+              onPress={() => {
                 setFormData((prev) => {
                   const newState = {
                     ...prev,
                     store_audio: !prev.store_audio,
                   };
-                  console.log("store_audio toggled. New formData:", newState); 
+                  console.log("store_audio toggled. New formData:", newState);
                   return newState;
                 });
               }}
@@ -866,12 +873,15 @@ export default function SignUpScreen() {
                   : "border-gray-200 bg-[#f6f7fb]"
               }`}
             >
-              <Text className="text-base text-gray-900">Allow audio storage</Text>
+              <Text className="text-base text-gray-900">
+                Allow audio storage
+              </Text>
               {formData.store_audio && <Check size={18} color="#111" />}
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => { // Add curly braces here to allow multiple statements
+              onPress={() => {
+                // Add curly braces here to allow multiple statements
                 setFormData((prev) => {
                   const newState = {
                     ...prev,
@@ -887,16 +897,17 @@ export default function SignUpScreen() {
                   : "border-gray-200 bg-[#f6f7fb]"
               }`}
             >
-              <Text className="text-base text-gray-900">Allow video storage</Text>
+              <Text className="text-base text-gray-900">
+                Allow video storage
+              </Text>
               {formData.store_video && <Check size={18} color="#111" />}
             </TouchableOpacity>
 
-              <Text className="text-sm text-gray-500">
+            <Text className="text-sm text-gray-500">
               You can change these settings in the profile.
             </Text>
           </View>
         )}
-
 
         <View className="mt-10 space-y-4">
           {currentStep === 1 && (
@@ -947,12 +958,12 @@ export default function SignUpScreen() {
 
           {currentStep === 1 ? (
             <View className="flex-row justify-center pt-4">
-            <Text className="text-gray-600">Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.push("/sign-in")}>
-              <Text className="text-black font-semibold">Sign In</Text>
-            </TouchableOpacity>
-          </View>
-          )  : null}
+              <Text className="text-gray-600">Already have an account? </Text>
+              <TouchableOpacity onPress={() => router.push("/sign-in")}>
+                <Text className="text-black font-semibold">Sign In</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </View>
       </ScrollView>
       <Toast />

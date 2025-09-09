@@ -7,7 +7,6 @@ import * as Haptics from "expo-haptics";
 import * as DocumentPicker from "expo-document-picker";
 import { Audio } from "expo-av";
 import { Video as VideoCompressor } from "react-native-compressor";
-import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
 
 interface SpeechRecorderSpeakerProps {
@@ -33,7 +32,7 @@ if (Platform.OS !== "web") {
   useCameraDevices = visionCamera.useCameraDevices;
 } else {
   CameraComponent = () => null;
-  useCameraDevices = () => ({}); // returns empty object on web
+  useCameraDevices = () => ({});
 }
 
 const SpeechRecorderSpeaker = ({
@@ -305,7 +304,6 @@ const SpeechRecorderSpeaker = ({
   };
 
   const handleFileUpload = async () => {
-    console.log("test");
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 

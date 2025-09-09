@@ -7,7 +7,7 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
-  TextInput
+  TextInput,
 } from "react-native";
 import {
   ChevronRight,
@@ -32,7 +32,7 @@ import {
   CheckCircle,
   AlertCircle,
   Inbox,
-  X
+  X,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import QuickFeedbackPractice from "./QuickFeedbackPractice";
@@ -72,9 +72,7 @@ const parseDateString = (input: unknown): Date | null => {
   if (typeof input !== "string" || !input.trim()) return null;
 
   try {
-    const iso = input
-      .replace(" ", "T")
-      .replace(/(\.\d{3})\d+/, "$1"); 
+    const iso = input.replace(" ", "T").replace(/(\.\d{3})\d+/, "$1");
 
     const d = new Date(iso);
     return isNaN(d.getTime()) ? null : d;
@@ -82,7 +80,6 @@ const parseDateString = (input: unknown): Date | null => {
     return null;
   }
 };
-
 
 const formatDate = (input: string) => {
   const d = parseDateString(input);
@@ -94,7 +91,6 @@ const formatDate = (input: string) => {
     year: "numeric",
   });
 };
-
 
 export default function PracticeLibrary({
   searchQuery,
@@ -116,7 +112,12 @@ export default function PracticeLibrary({
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isSearchActive, setIsSearchActive] = useState(false);
-  const hasActiveFilters = searchQuery || speechTypeFilter || durationFilter || scoreRange || dateRange;
+  const hasActiveFilters =
+    searchQuery ||
+    speechTypeFilter ||
+    durationFilter ||
+    scoreRange ||
+    dateRange;
 
   // Helper function to check if duration matches filter
   const matchesDurationFilter = (duration: string, filter: string | null) => {
@@ -184,28 +185,27 @@ export default function PracticeLibrary({
     }
   };
 
-   useEffect(() => {
+  useEffect(() => {
     const fetchPractices = async () => {
       setIsLoading(true);
       try {
-      const token = await AsyncStorage.getItem("auth_token");
+        const token = await AsyncStorage.getItem("auth_token");
 
-      const response = await fetch(`${BASE_URL}/practice/all`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+        const response = await fetch(`${BASE_URL}/practice/all`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch evaluations");
-      }
+        if (!response.ok) {
+          throw new Error("Failed to fetch evaluations");
+        }
 
-      const data = await response.json();
-      console.log("✅ Loaded practice records from Supabase", data.practices);
+        const data = await response.json();
+        console.log("✅ Loaded practice records from Supabase", data.practices);
 
-      const transformed = data.practices
-          .map((practice, idx, arr) => {
+        const transformed = data.practices.map((practice, idx, arr) => {
           const currentScore = practice.evaluation.OverallScore || 0;
           const previousScore =
             idx < arr.length - 1
@@ -233,7 +233,7 @@ export default function PracticeLibrary({
           };
         });
 
-      setPractices(transformed);
+        setPractices(transformed);
       } catch (err) {
         console.error("❌ Failed to load evaluation:", err);
       } finally {
@@ -244,47 +244,47 @@ export default function PracticeLibrary({
   }, []);
 
   const filteredPractices = useMemo(() => {
-      return practices.filter((practice) => {
-        if (searchQuery) {
-          if (!practice.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-            return false;
-          }
-        }
-  
-        // Speech type filter
-        if (speechTypeFilter) {
-          if (
-            practice.category.toLowerCase() !== speechTypeFilter.toLowerCase()
-          ) {
-            return false;
-          }
-        }
-  
-        // Duration filter
-        if (!matchesDurationFilter(practice.duration, durationFilter)) {
+    return practices.filter((practice) => {
+      if (searchQuery) {
+        if (!practice.title.toLowerCase().includes(searchQuery.toLowerCase())) {
           return false;
         }
-  
-        // Score range filter
-        if (!matchesScoreRange(practice.score, scoreRange)) {
+      }
+
+      // Speech type filter
+      if (speechTypeFilter) {
+        if (
+          practice.category.toLowerCase() !== speechTypeFilter.toLowerCase()
+        ) {
           return false;
         }
-  
-        // Date range filter
-        if (!matchesDateRange(practice.date, dateRange)) {
-          return false;
-        }
-  
-        return true;
-      });
-    }, [
-      practices,
-      searchQuery,
-      speechTypeFilter,
-      durationFilter,
-      scoreRange,
-      dateRange,
-    ]);
+      }
+
+      // Duration filter
+      if (!matchesDurationFilter(practice.duration, durationFilter)) {
+        return false;
+      }
+
+      // Score range filter
+      if (!matchesScoreRange(practice.score, scoreRange)) {
+        return false;
+      }
+
+      // Date range filter
+      if (!matchesDateRange(practice.date, dateRange)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    practices,
+    searchQuery,
+    speechTypeFilter,
+    durationFilter,
+    scoreRange,
+    dateRange,
+  ]);
 
   // Helper: Parse duration string (e.g. "5m 30s") to total seconds
   const parseDurationToSeconds = (duration: string): number => {
@@ -358,7 +358,6 @@ export default function PracticeLibrary({
     };
   }, [practices]);
 
-
   const getScoreColor = (score: number) => {
     if (score >= 90) return { bg: "#dcfce7", text: "#166534", icon: "#22c55e" };
     if (score >= 80) return { bg: "#dbeafe", text: "#1e40af", icon: "#3b82f6" };
@@ -385,7 +384,9 @@ export default function PracticeLibrary({
         return;
       }
 
-      setPractices((prev) => prev.filter((practice) => practice.id !== practiceId));
+      setPractices((prev) =>
+        prev.filter((practice) => practice.id !== practiceId),
+      );
     } catch (error) {
       console.error("Delete failed:", error);
     }
@@ -396,133 +397,132 @@ export default function PracticeLibrary({
 
     return (
       <View className="px-6">
-      <TouchableOpacity
-        className="rounded-3xl p-5 mb-4 shadow-lg"
-        style={{
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderWidth: 0.5,
-          shadowColor: theme === "dark" ? "#000" : "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-          shadowRadius: 12,
-          elevation: 8,
-        }}
-        onPress={() => setSelectedPractice(item)}
-        onLongPress={() => handleDeletePractice(item.id)}
-      >
-        {/* Header Row */}
-        <View className="flex-row items-start justify-between mb-3">
-          <View className="flex-1 mr-3">
-            <Text
-              className="text-xl font-bold mb-1"
-              style={{ color: colors.text }}
-            >
-              {item.title}
-            </Text>
-            <View className="flex-row items-center">
-              <View
-                className="rounded-full py-1 mr-2"
-                style={{
-                  backgroundColor:
-                    theme === "dark" ? colors.surface : "#f3f4f6",
-                }}
+        <TouchableOpacity
+          className="rounded-3xl p-5 mb-4 shadow-lg"
+          style={{
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            borderWidth: 0.5,
+            shadowColor: theme === "dark" ? "#000" : "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: theme === "dark" ? 0.3 : 0.1,
+            shadowRadius: 12,
+            elevation: 8,
+          }}
+          onPress={() => setSelectedPractice(item)}
+          onLongPress={() => handleDeletePractice(item.id)}
+        >
+          {/* Header Row */}
+          <View className="flex-row items-start justify-between mb-3">
+            <View className="flex-1 mr-3">
+              <Text
+                className="text-xl font-bold mb-1"
+                style={{ color: colors.text }}
               >
-                <Text
-                  className="text-xs font-semibold"
-                  style={{ color: colors.primary }}
+                {item.title}
+              </Text>
+              <View className="flex-row items-center">
+                <View
+                  className="rounded-full py-1 mr-2"
+                  style={{
+                    backgroundColor:
+                      theme === "dark" ? colors.surface : "#f3f4f6",
+                  }}
                 >
-                  {item.category}
+                  <Text
+                    className="text-xs font-semibold"
+                    style={{ color: colors.primary }}
+                  >
+                    {item.category}
+                  </Text>
+                </View>
+                <Calendar size={12} color={colors.textSecondary} />
+                <Text
+                  className="text-xs ml-1"
+                  style={{ color: colors.textSecondary }}
+                >
+                  {item.date}
                 </Text>
               </View>
-              <Calendar size={12} color={colors.textSecondary} />
+            </View>
+
+            {/* Score Badge */}
+            <View
+              className="rounded-2xl px-4 py-2 items-center justify-center min-w-[60px]"
+              style={{ backgroundColor: scoreColors.bg }}
+            >
               <Text
-                className="text-xs ml-1"
-                style={{ color: colors.textSecondary }}
+                className="text-2xl font-bold"
+                style={{ color: scoreColors.text }}
               >
-                {item.date}
+                {item.score}
+              </Text>
+              <Text
+                className="text-xs font-medium"
+                style={{ color: scoreColors.text }}
+              >
+                SCORE
               </Text>
             </View>
           </View>
 
-          {/* Score Badge */}
-          <View
-            className="rounded-2xl px-4 py-2 items-center justify-center min-w-[60px]"
-            style={{ backgroundColor: scoreColors.bg }}
-          >
-            <Text
-              className="text-2xl font-bold"
-              style={{ color: scoreColors.text }}
-            >
-              {item.score}
-            </Text>
-            <Text
-              className="text-xs font-medium"
-              style={{ color: scoreColors.text }}
-            >
-              SCORE
-            </Text>
-          </View>
-        </View>
-
-        {/* Metrics Row */}
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center flex-1">
-
-            <View className="flex-row items-center">
-              {item.improvement === "N/A" ? (
-                <>
-                  <TrendingUp size={14} color="#9ca3af" /> {/* Gray */}
-                  <Text className="text-sm ml-1 font-medium text-gray-400">
-                    New
-                  </Text>
-                </>
-              ) : parseInt(item.improvement) > 0 ? (
-                <>
-                  <TrendingUp size={14} color="#10b981" />
-                  <Text className="text-sm ml-1 font-bold text-green-500">
-                    {item.improvement}
-                  </Text>
-                </>
-              ) : parseInt(item.improvement) < 0 ? (
-                <>
-                  <TrendingDown size={14} color="#ef4444" />
-                  <Text className="text-sm ml-1 font-bold text-red-500">
-                    {item.improvement}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <TrendingUp size={14} color="#9ca3af" />
-                  <Text className="text-sm ml-1 font-medium text-gray-400">
-                    ±0
-                  </Text>
-                </>
-              )}
+          {/* Metrics Row */}
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center flex-1">
+              <View className="flex-row items-center">
+                {item.improvement === "N/A" ? (
+                  <>
+                    <TrendingUp size={14} color="#9ca3af" /> {/* Gray */}
+                    <Text className="text-sm ml-1 font-medium text-gray-400">
+                      New
+                    </Text>
+                  </>
+                ) : parseInt(item.improvement) > 0 ? (
+                  <>
+                    <TrendingUp size={14} color="#10b981" />
+                    <Text className="text-sm ml-1 font-bold text-green-500">
+                      {item.improvement}
+                    </Text>
+                  </>
+                ) : parseInt(item.improvement) < 0 ? (
+                  <>
+                    <TrendingDown size={14} color="#ef4444" />
+                    <Text className="text-sm ml-1 font-bold text-red-500">
+                      {item.improvement}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <TrendingUp size={14} color="#9ca3af" />
+                    <Text className="text-sm ml-1 font-medium text-gray-400">
+                      ±0
+                    </Text>
+                  </>
+                )}
+              </View>
             </View>
+
+            <ChevronRight size={20} color={colors.textSecondary} />
           </View>
 
-          <ChevronRight size={20} color={colors.textSecondary} />
-        </View>
-
-        {/* Progress Bar */}
-        <View className="mt-3">
-          <View
-            className="h-1 rounded-full"
-            style={{
-              backgroundColor: theme === "dark" ? colors.surface : "#f3f4f6",
-            }}
-          >
+          {/* Progress Bar */}
+          <View className="mt-3">
             <View
               className="h-1 rounded-full"
               style={{
-                backgroundColor: scoreColors.icon,
-                width: `${item.score}%`,
+                backgroundColor: theme === "dark" ? colors.surface : "#f3f4f6",
               }}
-            />
+            >
+              <View
+                className="h-1 rounded-full"
+                style={{
+                  backgroundColor: scoreColors.icon,
+                  width: `${item.score}%`,
+                }}
+              />
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -576,19 +576,18 @@ export default function PracticeLibrary({
         </View>
 
         <ScrollView className="flex-1">
-          <View className="p-6">
+          <View className="p-1 mt-2">
             <Text
-              className="text-2xl font-bold mb-2 text-center"
+              className="text-2xl font-bold text-center"
               style={{ color: colors.text }}
             >
               {selectedPractice.title}
             </Text>
             <Text
-              className="text-center mb-8 text-base"
+              className="text-center text-base"
               style={{ color: colors.textSecondary }}
             >
-              Recorded on {selectedPractice.date} •{" "}
-              {selectedPractice.category}
+              Recorded on {selectedPractice.date} • {selectedPractice.category}
             </Text>
 
             {/* Quick Feedback */}
@@ -609,50 +608,58 @@ export default function PracticeLibrary({
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-          <FlatList
-            data={filteredPractices}
-            renderItem={renderPracticeItem}
-            keyExtractor={(item) => item.id}
-            ListHeaderComponent={
-              <LibraryHeader
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                isSearchActive={isSearchActive}
-                setIsSearchActive={setIsSearchActive}
-                isFilterModalVisible={isFilterModalVisible}
-                setIsFilterModalVisible={setIsFilterModalVisible}
-                hasActiveFilters={hasActiveFilters}
-                stats={stats}
-              />
-            }
-            ListFooterComponent={<View style={{ height: 20 }} />}
-            ListEmptyComponent={() => {
-              if (isLoading) {
-                return (
-                  <View className="flex-1 justify-center items-center py-8">
-                    <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={{ color: colors.text, marginTop: 16 }}>
-                      Loading your practice speeches...
-                    </Text>
-                  </View>
-                );
-              } else {
-                return (
-                  <View className="flex-1 justify-center items-center px-6 py-12">
-                    <Text className="text-xl font-bold mb-2" style={{ color: colors.text }}>
-                      No Practice Speeches Found
-                    </Text>
-                    <Text className="text-center" style={{ color: colors.textSecondary }}>
-                      {searchQuery ? "Try a different search or clear your filters." : "You haven't recorded any practice speeches yet."}
-                    </Text>
-                  </View>
-                );
-              }
-            }}
-            contentContainerStyle={{ flexGrow: 1 }}
+      <FlatList
+        data={filteredPractices}
+        renderItem={renderPracticeItem}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={
+          <LibraryHeader
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            isSearchActive={isSearchActive}
+            setIsSearchActive={setIsSearchActive}
+            isFilterModalVisible={isFilterModalVisible}
+            setIsFilterModalVisible={setIsFilterModalVisible}
+            hasActiveFilters={hasActiveFilters}
+            stats={stats}
           />
-        </View>
+        }
+        ListFooterComponent={<View style={{ height: 20 }} />}
+        ListEmptyComponent={() => {
+          if (isLoading) {
+            return (
+              <View className="flex-1 justify-center items-center py-8">
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={{ color: colors.text, marginTop: 16 }}>
+                  Loading your practice speeches...
+                </Text>
+              </View>
+            );
+          } else {
+            return (
+              <View className="flex-1 justify-center items-center px-6 py-12">
+                <Text
+                  className="text-xl font-bold mb-2"
+                  style={{ color: colors.text }}
+                >
+                  No Practice Speeches Found
+                </Text>
+                <Text
+                  className="text-center"
+                  style={{ color: colors.textSecondary }}
+                >
+                  {searchQuery
+                    ? "Try a different search or clear your filters."
+                    : "You haven't recorded any practice speeches yet."}
+                </Text>
+              </View>
+            );
+          }
+        }}
+        contentContainerStyle={{ flexGrow: 1 }}
+      />
+    </View>
   );
 }

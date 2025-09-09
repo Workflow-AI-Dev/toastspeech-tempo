@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -79,6 +79,29 @@ export default function EvaluatorModeScreen({
   const [detailedFeedback, setDetailedFeedback] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [plan, setPlan] = useState<string | null>(null);
+  const [limits, setLimits] = useState(null);
+
+  useEffect(() => {
+    const fetchPlan = async () => {
+      try {
+        const plan = await AsyncStorage.getItem("plan");
+        setPlan(plan);
+      } catch (error) {
+        console.error("Error fetching subscription plan", error);
+      }
+    };
+    fetchPlan();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const savedLimits = await AsyncStorage.getItem("limits");
+      if (savedLimits) {
+        setLimits(JSON.parse(savedLimits));
+      }
+    })();
+  }, []);
 
   const router = useRouter();
 
@@ -129,7 +152,7 @@ export default function EvaluatorModeScreen({
       const token = await AsyncStorage.getItem("auth_token");
       const formData = new FormData();
 
-      // Prepare file extensions and MIME types
+      // File extensions + MIME
       const speakerExt = speakerFile.fileType === "audio" ? "mp3" : "mp4";
       const evaluatorExt = evaluatorFile.fileType === "audio" ? "mp3" : "mp4";
 
@@ -139,30 +162,26 @@ export default function EvaluatorModeScreen({
         evaluatorFile.fileType === "audio" ? "audio/mpeg" : "video/mp4";
 
       if (Platform.OS === "web") {
-        // Fetch blobs from URIs for browser
+        // Web → convert blobs
         const speakerRes = await fetch(speakerFile.recordingUri);
         const speakerBlob = await speakerRes.blob();
-        const speakerWebFile = new File(
-          [speakerBlob],
-          `speaker.${speakerExt}`,
-          {
+        formData.append(
+          "speaker_file",
+          new File([speakerBlob], `speaker.${speakerExt}`, {
             type: speakerMime,
-          },
+          }),
         );
-        formData.append("speaker_file", speakerWebFile);
 
         const evaluatorRes = await fetch(evaluatorFile.recordingUri);
         const evaluatorBlob = await evaluatorRes.blob();
-        const evaluatorWebFile = new File(
-          [evaluatorBlob],
-          `evaluator.${evaluatorExt}`,
-          {
+        formData.append(
+          "evaluator_file",
+          new File([evaluatorBlob], `evaluator.${evaluatorExt}`, {
             type: evaluatorMime,
-          },
+          }),
         );
-        formData.append("evaluator_file", evaluatorWebFile);
       } else {
-        // React Native: use uri-based file object
+        // RN → URI-based
         formData.append("speaker_file", {
           uri: speakerFile.recordingUri,
           name: `speaker.${speakerExt}`,
@@ -176,7 +195,7 @@ export default function EvaluatorModeScreen({
         } as any);
       }
 
-      // Add task types
+      // Add task metadata
       formData.append(
         "task_type_speaker",
         `${speakerFile.fileType}_evaluation`,
@@ -188,73 +207,105 @@ export default function EvaluatorModeScreen({
       formData.append("speech_type", speechType);
       formData.append("speech_details", JSON.stringify(speechDetails));
 
-      for (let [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
-
       setIsLoading(true);
 
+      // 🔹 Step 1: Submit evaluation
       const response = await fetch(`${BASE_URL}/evaluator/process_evaluation`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
-      const data = await response.json();
+      if (!response.ok)
+        throw new Error(`Upload failed with status ${response.status}`);
+      const { task_id } = await response.json();
 
-      if (!response.ok) {
-        console.error("Backend error:", data);
-        alert("Failed to process evaluation.");
-        return;
-      }
+      // 🔹 Step 2: Poll until results are ready
+      const data = await pollForResults(task_id, token);
+      const finalData = data.result ?? data;
 
-      console.log("Evaluation Results:", data);
-
+      // 🔹 Step 3: Map results as before
       const mappedResults = {
-        overallScore: data.summary.Metadata?.overall_score ?? 0,
-        pace: data.analytics?.speaker_analysis?.[0]?.words_per_minute || 0,
-        fillerWords: 0, // Gemini may not return this yet
+        overallScore:
+          finalData.summary_evaluation?.Metadata?.overall_score ?? 0,
+        pace: finalData.analytics?.speaker_analysis?.[0]?.words_per_minute || 0,
+        fillerWords: 0,
         emotionalDelivery: 0,
         clarity: 0,
         confidence: 0,
         engagement: 0,
-        improvement: "N/A", // Or calculate based on history
+        improvement: "N/A",
         duration: (() => {
           const totalSpeakingSeconds =
-            data.analytics?.speaker_analysis?.[0]
+            finalData.analytics?.speaker_analysis?.[0]
               ?.total_speaking_time_seconds || 0;
           const minutes = Math.floor(totalSpeakingSeconds / 60);
           const seconds = totalSpeakingSeconds % 60;
           return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
         })(),
-        avgPause: data.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
-        pausesData: data.analytics?.pauses || [],
-        fillerData: data.analytics?.filler_words || [],
-        crutchData: data.analytics?.crutch_phrases || [],
-        grammarData: data.analytics?.grammar_mistakes || [],
-        environData: data.analytics?.environmental_elements || [],
+        avgPause:
+          finalData.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
+        pausesData: finalData.analytics?.pauses || [],
+        fillerData: finalData.analytics?.filler_words || [],
+        crutchData: finalData.analytics?.crutch_phrases || [],
+        grammarData: finalData.analytics?.grammar_mistakes || [],
+        environData: finalData.analytics?.environmental_elements || [],
+        pitchData: finalData.pitch_track || [],
       };
 
       const mappedFeedback = {
-        strengths: data.summary.Commendations ?? [],
-        improvements: data.summary.Recommendations ?? [],
-        keyInsights: data.summary.KeyInsights ?? [],
+        strengths: finalData.summary_evaluation?.Commendations ?? [],
+        improvements: finalData.summary_evaluation?.Recommendations ?? [],
+        keyInsights: finalData.summary_evaluation?.KeyInsights ?? [],
       };
-
-      const detailedFeedback = data.detailed;
 
       setAnalysisResults(mappedResults);
       setFeedback(mappedFeedback);
-      setDetailedFeedback(detailedFeedback);
-      setIsLoading(false);
+      setDetailedFeedback(finalData.detailed_evaluation);
       setCurrentStep("feedback");
     } catch (err) {
-      setIsLoading(false);
       console.error("Error submitting evaluation:", err);
       alert("An error occurred during evaluation submission.");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const pollForResults = (taskId, token) => {
+    return new Promise((resolve, reject) => {
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(
+            `${BASE_URL}/evaluator/status/${taskId}`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          );
+
+          if (!statusResponse.ok) {
+            const err = await statusResponse.text();
+            clearInterval(pollInterval);
+            reject(new Error(err || "Status check failed"));
+          }
+
+          const statusData = await statusResponse.json();
+          console.log(`Polling for task ${taskId}:`, statusData.message);
+
+          // Check if the task is completed
+          if (statusData.success) {
+            clearInterval(pollInterval); // Stop polling
+            console.log("✅ Polling success:", statusData);
+            resolve(statusData); // Return the final result
+          }
+        } catch (err) {
+          clearInterval(pollInterval);
+          reject(err);
+        }
+      }, 5000); // Poll every 5 seconds
+    });
   };
 
   const renderLoadingScreen = () => (
@@ -514,10 +565,10 @@ export default function EvaluatorModeScreen({
                   className="font-semibold mt-2"
                   style={{ color: colors.primary }}
                 >
-                  Tap to upload PDF or image
+                  Tap to upload PDF
                 </Text>
                 <Text
-                  className="text-sm mt-1"
+                  className="text-sm mt-1 text-center"
                   style={{ color: colors.textSecondary }}
                 >
                   Optional - you can fill details manually below
@@ -747,6 +798,7 @@ export default function EvaluatorModeScreen({
             onRecordingComplete={onSpeakerRecordComplete}
             isProcessing={false}
             recordingMethod={recordMode}
+            plan={plan}
           />
 
           <View className="flex-row space-x-3 mt-6">

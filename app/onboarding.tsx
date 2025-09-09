@@ -194,12 +194,7 @@ export default function OnboardingScreen() {
               className="w-full py-4 rounded-2xl border"
               style={{ borderColor: colors.border }}
             >
-              <Text
-                className="text-center font-semibold text-lg"
-                style={{ color: colors.text }}
-              >
-                Sign In
-              </Text>
+              <Text className="text-center font-semibold text-lg">Sign In</Text>
             </TouchableOpacity>
           </>
         ) : (
