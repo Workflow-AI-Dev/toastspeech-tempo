@@ -19,6 +19,7 @@ import { useTheme, getThemeColors } from "../context/ThemeContext";
 import QuickFeedbackEvaluations from "./QuickFeedbackEvaluations";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BASE_URL } from "../api";
 import { Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import LibraryHeader from "./LibraryHeader";
@@ -184,7 +185,7 @@ export default function EvaluationsLibrary({
       try {
         const token = await AsyncStorage.getItem("auth_token");
 
-        const response = await fetch(`https://tasloflow.com/evaluator/all`, {
+        const response = await fetch(`${BASE_URL}/evaluator/all`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -351,7 +352,7 @@ export default function EvaluationsLibrary({
 
     try {
       const token = await AsyncStorage.getItem("auth_token");
-      const res = await fetch(`https://tasloflow.com/evaluator/delete/${evaluationId}`, {
+      const res = await fetch(`${BASE_URL}/evaluator/delete/${evaluationId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

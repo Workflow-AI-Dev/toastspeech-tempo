@@ -25,7 +25,7 @@ import { useTheme, getThemeColors } from "../context/ThemeContext";
 import QuickFeedbackEvaluations from "../components/QuickFeedbackEvaluations";
 import ProgressIndicator from "../components/ProgressIndicator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { BASE_URL } from "../config/api";
+import { BASE_URL } from "../api";
 import { Platform } from "react-native";
 import { useRouter } from "expo-router";
 

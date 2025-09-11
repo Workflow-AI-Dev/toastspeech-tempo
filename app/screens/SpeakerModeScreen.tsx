@@ -26,7 +26,7 @@ import { useTheme, getThemeColors } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { useRouter } from "expo-router";
-import { BASE_URL } from "../config/api";
+import { BASE_URL } from "../api";
 import * as FileSystem from "expo-file-system";
 
 interface SpeakerModeScreenProps {

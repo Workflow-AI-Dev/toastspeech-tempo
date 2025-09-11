@@ -18,7 +18,7 @@ import {
   Users,
   ChevronLeft,
 } from "lucide-react-native";
-import { BASE_URL } from "./config/api";
+import { BASE_URL } from "./api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function SubscriptionScreen() {

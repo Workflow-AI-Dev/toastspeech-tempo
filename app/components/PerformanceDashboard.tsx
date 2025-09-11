@@ -27,7 +27,7 @@ import { useRouter } from "expo-router";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BASE_URL } from "../config/api";
+import { BASE_URL } from "../api";
 import dayjs from "dayjs";
 import weekday from "dayjs/plugin/weekday"; // Import the weekday plugin
 dayjs.extend(weekday); // Extend dayjs with the weekday plugin

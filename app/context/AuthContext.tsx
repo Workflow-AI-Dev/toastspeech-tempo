@@ -7,10 +7,9 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useSegments } from "expo-router";
-import { BASE_URL, GOOGLE_CLIENT_ID } from "../config/api";
+import { BASE_URL } from "../api";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
-import { supabase } from "../../lib/supabase";
 import { registerForPushNotificationsAsync } from "../hooks/NotificationManager";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -96,7 +95,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (loading) return;
 
     // These are routes that an unauthenticated user should be able to access.
-    // Once authenticated, a user should generally not be sent back to these.
     const unauthenticatedRoutes = [
       "(auth)",
       "onboarding",
@@ -109,13 +107,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const isInUnauthenticatedGroup =
       unauthenticatedRoutes.includes(currentSegment);
 
-    // If there's no user and the current route is not an unauthenticated route, redirect to onboarding.
     if (!user && !isInUnauthenticatedGroup) {
       router.replace("/onboarding");
-    }
-    // If there's a user and the current route *is* an unauthenticated route, redirect to the main app.
-    // We specifically allow "/subscription" here so the user isn't redirected if they just signed up.
-    else if (
+    } else if (
       user &&
       isInUnauthenticatedGroup &&
       currentSegment !== "subscription"
@@ -287,29 +281,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signInWithGoogle = async (): Promise<{ error: any }> => {
+  const signInWithGoogle = async (): Promise<{ error: any; user?: any }> => {
     try {
       console.log("Google sign-in initiated");
 
       const redirectUri = AuthSession.makeRedirectUri({
-        useProxy: true,
+        useProxy: __DEV__,
+        native: "com.yourapp:/oauthredirect",
       });
-      console.log("Redirect URI:", redirectUri);
 
       const request = new AuthSession.AuthRequest({
-        clientId: GOOGLE_CLIENT_ID,
-        scopes: ["openid", "profile", "email"],
+        clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!,
         redirectUri,
+        scopes: ["openid", "profile", "email"],
         responseType: AuthSession.ResponseType.Code,
         usePKCE: true,
       });
 
-      await request.makeAuthUrlAsync(discovery);
-      console.log("Auth URL created");
-
-      const result = await request.promptAsync(discovery);
-
-      console.log("Google Auth Result:", result);
+      const result = await request.promptAsync(discovery, {
+        useProxy: __DEV__,
+      });
 
       if (result.type === "success") {
         const res = await fetch(`${BASE_URL}/auth/google-signin`, {
@@ -318,46 +309,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           body: JSON.stringify({
             code: result.params.code,
             code_verifier: request.codeVerifier,
-            redirect_uri: redirectUri,
+            redirect_uri: redirectUri, // send it to backend too
           }),
         });
 
         const data = await res.json();
-        console.log("Backend response:", data);
-
         if (!res.ok) return { error: data.detail || "Google sign in failed" };
 
         await AsyncStorage.setItem("auth_token", data.access_token);
+        setUser(data.user);
 
-        setUser(data.user); // optional here, but also return for explicit use
         const expoToken = await registerForPushNotificationsAsync();
-        if (expoToken) {
-          await updatePushTokenOnBackend(expoToken);
-        }
+        if (expoToken) await updatePushTokenOnBackend(expoToken);
+
         return { error: null, user: data.user };
       }
+
+      return { error: "Google sign in was cancelled" };
     } catch (error) {
-      console.log("Google sign-in error", error);
+      console.error("Google sign-in error", error);
       return { error };
     }
   };
 
-  const signUpWithGoogle = async (userData?: any): Promise<{ error: any }> => {
+  const signUpWithGoogle = async (
+    userData?: any,
+  ): Promise<{ error: any; user?: any }> => {
     try {
+      console.log("Google sign-up initiated");
+
       const redirectUri = AuthSession.makeRedirectUri({
-        useProxy: true,
+        useProxy: __DEV__,
+        native: "com.yourapp:/oauthredirect",
       });
 
+      console.log(redirectUri);
+
       const request = new AuthSession.AuthRequest({
-        clientId: GOOGLE_CLIENT_ID,
-        scopes: ["openid", "profile", "email"],
+        clientId:
+          "278297929608-v6ifsorbpol0t4jq19t7ch2a7s14a72g.apps.googleusercontent.com",
         redirectUri,
+        scopes: ["openid", "profile", "email"],
         responseType: AuthSession.ResponseType.Code,
         usePKCE: true,
       });
 
-      await request.makeAuthUrlAsync(discovery);
-      const result = await request.promptAsync(discovery);
+      const result = await request.promptAsync(discovery, {
+        useProxy: __DEV__,
+      });
 
       if (result.type === "success") {
         const res = await fetch(`${BASE_URL}/auth/google-signup`, {
@@ -367,6 +366,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             code: result.params.code,
             code_verifier: request.codeVerifier,
             redirect_uri: redirectUri,
+            ...userData, // include optional signup fields
           }),
         });
 
@@ -374,16 +374,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (!res.ok) return { error: data.detail || "Google sign up failed" };
 
         await AsyncStorage.setItem("auth_token", data.access_token);
-        // setUser(data.user);
+        setUser(data.user);
+
         const expoToken = await registerForPushNotificationsAsync();
-        if (expoToken) {
-          await updatePushTokenOnBackend(expoToken);
-        }
+        if (expoToken) await updatePushTokenOnBackend(expoToken);
+
         return { error: null, user: data.user };
-      } else {
-        return { error: "Google sign up was cancelled" };
       }
+
+      return { error: "Google sign up was cancelled" };
     } catch (error) {
+      console.error("Google sign-up error", error);
       return { error };
     }
   };

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet, ActivityIndicator } from "react-native";
 import { WebView } from "react-native-webview";
-import { BASE_URL } from "../config/api";
+import { BASE_URL } from "../api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 

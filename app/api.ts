@@ -6,6 +6,3 @@
 // export const BASE_URL = "http://16.171.60.54";
 
 export const BASE_URL = "https://tasloflow.com";
-
-export const GOOGLE_CLIENT_ID =
-  "454279169261-8sljbk4qjgfnrms4hddr4d2chc1ghbon.apps.googleusercontent.com";

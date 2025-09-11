@@ -42,7 +42,7 @@ import { supabase } from "../../lib/supabase";
 import { useRouter } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
-import { BASE_URL } from "../config/api";
+import { BASE_URL } from "../api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 

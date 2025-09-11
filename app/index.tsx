@@ -23,7 +23,7 @@ import {
   Annoyed,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "./context/ThemeContext";
-import { BASE_URL } from "./config/api";
+import { BASE_URL } from "./api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import relativeTime from "dayjs/plugin/relativeTime";
 import dayjs from 'dayjs';

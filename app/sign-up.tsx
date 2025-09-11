@@ -23,12 +23,12 @@ import {
 } from "lucide-react-native";
 import GLogo from "../assets/images/glogo.webp";
 import { Image } from "react-native";
-import { BASE_URL } from "./config/api";
+import { BASE_URL } from "./api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const { signUp, signUpWithGoogle, setUser } = useAuth(); // 👈 grab setUser
+  const { signUp, signUpWithGoogle, setUser } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     name: "",

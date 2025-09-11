@@ -38,7 +38,7 @@ import { useTheme, getThemeColors } from "../context/ThemeContext";
 import QuickFeedbackPractice from "./QuickFeedbackPractice";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { BASE_URL } from "../config/api";
+import { BASE_URL } from "../api";
 import { SafeAreaView } from "react-native-safe-area-context";
 import LibraryHeader from "./LibraryHeader";
 
