@@ -1,5 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Modal, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "./context/AuthContext";
@@ -10,24 +18,20 @@ import {
   Award,
   User,
   Flame,
-  Trophy,
-  Target,
   Zap,
   Crown,
-  Star,
   TrendingUp,
   X,
   Settings,
   ChevronRight,
   House,
-  Annoyed,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "./context/ThemeContext";
 import { BASE_URL } from "./api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import relativeTime from "dayjs/plugin/relativeTime";
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
@@ -39,7 +43,6 @@ export default function HomeScreen() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [modalTitle, setModalTitle] = useState("");
-  const [isFirstTime, setIsFirstTime] = useState(true);
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
   const [plan, setPlan] = useState<string | null>(null);
@@ -117,16 +120,11 @@ export default function HomeScreen() {
     }
   }, []);
 
-
   useEffect(() => {
     const initializeAppData = async () => {
       setDataLoading(true);
       try {
-        await Promise.all([
-          fetchPlan(),
-          fetchLimits(),
-          fetchSessions()
-        ]);
+        await Promise.all([fetchPlan(), fetchLimits(), fetchSessions()]);
       } catch (error) {
         console.error("Initialization error:", error);
       } finally {
@@ -137,14 +135,13 @@ export default function HomeScreen() {
     initializeAppData();
   }, []);
 
-
   const calculateStreak = (sessions: any[]) => {
     const today = dayjs().startOf("day");
 
     const datesSet = new Set(
       sessions.map((s) =>
-        dayjs.utc(s.created_at).local().startOf("day").format("YYYY-MM-DD")
-      )
+        dayjs.utc(s.created_at).local().startOf("day").format("YYYY-MM-DD"),
+      ),
     );
 
     let streak = 0;
@@ -158,9 +155,10 @@ export default function HomeScreen() {
     return streak;
   };
 
-
-  const streakDays = useMemo(() => calculateStreak(recentSessions), [recentSessions]);
-
+  const streakDays = useMemo(
+    () => calculateStreak(recentSessions),
+    [recentSessions],
+  );
 
   const userLevel = {
     current: 7,
@@ -169,14 +167,20 @@ export default function HomeScreen() {
     streakDays: streakDays,
   };
 
-  const handleFeaturePress = (featureId: string, currentOnPress: () => void, isLocked: boolean) => {
+  const handleFeaturePress = (
+    featureId: string,
+    currentOnPress: () => void,
+    isLocked: boolean,
+  ) => {
     if (isLocked) {
       setModalTitle("Feature Locked");
-      setModalMessage("This feature is locked. Upgrade your plan to unlock your full potential!");
+      setModalMessage(
+        "This feature is locked. Upgrade your plan to unlock your full potential!",
+      );
       setShowSubscriptionModal(true);
       return;
     }
-    console.log(limits)
+    console.log(limits);
     if (!limits) {
       console.log("Limits not yet loaded. Please wait.");
       return;
@@ -210,7 +214,9 @@ export default function HomeScreen() {
 
     if (hasLimitReached) {
       setModalTitle("Limit Reached");
-      setModalMessage(`You've reached your limit for ${limitType} this month. Upgrade your plan for more!`);
+      setModalMessage(
+        `You've reached your limit for ${limitType} this month. Upgrade your plan for more!`,
+      );
       setShowSubscriptionModal(true);
     } else {
       currentOnPress();
@@ -296,7 +302,6 @@ export default function HomeScreen() {
     "Almost there… your voice is warming up!",
   ];
 
-
   const [currentTip, setCurrentTip] = useState(0);
 
   useEffect(() => {
@@ -307,7 +312,6 @@ export default function HomeScreen() {
   }, []);
 
   const randomTip = tips[currentTip];
-
 
   if (loading || dataLoading) {
     return (
@@ -324,7 +328,7 @@ export default function HomeScreen() {
             paddingHorizontal: 30,
             fontSize: 15,
             lineHeight: 22,
-            fontWeight: '600'
+            fontWeight: "600",
           }}
         >
           {randomTip}
@@ -332,7 +336,6 @@ export default function HomeScreen() {
       </SafeAreaView>
     );
   }
-
 
   return (
     <SafeAreaView
@@ -350,32 +353,59 @@ export default function HomeScreen() {
             </Text>
 
             <View className="flex-row items-center">
-              <View className="rounded-full px-3 py-1 mr-3" style={{ backgroundColor: theme === 'light' ? "#fef3c7" : colors.surface }}>
+              <View
+                className="rounded-full px-3 py-1 mr-3"
+                style={{
+                  backgroundColor:
+                    theme === "light" ? "#fef3c7" : colors.surface,
+                }}
+              >
                 <View className="flex-row items-center">
                   <Crown size={14} color={colors.warning} />
-                  <Text className="text-sm font-semibold ml-1" style={{ color: colors.warning }}>
+                  <Text
+                    className="text-sm font-semibold ml-1"
+                    style={{ color: colors.warning }}
+                  >
                     Level {userLevel.current}
                   </Text>
                 </View>
               </View>
-              <View className="rounded-full px-3 py-1" style={{ backgroundColor: userLevel.streakDays > 0 ? (theme === 'light' ? colors.warning + '20' : colors.surface) : colors.border }}>
+              <View
+                className="rounded-full px-3 py-1"
+                style={{
+                  backgroundColor:
+                    userLevel.streakDays > 0
+                      ? theme === "light"
+                        ? colors.warning + "20"
+                        : colors.surface
+                      : colors.border,
+                }}
+              >
                 <View className="flex-row items-center">
                   {userLevel.streakDays > 0 ? (
                     <>
                       <Flame size={14} color={colors.warning} />
-                      <Text className="text-sm font-semibold ml-1" style={{ color: colors.warning }}>
-                        {userLevel.streakDays} day{userLevel.streakDays > 1 ? "s" : ""}
+                      <Text
+                        className="text-sm font-semibold ml-1"
+                        style={{ color: colors.warning }}
+                      >
+                        {userLevel.streakDays} day
+                        {userLevel.streakDays > 1 ? "s" : ""}
                       </Text>
                     </>
                   ) : (
                     <>
                       <Text className="text-lg mr-1">😞</Text>
-                      <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>0 days</Text>
+                      <Text
+                        className="text-sm font-semibold"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        0 days
+                      </Text>
                     </>
                   )}
                 </View>
               </View>
-
             </View>
           </View>
           <TouchableOpacity
@@ -403,14 +433,23 @@ export default function HomeScreen() {
               >
                 Level {userLevel.nextLevel} Progress
               </Text>
-              <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>
+              <Text
+                className="text-sm font-semibold"
+                style={{ color: colors.textSecondary }}
+              >
                 {userLevel.progress}%
               </Text>
             </View>
-            <View className="rounded-full h-2 mb-3" style={{ backgroundColor: colors.border }}>
+            <View
+              className="rounded-full h-2 mb-3"
+              style={{ backgroundColor: colors.border }}
+            >
               <View
                 className="rounded-full h-2"
-                style={{ width: `${userLevel.progress}%`, backgroundColor: colors.primary }}
+                style={{
+                  width: `${userLevel.progress}%`,
+                  backgroundColor: colors.primary,
+                }}
               />
             </View>
             <Text className="text-sm" style={{ color: colors.textSecondary }}>
@@ -438,7 +477,13 @@ export default function HomeScreen() {
                     borderColor: colors.border,
                     borderWidth: 1,
                   }}
-                  onPress={() => handleFeaturePress(feature.id, feature.onPress, feature.locked)}
+                  onPress={() =>
+                    handleFeaturePress(
+                      feature.id,
+                      feature.onPress,
+                      feature.locked,
+                    )
+                  }
                 >
                   <View className="flex-row items-center flex-1">
                     <View
@@ -456,15 +501,27 @@ export default function HomeScreen() {
                           {feature.title}
                         </Text>
                         {feature.badge && (
-                          <View className="rounded-full px-2 py-1 ml-2" style={{ backgroundColor: colors.success + '20' }}>
-                            <Text className="text-xs font-bold" style={{ color: colors.success }}>
+                          <View
+                            className="rounded-full px-2 py-1 ml-2"
+                            style={{ backgroundColor: colors.success + "20" }}
+                          >
+                            <Text
+                              className="text-xs font-bold"
+                              style={{ color: colors.success }}
+                            >
                               {feature.badge}
                             </Text>
                           </View>
                         )}
                         {feature.locked && (
-                          <View className="rounded-full px-2 py-1 ml-2" style={{ backgroundColor: colors.error + '20' }}>
-                            <Text className="text-xs font-bold" style={{ color: colors.error }}>
+                          <View
+                            className="rounded-full px-2 py-1 ml-2"
+                            style={{ backgroundColor: colors.error + "20" }}
+                          >
+                            <Text
+                              className="text-xs font-bold"
+                              style={{ color: colors.error }}
+                            >
                               LOCKED
                             </Text>
                           </View>
@@ -492,35 +549,62 @@ export default function HomeScreen() {
           >
             Recent Achievements
           </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="-mx-6 px-6"
-          >
-            {recentAchievements.map((achievement, index) => (
-              <View
-                key={index}
-                className="rounded-2xl p-4 mr-3 min-w-[140px] items-center"
-                style={{
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  borderWidth: 1,
-                }}
+          {recentAchievements.length === 0 ? (
+            <View
+              className="items-center justify-center py-10 rounded-2xl border"
+              style={{
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+              }}
+            >
+              <Award size={32} color={colors.textSecondary} />
+              <Text
+                style={{ color: colors.textSecondary }}
+                className="text-center mt-3 font-medium"
               >
-                <View className="rounded-full w-12 h-12 items-center justify-center mb-3" style={{ backgroundColor: colors.surface }}>
-                  <Text className="text-2xl">
-                    <Flame color={colors.warning} />
+                No achievements yet
+              </Text>
+              <Text
+                style={{ color: colors.textSecondary }}
+                className="text-center text-sm mt-1"
+              >
+                Start your next session to earn one!
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="-mx-6 px-6"
+            >
+              {recentAchievements.map((achievement, index) => (
+                <View
+                  key={index}
+                  className="rounded-2xl p-4 mr-3 min-w-[140px] items-center"
+                  style={{
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                  }}
+                >
+                  <View
+                    className="rounded-full w-12 h-12 items-center justify-center mb-3"
+                    style={{ backgroundColor: colors.surface }}
+                  >
+                    <Text className="text-2xl">
+                      <Flame color={colors.warning} />
+                    </Text>
+                  </View>
+                  <Text
+                    className="font-semibold text-center text-sm"
+                    style={{ color: colors.text }}
+                  >
+                    {achievement}
                   </Text>
                 </View>
-                <Text
-                  className="font-semibold text-center text-sm"
-                  style={{ color: colors.text }}
-                >
-                  {achievement}
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         <View className="px-6 mb-8">
@@ -529,64 +613,107 @@ export default function HomeScreen() {
               Recent Sessions
             </Text>
             <TouchableOpacity onPress={() => router.push("/feedback-library")}>
-              <Text className="text-sm font-semibold" style={{ color: colors.primary }}>
+              <Text
+                className="text-sm font-semibold"
+                style={{ color: colors.primary }}
+              >
                 View All
               </Text>
             </TouchableOpacity>
           </View>
-
-          {recentSessions.map((session) => {
-            const isSpeech = session.type === "speech";
-            return (
-              <TouchableOpacity
-                key={session.id}
-                className="rounded-2xl p-4 mb-3 flex-row items-center"
-                style={{
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  borderWidth: 1,
-                }}
+          {recentSessions.length === 0 ? (
+            <View
+              className="items-center justify-center py-10 rounded-2xl border"
+              style={{
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+              }}
+            >
+              <Mic size={32} color={colors.textSecondary} />
+              <Text
+                style={{ color: colors.textSecondary }}
+                className="text-center mt-3 font-medium"
               >
-                <View className="rounded-2xl w-12 h-12 items-center justify-center mr-4" style={{ backgroundColor: colors.surface }}>
-                  {isSpeech ? (
-                    <Mic size={24} color={colors.primary} />
-                  ) : (
-                    <Award size={24} color={colors.success} />
-                  )}
-                </View>
-                <View className="flex-1">
-                  <Text className="font-bold mb-1" style={{ color: colors.text }}>
-                    {session.title || (isSpeech ? "Untitled Speech" : "Evaluation")}
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                      {dayjs(session.created_at).fromNow()}
-                    </Text>
+                No sessions yet
+              </Text>
+              <Text
+                style={{ color: colors.textSecondary }}
+                className="text-center text-sm mt-1"
+              >
+                Record your first one to get started!
+              </Text>
+            </View>
+          ) : (
+            recentSessions.map((session) => {
+              const isSpeech = session.type === "speech";
+              return (
+                <TouchableOpacity
+                  key={session.id}
+                  className="rounded-2xl p-4 mb-3 flex-row items-center"
+                  style={{
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                  }}
+                >
+                  <View
+                    className="rounded-2xl w-12 h-12 items-center justify-center mr-4"
+                    style={{ backgroundColor: colors.surface }}
+                  >
+                    {isSpeech ? (
+                      <Mic size={24} color={colors.primary} />
+                    ) : (
+                      <Award size={24} color={colors.success} />
+                    )}
                   </View>
-                </View>
-                <View className="items-end">
-                  {session.summary.Metadata.overall_score && (
-                    <View className="rounded-xl px-3 py-2 mb-2" style={{ backgroundColor: colors.primary + '20' }}>
-                      <Text className="font-bold text-lg" style={{ color: colors.primary }}>
-                        {session.summary.Metadata.overall_score}
-                      </Text>
-                    </View>
-                  )}
-                  {session.improvement && (
+                  <View className="flex-1">
+                    <Text
+                      className="font-bold mb-1"
+                      style={{ color: colors.text }}
+                    >
+                      {session.title ||
+                        (isSpeech ? "Untitled Speech" : "Evaluation")}
+                    </Text>
                     <View className="flex-row items-center">
-                      <TrendingUp size={12} color={colors.success} />
-                      <Text className="text-xs ml-1 font-semibold" style={{ color: colors.success }}>
-                        {session.improvement}
+                      <Text
+                        className="text-sm"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        {dayjs(session.created_at).fromNow()}
                       </Text>
                     </View>
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-
+                  </View>
+                  <View className="items-end">
+                    {session.summary.Metadata.overall_score && (
+                      <View
+                        className="rounded-xl px-3 py-2 mb-2"
+                        style={{ backgroundColor: colors.primary + "20" }}
+                      >
+                        <Text
+                          className="font-bold text-lg"
+                          style={{ color: colors.primary }}
+                        >
+                          {session.summary.Metadata.overall_score}
+                        </Text>
+                      </View>
+                    )}
+                    {session.improvement && (
+                      <View className="flex-row items-center">
+                        <TrendingUp size={12} color={colors.success} />
+                        <Text
+                          className="text-xs ml-1 font-semibold"
+                          style={{ color: colors.success }}
+                        >
+                          {session.improvement}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
-
       </ScrollView>
 
       <View
@@ -666,7 +793,15 @@ export default function HomeScreen() {
         visible={showSubscriptionModal}
         onRequestClose={() => setShowSubscriptionModal(false)}
       >
-        <View style={[styles.centeredView, { backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)' }]}>
+        <View
+          style={[
+            styles.centeredView,
+            {
+              backgroundColor:
+                theme === "dark" ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.5)",
+            },
+          ]}
+        >
           <View style={[styles.modalView, { backgroundColor: colors.card }]}>
             <TouchableOpacity
               style={styles.closeButton}
@@ -674,13 +809,22 @@ export default function HomeScreen() {
             >
               <X size={24} color={colors.textSecondary} />
             </TouchableOpacity>
-            <Crown size={60} color={colors.warning} style={{ marginBottom: 20 }} />
-            <Text style={[styles.modalTitle, { color: colors.text }]}>{modalTitle}</Text>
+            <Crown
+              size={60}
+              color={colors.warning}
+              style={{ marginBottom: 20 }}
+            />
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              {modalTitle}
+            </Text>
             <Text style={[styles.modalText, { color: colors.textSecondary }]}>
               {modalMessage}
             </Text>
             <TouchableOpacity
-              style={[styles.upgradeButton, { backgroundColor: colors.warning }]}
+              style={[
+                styles.upgradeButton,
+                { backgroundColor: colors.warning },
+              ]}
               onPress={() => {
                 setShowSubscriptionModal(false);
                 router.push("/subscription");
@@ -717,7 +861,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 15,
     right: 15,
     padding: 5,

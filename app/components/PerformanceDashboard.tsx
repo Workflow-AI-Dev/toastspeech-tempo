@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { LineChart, BarChart } from "react-native-chart-kit";
 import { Dimensions } from "react-native";
 import {
-  ChevronDown,
   TrendingUp,
-  Clock,
   Mic,
   BarChart2,
   Trophy,
@@ -15,13 +19,12 @@ import {
   Flame,
   Star,
   TrendingDown,
-  Timer,
-  CheckCircle,
   ThumbsUp,
   PauseCircle,
   Volume2,
   MessageCircle,
   Repeat,
+  ClipboardList,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
@@ -29,8 +32,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BASE_URL } from "../api";
 import dayjs from "dayjs";
-import weekday from "dayjs/plugin/weekday"; // Import the weekday plugin
-dayjs.extend(weekday); // Extend dayjs with the weekday plugin
+import weekday from "dayjs/plugin/weekday";
+dayjs.extend(weekday);
 
 interface PerformanceDashboardProps {
   data?: {
@@ -74,7 +77,6 @@ const PerformanceDashboard = ({
   const isLoading = loadingCount > 0;
   const [isFilteringTime, setIsFilteringTime] = useState(true);
 
-
   const screenWidth = Dimensions.get("window").width - 32; // Accounting for padding
   const [avgScore, setAvgScore] = useState<number>(0);
   const [totalSessions, setTotalSessions] = useState<number>(0);
@@ -91,12 +93,12 @@ const PerformanceDashboard = ({
   const [recentAchievements, setRecentAchievements] = useState([]);
 
   const achievementIcons = [
-    { Icon: Flame, color: "#f97316" },      // Orange
-    { Icon: TrendingUp, color: "#10b981" }, // Green
-    { Icon: Star, color: "#eab308" },       // Yellow
-    { Icon: Award, color: "#6366f1" },      // Indigo
-    { Icon: ThumbsUp, color: "#3b82f6" },   // Blue
-    { Icon: Trophy, color: "#d97706" },     // Amber
+    { Icon: Flame, color: "#f97316" },
+    { Icon: TrendingUp, color: "#10b981" },
+    { Icon: Star, color: "#eab308" },
+    { Icon: Award, color: "#6366f1" },
+    { Icon: ThumbsUp, color: "#3b82f6" },
+    { Icon: Trophy, color: "#d97706" },
   ];
 
   // New states for breakdown charts (dynamic based on fetched data)
@@ -137,9 +139,7 @@ const PerformanceDashboard = ({
   const [currentPausesCount, setCurrentPausesCount] = useState<number | null>(
     null,
   );
-  const [pausesImprovement, setPausesImprovement] = useState<string | null>(
-    null,
-  );
+  const [hasNoSessions, setHasNoSessions] = useState(false);
 
   const timeFrames = ["Week", "Month", "Last 6 Months"];
   const metrics = [
@@ -180,7 +180,17 @@ const PerformanceDashboard = ({
         });
 
         const { evaluations, speeches } = await response.json();
-        const allSessions = []; // Combine speeches and evaluations, extracting relevant analytics
+
+        if (
+          (!evaluations || evaluations.length === 0) &&
+          (!speeches || speeches.length === 0)
+        ) {
+          setHasNoSessions(true);
+          setIsFilteringTime(false);
+          return; // Stop processing further since there's no data
+        }
+
+        const allSessions: any[] = [];
 
         evaluations.forEach((e) => {
           if (e?.summary?.Metadata) {
@@ -263,7 +273,7 @@ const PerformanceDashboard = ({
             .map((s) => s.overall_score);
           return bucketProcessor(scores, "average");
         });
-        setLast6MonthsScores(sixMonthsScores); // --- Process for Filler Word Trends (Counts) ---
+        setLast6MonthsScores(sixMonthsScores);
 
         const weekFillerCounts = daysInCurrentWeek.map((d) => {
           const sessionsForDay = allSessions.filter((s) =>
@@ -332,7 +342,7 @@ const PerformanceDashboard = ({
         const aggregatedSessions = filterSessionsByTimeFrame(
           allSessions,
           selectedTimeFrame,
-        ); 
+        );
 
         // Aggregate Filler Words Breakdown - MODIFIED TO SHOW TOP 5
         const fillerWordMap = new Map<string, number>();
@@ -354,7 +364,7 @@ const PerformanceDashboard = ({
         setDynamicFillerWordsBreakdown({
           labels: sortedFillerWords.map(([word]) => word),
           data: sortedFillerWords.map(([, count]) => count),
-        }); 
+        });
 
         // Aggregate Crutch Phrases Breakdown
         const crutchPhraseMap = new Map<string, number>();
@@ -375,8 +385,7 @@ const PerformanceDashboard = ({
         setDynamicCrutchPhrasesBreakdown({
           labels: sortedCrutchPhrases.map(([phrase]) => phrase),
           data: sortedCrutchPhrases.map(([, count]) => count),
-        }); 
-
+        });
 
         // Aggregate Repeated Phrases Breakdown
         const repeatedPhraseMap = new Map<string, number>();
@@ -394,13 +403,12 @@ const PerformanceDashboard = ({
           .sort(([, countA], [, countB]) => countB - countA)
           .slice(0, 5); // 👈 Top 5 only
 
-        console.log(sortedRepeatPhrases)
+        console.log(sortedRepeatPhrases);
 
         setDynamicRepeatPhrasesBreakdown({
           labels: sortedRepeatPhrases.map(([word]) => word),
           data: sortedRepeatPhrases.map(([, count]) => count),
-        }); 
-        
+        });
 
         // Aggregate Pauses Breakdown
         const pauseTypeMap = new Map<string, number>();
@@ -522,71 +530,83 @@ const PerformanceDashboard = ({
   }, [selectedTimeFrame]); // Re-fetch when time frame changes for breakdown charts
 
   useEffect(() => {
-  const fetchSessions = async () => {
-    const token = await AsyncStorage.getItem("auth_token");
-    setLoadingCount((prev) => prev + 1);
-    try {
-      const response = await fetch(`${BASE_URL}/dashboard/recent`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    const fetchSessions = async () => {
+      const token = await AsyncStorage.getItem("auth_token");
+      setLoadingCount((prev) => prev + 1);
+      try {
+        const response = await fetch(`${BASE_URL}/dashboard/recent`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      const { recent_sessions } = await response.json();
-      const sessions = recent_sessions || [];
+        const { recent_sessions } = await response.json();
+        const sessions = recent_sessions || [];
 
-      // Extract up to 3 recent achievements (with tag + description)
-      const achievements = sessions
-      .slice(0, 3)
-      .flatMap((s) => {
-        const ach = s.analytics?.achievement;
-        return ach && ach.tag && ach.description
-          ? [{ 
-              tag: ach.tag, 
-              description: ach.description,
-              iconIndex: Math.floor(Math.random() * achievementIcons.length)
-            }]
-          : [];
-      })
-      .filter(
-        (item, index, self) =>
-          self.findIndex((a) => a.tag === item.tag) === index
-      );
+        // Extract up to 3 recent achievements (with tag + description)
+        const achievements = sessions
+          .slice(0, 3)
+          .flatMap((s) => {
+            const ach = s.analytics?.achievement;
+            return ach && ach.tag && ach.description
+              ? [
+                  {
+                    tag: ach.tag,
+                    description: ach.description,
+                    iconIndex: Math.floor(
+                      Math.random() * achievementIcons.length,
+                    ),
+                  },
+                ]
+              : [];
+          })
+          .filter(
+            (item, index, self) =>
+              self.findIndex((a) => a.tag === item.tag) === index,
+          );
 
-      console.log("Achievements →", achievements);
-      setRecentAchievements(achievements);
-    } catch (err) {
-      console.error("Failed to fetch sessions:", err);
-    } finally {
-      setLoadingCount((prev) => prev - 1);
+        console.log("Achievements →", achievements);
+        setRecentAchievements(achievements);
+      } catch (err) {
+        console.error("Failed to fetch sessions:", err);
+      } finally {
+        setLoadingCount((prev) => prev - 1);
+      }
+    };
+
+    fetchSessions();
+  }, []);
+
+  const [showContent, setShowContent] = useState(false);
+  useEffect(() => {
+    if (!isLoading) {
+      const timeout = setTimeout(() => setShowContent(true), 300);
+      return () => clearTimeout(timeout);
+    } else {
+      setShowContent(false);
     }
-  };
+  }, [isLoading]);
 
-  fetchSessions();
-}, []);
-
-const [showContent, setShowContent] = useState(false);
-useEffect(() => {
-  if (!isLoading) {
-    const timeout = setTimeout(() => setShowContent(true), 300);
-    return () => clearTimeout(timeout);
-  } else {
-    setShowContent(false);
-  }
-}, [isLoading]);
-
-
-
- if (!showContent) return (
-  <SafeAreaView className="flex-1 justify-center items-center mt-9" style={{ backgroundColor: colors.background }}>
-    <ActivityIndicator size="large" color={colors.primary} />
-    <Text style={{ color: colors.text, marginTop: 16, fontSize: 16, fontWeight: '600' }}>
-      Loading your progress...
-    </Text>
-  </SafeAreaView>
-);
-
+  if (!showContent)
+    return (
+      <SafeAreaView
+        className="flex-1 justify-center items-center mt-9"
+        style={{ backgroundColor: colors.background }}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text
+          style={{
+            color: colors.text,
+            marginTop: 16,
+            fontSize: 16,
+            fontWeight: "600",
+          }}
+        >
+          Loading your progress...
+        </Text>
+      </SafeAreaView>
+    );
 
   const getChartData = () => {
     let chartData: number[] = [];
@@ -817,42 +837,52 @@ useEffect(() => {
   };
 
   if (plan === "casual") {
-  return (
-    <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: colors.background }}>
-      <Text className="text-2xl font-bold mb-4 text-center" style={{ color: colors.text }}>
-        🚫 Feature Locked
-      </Text>
-      <Text className="text-base text-center mb-8" style={{ color: colors.textSecondary }}>
-        This feature is only available on premium plans. Upgrade your subscription to unlock performance analytics and insights.
-      </Text>
-
-      <View className="flex-row space-x-4">
-        <TouchableOpacity
-          className="px-6 py-3 rounded-xl mr-2"
-          style={{ backgroundColor: colors.card }}
-          onPress={() => {
-            // navigate to Home
-            router.push("/")
-          }}
+    return (
+      <View
+        className="flex-1 items-center justify-center px-6"
+        style={{ backgroundColor: colors.background }}
+      >
+        <Text
+          className="text-2xl font-bold mb-4 text-center"
+          style={{ color: colors.text }}
         >
-          <Text className="font-semibold" style={{ color: colors.text }}>
-            Go Home
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          className="px-6 py-3 rounded-xl"
-          style={{ backgroundColor: colors.primary }}
-          onPress={() => {
-            router.push("/subscription")
-          }}
+          🚫 Feature Locked
+        </Text>
+        <Text
+          className="text-base text-center mb-8"
+          style={{ color: colors.textSecondary }}
         >
-          <Text className="text-white font-semibold">Upgrade</Text>
-        </TouchableOpacity>
+          This feature is only available on premium plans. Upgrade your
+          subscription to unlock performance analytics and insights.
+        </Text>
+
+        <View className="flex-row space-x-4">
+          <TouchableOpacity
+            className="px-6 py-3 rounded-xl mr-2"
+            style={{ backgroundColor: colors.card }}
+            onPress={() => {
+              // navigate to Home
+              router.push("/");
+            }}
+          >
+            <Text className="font-semibold" style={{ color: colors.text }}>
+              Go Home
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="px-6 py-3 rounded-xl"
+            style={{ backgroundColor: colors.primary }}
+            onPress={() => {
+              router.push("/subscription");
+            }}
+          >
+            <Text className="text-white font-semibold">Upgrade</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
-}
+    );
+  }
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -878,7 +908,7 @@ useEffect(() => {
                 className="mt-1 text-base"
                 style={{ color: colors.textSecondary }}
               >
-                Level 7 Speaker • 12-day streak
+                Level 1 Speaker • 12-day streak
               </Text>
             </View>
 
@@ -946,268 +976,338 @@ useEffect(() => {
             </View>
           </View>
         </View>
-        {/* Time Frame Selector */}
-        <View className="px-6 py-4">
-          <View
-            className="flex-row rounded-2xl p-1"
-            style={{
-              backgroundColor: colors.card,
-              shadowColor: theme === "dark" ? "#000" : "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: theme === "dark" ? 0.3 : 0.08,
-              shadowRadius: 8,
-              elevation: 4,
-            }}
-          >
-            {timeFrames.map((timeFrame) => (
-              <TouchableOpacity
-                key={timeFrame}
-                className="flex-1 py-3 rounded-xl"
-                style={{
-                  backgroundColor:
-                    selectedTimeFrame === timeFrame
-                      ? colors.primary
-                      : "transparent",
-                }}
-                onPress={() => setSelectedTimeFrame(timeFrame)}
-              >
-                <Text
-                  className="text-center font-semibold"
-                  style={{
-                    color:
-                      selectedTimeFrame === timeFrame ? "white" : colors.text,
-                  }}
-                >
-                  {timeFrame}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {/* 👇 Empty State after header */}
+        {hasNoSessions ? (
+          <View className="px-6 py-12 items-center justify-center">
+            <ClipboardList size={48} color={colors.textSecondary} />
+            <Text
+              className="text-lg font-semibold mt-4"
+              style={{ color: colors.text }}
+            >
+              No progress yet
+            </Text>
+            <Text
+              className="text-base text-center mt-2"
+              style={{ color: colors.textSecondary }}
+            >
+              Record your first speech or evaluation to start tracking your
+              journey.
+            </Text>
           </View>
-        </View>
-        {/* Main Chart */}
-        <View className="px-6 py-4">
-          <View
-            className="rounded-3xl p-6 shadow-lg"
-            style={{
-              backgroundColor: colors.card,
-              shadowColor: theme === "dark" ? "#000" : "#000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-              shadowRadius: 12,
-              elevation: 8,
-            }}
-          >
-            <View className="flex-row justify-between items-center mb-6">
-              <View className="flex-row items-center">
-                {/* <View
-                  className="rounded-full p-2 mr-3"
-                  style={{
-                    backgroundColor:
-                      theme === "dark" ? colors.surface : "#f0f9ff",
-                  }}
-                >
-                  <BarChart2 size={20} color={colors.primary} />
-                </View> */}
-                <Text
-                  className="text-xl font-bold"
-                  style={{ color: colors.text }}
-                >
-                  {selectedMetric}
-                </Text>
-              </View>
+        ) : (
+          <>
+            {/* Time Frame Selector */}
+            <View className="px-6 py-4">
               <View
-                className="rounded-full px-3 py-1"
+                className="flex-row rounded-2xl p-1"
                 style={{
-                  backgroundColor:
-                    theme === "dark" ? colors.surface : "#f3f4f6",
+                  backgroundColor: colors.card,
+                  shadowColor: theme === "dark" ? "#000" : "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: theme === "dark" ? 0.3 : 0.08,
+                  shadowRadius: 8,
+                  elevation: 4,
                 }}
               >
-                <Text
-                  className="text-xs font-semibold"
-                  style={{ color: colors.primary }}
-                >
-                  {selectedTimeFrame === "Last 6 Months"
-                    ? selectedTimeFrame
-                    : `This ${selectedTimeFrame}`}
-                </Text>
-              </View>
-            </View>
-              {isFilteringTime ? (
-                <View style={{ height: 220, justifyContent: 'center', alignItems: 'center' }}>
-                  {/* You'll need to import ActivityIndicator from 'react-native' */}
-                  <ActivityIndicator size="large" color={colors.primary} />
-                  <Text style={{ color: colors.textSecondary, marginTop: 10 }}>Loading data...</Text>
-                </View>
-              )  : shouldShowBarChart() ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingRight: 24 }} // Optional spacing
-              >
-                <BarChart
-                  data={getBarChartData()!}
-                  width={Math.max(getBarChartData()!.labels.length * 100, screenWidth)} // Dynamically set width
-                  height={220}
-                  chartConfig={{
-                    ...chartConfig,
-                    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-                    barPercentage: 0.7,
-                  }}
-                  style={{
-                    marginVertical: 8,
-                    borderRadius: 16,
-                  }}
-                  showValuesOnTopOfBars
-                />
-              </ScrollView>
-            ) : (
-              <LineChart
-                data={getChartData()}
-                width={screenWidth - 80}
-                height={220}
-                chartConfig={{
-                  ...chartConfig,
-                  color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-                  propsForDots: {
-                    r: "6",
-                    strokeWidth: "2",
-                    stroke: colors.primary,
-                    fill: colors.primary,
-                  },
-                }}
-                bezier
-                style={{
-                  marginVertical: 8,
-                  borderRadius: 16,
-                }}
-              />
-            )}
-          </View>
-        </View>
-        {/* Metric Selector */}
-        <View className="px-6 py-4">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View className="flex-row">
-              {metrics.map((metric, index) => {
-                const icons = [
-                  BarChart2,
-                  Mic,
-                  MessageCircle,
-                  Repeat,
-                  PauseCircle,
-                  Volume2,
-                ];
-                const IconComponent = icons[index];
-                return (
+                {timeFrames.map((timeFrame) => (
                   <TouchableOpacity
-                    key={metric}
-                    className="mr-3 py-3 px-4 rounded-2xl flex-row items-center"
+                    key={timeFrame}
+                    className="flex-1 py-3 rounded-xl"
                     style={{
                       backgroundColor:
-                        selectedMetric === metric
+                        selectedTimeFrame === timeFrame
                           ? colors.primary
-                          : colors.card,
-                      shadowColor: theme === "dark" ? "#000" : "#000",
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: theme === "dark" ? 0.3 : 0.1,
-                      shadowRadius: 6,
-                      elevation: 3,
+                          : "transparent",
                     }}
-                    onPress={() => setSelectedMetric(metric)}
+                    onPress={() => setSelectedTimeFrame(timeFrame)}
                   >
-                    <View
-                      className="rounded-full p-1.5 mr-2"
-                      style={{
-                        backgroundColor:
-                          selectedMetric === metric
-                            ? "rgba(255, 255, 255, 0.2)"
-                            : theme === "dark"
-                              ? colors.surface
-                              : "#f0f9ff",
-                      }}
-                    >
-                      <IconComponent
-                        size={14}
-                        color={
-                          selectedMetric === metric ? "white" : colors.primary
-                        }
-                      />
-                    </View>
                     <Text
-                      className="font-semibold text-sm"
+                      className="text-center font-semibold"
                       style={{
                         color:
-                          selectedMetric === metric ? "white" : colors.text,
+                          selectedTimeFrame === timeFrame
+                            ? "white"
+                            : colors.text,
                       }}
                     >
-                      {metric}
+                      {timeFrame}
                     </Text>
                   </TouchableOpacity>
-                );
-              })}
+                ))}
+              </View>
             </View>
-          </ScrollView>
-        </View>
-        {/* Current Performance Score Cards */}
-        <View className="px-6 pb-4">
-          <Text
-            className="text-lg font-bold mb-3"
-            style={{ color: colors.text }}
-          >
-            Current Performance
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View className="flex-row">
-              {renderScoreCard(
-                "Score",
-                currentOverallScore,
-                <Award />, // Or a more relevant icon for score
-                theme === "dark" ? "#4c1d95" : "#ede9fe", // Purple
-                theme === "dark" ? "#d8b4fe" : "#8b5cf6",
-                overallScoreImprovement,
-                true, // Higher is better
-              )}
-              {renderScoreCard(
-                "Fillers",
-                currentFillerWordsCount,
-                <Mic />,
-                theme === "dark" ? "#a16207" : "#fffbeb", // Amber
-                theme === "dark" ? "#fcd34d" : "#fbbf24",
-                fillerWordsImprovement,
-                false, // Lower is better
-              )}
-              {renderScoreCard(
-                "Crutches",
-                currentCrutchPhrasesCount,
-                <Zap />, // Represents quick, unnecessary words
-                theme === "dark" ? "#be123c" : "#fef2f2", // Red
-                theme === "dark" ? "#fda4af" : "#f87171",
-                crutchPhrasesImprovement,
-                false, // Lower is better
-              )}
+            {/* Main Chart */}
+            <View className="px-6 py-4">
+              <View
+                className="rounded-3xl p-6 shadow-lg"
+                style={{
+                  backgroundColor: colors.card,
+                  shadowColor: theme === "dark" ? "#000" : "#000",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: theme === "dark" ? 0.3 : 0.1,
+                  shadowRadius: 12,
+                  elevation: 8,
+                }}
+              >
+                <View className="flex-row justify-between items-center mb-6">
+                  <View className="flex-row items-center">
+                    <Text
+                      className="text-xl font-bold"
+                      style={{ color: colors.text }}
+                    >
+                      {selectedMetric}
+                    </Text>
+                  </View>
+                  <View
+                    className="rounded-full px-3 py-1"
+                    style={{
+                      backgroundColor:
+                        theme === "dark" ? colors.surface : "#f3f4f6",
+                    }}
+                  >
+                    <Text
+                      className="text-xs font-semibold"
+                      style={{ color: colors.primary }}
+                    >
+                      {selectedTimeFrame === "Last 6 Months"
+                        ? selectedTimeFrame
+                        : `This ${selectedTimeFrame}`}
+                    </Text>
+                  </View>
+                </View>
+                {isFilteringTime ? (
+                  <View
+                    style={{
+                      height: 220,
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    {/* You'll need to import ActivityIndicator from 'react-native' */}
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text
+                      style={{ color: colors.textSecondary, marginTop: 10 }}
+                    >
+                      Loading data...
+                    </Text>
+                  </View>
+                ) : shouldShowBarChart() ? (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingRight: 24 }} // Optional spacing
+                  >
+                    <BarChart
+                      data={getBarChartData()!}
+                      width={Math.max(
+                        getBarChartData()!.labels.length * 100,
+                        screenWidth,
+                      )} // Dynamically set width
+                      height={220}
+                      chartConfig={{
+                        ...chartConfig,
+                        color: (opacity = 1) =>
+                          `rgba(59, 130, 246, ${opacity})`,
+                        barPercentage: 0.7,
+                      }}
+                      style={{
+                        marginVertical: 8,
+                        borderRadius: 16,
+                      }}
+                      showValuesOnTopOfBars
+                    />
+                  </ScrollView>
+                ) : (
+                  <LineChart
+                    data={getChartData()}
+                    width={screenWidth - 80}
+                    height={220}
+                    chartConfig={{
+                      ...chartConfig,
+                      color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+                      propsForDots: {
+                        r: "6",
+                        strokeWidth: "2",
+                        stroke: colors.primary,
+                        fill: colors.primary,
+                      },
+                    }}
+                    bezier
+                    style={{
+                      marginVertical: 8,
+                      borderRadius: 16,
+                    }}
+                  />
+                )}
+              </View>
             </View>
-          </ScrollView>
-        </View>
+            {/* Metric Selector */}
+            <View className="px-6 py-4">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View className="flex-row">
+                  {metrics.map((metric, index) => {
+                    const icons = [
+                      BarChart2,
+                      Mic,
+                      MessageCircle,
+                      Repeat,
+                      PauseCircle,
+                      Volume2,
+                    ];
+                    const IconComponent = icons[index];
+                    return (
+                      <TouchableOpacity
+                        key={metric}
+                        className="mr-3 py-3 px-4 rounded-2xl flex-row items-center"
+                        style={{
+                          backgroundColor:
+                            selectedMetric === metric
+                              ? colors.primary
+                              : colors.card,
+                          shadowColor: theme === "dark" ? "#000" : "#000",
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: theme === "dark" ? 0.3 : 0.1,
+                          shadowRadius: 6,
+                          elevation: 3,
+                        }}
+                        onPress={() => setSelectedMetric(metric)}
+                      >
+                        <View
+                          className="rounded-full p-1.5 mr-2"
+                          style={{
+                            backgroundColor:
+                              selectedMetric === metric
+                                ? "rgba(255, 255, 255, 0.2)"
+                                : theme === "dark"
+                                  ? colors.surface
+                                  : "#f0f9ff",
+                          }}
+                        >
+                          <IconComponent
+                            size={14}
+                            color={
+                              selectedMetric === metric
+                                ? "white"
+                                : colors.primary
+                            }
+                          />
+                        </View>
+                        <Text
+                          className="font-semibold text-sm"
+                          style={{
+                            color:
+                              selectedMetric === metric ? "white" : colors.text,
+                          }}
+                        >
+                          {metric}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            </View>
+            {/* Current Performance Score Cards */}
+            <View className="px-6 pb-4">
+              <Text
+                className="text-lg font-bold mb-3"
+                style={{ color: colors.text }}
+              >
+                Current Performance
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View className="flex-row">
+                  {renderScoreCard(
+                    "Score",
+                    currentOverallScore,
+                    <Award />, // Or a more relevant icon for score
+                    theme === "dark" ? "#4c1d95" : "#ede9fe", // Purple
+                    theme === "dark" ? "#d8b4fe" : "#8b5cf6",
+                    overallScoreImprovement,
+                    true, // Higher is better
+                  )}
+                  {renderScoreCard(
+                    "Fillers",
+                    currentFillerWordsCount,
+                    <Mic />,
+                    theme === "dark" ? "#a16207" : "#fffbeb", // Amber
+                    theme === "dark" ? "#fcd34d" : "#fbbf24",
+                    fillerWordsImprovement,
+                    false, // Lower is better
+                  )}
+                  {renderScoreCard(
+                    "Crutches",
+                    currentCrutchPhrasesCount,
+                    <Zap />, // Represents quick, unnecessary words
+                    theme === "dark" ? "#be123c" : "#fef2f2", // Red
+                    theme === "dark" ? "#fda4af" : "#f87171",
+                    crutchPhrasesImprovement,
+                    false, // Lower is better
+                  )}
+                </View>
+              </ScrollView>
+            </View>
 
-        {/* Recent Improvements */}
-        <View
-          className="px-6 py-6 border-b"
-          style={{ borderBottomColor: colors.border }}
-        >
-          <Text
-            className="text-lg font-bold mb-4"
-            style={{ color: colors.text }}
-          >
-            Recent Wins
-          </Text>
+            {/* Recent Improvements */}
+            <View
+              className="px-6 py-6 border-b"
+              style={{ borderBottomColor: colors.border }}
+            >
+              <Text
+                className="text-lg font-bold mb-4"
+                style={{ color: colors.text }}
+              >
+                Recent Wins
+              </Text>
 
-          <View className="space-y-1">
-            {recentAchievements.map((achievement, index) => {
-              const { Icon, color } = achievementIcons[achievement.iconIndex];
+              <View className="space-y-1">
+                {recentAchievements.map((achievement, index) => {
+                  const { Icon, color } =
+                    achievementIcons[achievement.iconIndex];
 
-              return (
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      className="flex-row items-center justify-between py-3 px-4 rounded-2xl mb-3"
+                      style={{ backgroundColor: colors.surface }}
+                    >
+                      <View className="flex-row items-center flex-1">
+                        <View
+                          className="rounded-xl p-2 mr-3"
+                          style={{ backgroundColor: colors.card }}
+                        >
+                          <Icon size={20} color={color} />
+                        </View>
+                        <View className="flex-1">
+                          <Text
+                            className="font-semibold"
+                            style={{ color: colors.text }}
+                          >
+                            {achievement.tag}
+                          </Text>
+                          <Text
+                            className="text-sm mt-1"
+                            style={{ color: colors.textSecondary }}
+                          >
+                            {achievement.description}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+            {/* Suggested Focus Areas */}
+            <View className="px-6 py-6">
+              <Text
+                className="text-lg font-bold mb-4"
+                style={{ color: colors.text }}
+              >
+                Next Level Goals
+              </Text>
+              <View className="space-y-1">
                 <TouchableOpacity
-                  key={index}
                   className="flex-row items-center justify-between py-3 px-4 rounded-2xl mb-3"
                   style={{ backgroundColor: colors.surface }}
                 >
@@ -1216,95 +1316,66 @@ useEffect(() => {
                       className="rounded-xl p-2 mr-3"
                       style={{ backgroundColor: colors.card }}
                     >
-                      <Icon size={20} color={color} />
+                      <Target size={20} color={colors.warning} />
                     </View>
                     <View className="flex-1">
-                      <Text className="font-semibold" style={{ color: colors.text }}>
-                        {achievement.tag}
+                      <Text
+                        className="font-semibold"
+                        style={{ color: colors.text }}
+                      >
+                        Master Strategic Pauses
                       </Text>
-                      <Text className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                        {achievement.description}
+                      <Text
+                        className="text-sm mt-1"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        Use pauses to create impact and emphasis
                       </Text>
                     </View>
                   </View>
+                  <View className="bg-orange-100 rounded-full px-3 py-1">
+                    <Text className="text-orange-600 font-bold text-xs">
+                      FOCUS
+                    </Text>
+                  </View>
                 </TouchableOpacity>
-              );
-            })}
-          </View>
 
-        </View>
-        {/* Suggested Focus Areas */}
-        <View className="px-6 py-6">
-          <Text
-            className="text-lg font-bold mb-4"
-            style={{ color: colors.text }}
-          >
-            Next Level Goals
-          </Text>
-          <View className="space-y-1">
-            <TouchableOpacity
-              className="flex-row items-center justify-between py-3 px-4 rounded-2xl mb-3"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <View className="flex-row items-center flex-1">
-                <View
-                  className="rounded-xl p-2 mr-3"
-                  style={{ backgroundColor: colors.card }}
+                <TouchableOpacity
+                  className="flex-row items-center justify-between py-3 px-4 rounded-2xl"
+                  style={{ backgroundColor: colors.surface }}
                 >
-                  <Target size={20} color={colors.warning} />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="font-semibold"
-                    style={{ color: colors.text }}
-                  >
-                    Master Strategic Pauses
-                  </Text>
-                  <Text
-                    className="text-sm mt-1"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    Use pauses to create impact and emphasis
-                  </Text>
-                </View>
+                  <View className="flex-row items-center flex-1">
+                    <View
+                      className="rounded-xl p-2 mr-3"
+                      style={{ backgroundColor: colors.card }}
+                    >
+                      <Mic size={20} color={colors.warning} />
+                    </View>
+                    <View className="flex-1">
+                      <Text
+                        className="font-semibold"
+                        style={{ color: colors.text }}
+                      >
+                        Vocal Variety
+                      </Text>
+                      <Text
+                        className="text-sm mt-1"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        Practice varying tone, pitch, and volume
+                      </Text>
+                    </View>
+                  </View>
+                  <View className="bg-orange-100 rounded-full px-3 py-1">
+                    <Text className="text-orange-600 font-bold text-xs">
+                      FOCUS
+                    </Text>
+                  </View>
+                </TouchableOpacity>
               </View>
-              <View className="bg-orange-100 rounded-full px-3 py-1">
-                <Text className="text-orange-600 font-bold text-xs">FOCUS</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              className="flex-row items-center justify-between py-3 px-4 rounded-2xl"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <View className="flex-row items-center flex-1">
-                <View
-                  className="rounded-xl p-2 mr-3"
-                  style={{ backgroundColor: colors.card }}
-                >
-                  <Mic size={20} color={colors.warning} />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="font-semibold"
-                    style={{ color: colors.text }}
-                  >
-                    Vocal Variety
-                  </Text>
-                  <Text
-                    className="text-sm mt-1"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    Practice varying tone, pitch, and volume
-                  </Text>
-                </View>
-              </View>
-              <View className="bg-orange-100 rounded-full px-3 py-1">
-                <Text className="text-orange-600 font-bold text-xs">FOCUS</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
