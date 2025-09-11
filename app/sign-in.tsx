@@ -1,34 +1,27 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, TextInput, Alert } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, Alert, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "./context/AuthContext";
-import { ArrowLeft, Eye, EyeOff, Mail, Lock, User } from "lucide-react-native";
+import { ArrowLeft, Eye, EyeOff, Mail, Lock } from "lucide-react-native";
 import GLogo from "../assets/images/glogo.webp";
-import { Image } from "react-native";
 import Toast from "react-native-toast-message";
+import { useTheme, getThemeColors } from "./context/ThemeContext";
 
 export default function SignInScreen() {
+  const { theme } = useTheme();
+  const colors = getThemeColors(theme);
   const router = useRouter();
   const { signIn, signInWithGoogle, resetPassword } = useAuth();
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-  const [errors, setErrors] = useState({
-    email: "",
-    password: "",
-  });
+
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [errors, setErrors] = useState({ email: "", password: "" });
   const [signInError, setSignInError] = useState("");
-
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleSignIn = async () => {
     const newErrors = { email: "", password: "" };
@@ -48,7 +41,6 @@ export default function SignInScreen() {
     }
 
     setErrors(newErrors);
-
     if (!isValid) return;
 
     setSignInError("");
@@ -56,19 +48,12 @@ export default function SignInScreen() {
 
     try {
       const { error } = await signIn(formData.email, formData.password);
-
       if (error) {
-        setSignInError(
-          typeof error === "string"
-            ? error
-            : error.message || "Invalid credentials",
-        );
+        setSignInError(typeof error === "string" ? error : error.message || "Invalid credentials");
         setIsLoading(false);
         return;
       }
-
-      setSignInError("");
-    } catch (error) {
+    } catch {
       setSignInError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
@@ -86,7 +71,6 @@ export default function SignInScreen() {
       });
       return;
     }
-
     if (!validateEmail(formData.email)) {
       Toast.show({
         type: "error",
@@ -104,20 +88,14 @@ export default function SignInScreen() {
         Toast.show({
           type: "error",
           text1: "Email Not Found",
-          text2:
-            typeof error === "string"
-              ? error
-              : error.message || "This email is not registered with us.",
+          text2: typeof error === "string" ? error : error.message || "This email is not registered.",
           position: "top",
           visibilityTime: 4000,
         });
       } else {
-        // Email exists, redirect to reset password screen
-        router.push(
-          `/reset-password?email=${encodeURIComponent(formData.email)}`,
-        );
+        router.push(`/reset-password?email=${encodeURIComponent(formData.email)}`);
       }
-    } catch (error) {
+    } catch {
       Toast.show({
         type: "error",
         text1: "Error",
@@ -132,121 +110,92 @@ export default function SignInScreen() {
     setIsGoogleLoading(true);
     try {
       const { error, user } = await signInWithGoogle();
-
       if (error) {
-        Alert.alert(
-          "Google Sign In",
-          typeof error === "string"
-            ? error
-            : error.message || "Please try again",
-        );
+        Alert.alert("Google Sign In", typeof error === "string" ? error : error.message || "Please try again");
       } else {
-        setUser(user); // Set global user state
-        router.push("/"); // Redirect to home/dashboard
+        router.push("/"); 
       }
-    } catch {
-      Alert.alert(
-        "Error",
-        "Something went wrong with Google sign in. Try again.",
-      );
     } finally {
       setIsGoogleLoading(false);
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1 px-6 py-8">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{ flex: 1, paddingHorizontal: 24, paddingVertical: 32 }}>
         {/* Header */}
-        <View className="flex-row justify-between items-center mb-6">
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 24 }}>
           <TouchableOpacity
-            className="p-2 rounded-full border border-gray-300"
+            style={{ padding: 8, borderRadius: 9999, borderWidth: 1, borderColor: colors.border }}
             onPress={() => router.back()}
           >
-            <ArrowLeft size={20} color="#111" />
+            <ArrowLeft size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
 
-        <Text className="text-2xl font-semibold text-gray-900 mb-10">
+        <Text style={{ fontSize: 28, fontWeight: "600", color: colors.text, marginBottom: 40 }}>
           Welcome Back
         </Text>
 
         {/* Email */}
-        <View className="relative mb-2">
+        <View style={{ marginBottom: 16 }}>
           <TextInput
             placeholder="Email"
+            placeholderTextColor={colors.textSecondary}
             keyboardType="email-address"
             autoCapitalize="none"
-            className={`bg-[#f6f7fb] px-12 py-4 rounded-xl border text-gray-900 ${
-              errors.email ? "border-red-500" : "border-gray-200"
-            }`}
             value={formData.email}
             onChangeText={(text) => {
               setFormData({ ...formData, email: text });
               if (errors.email) setErrors({ ...errors, email: "" });
             }}
+            style={{
+              backgroundColor: colors.surface,
+              paddingVertical: 16,
+              paddingLeft: 48,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: errors.email ? colors.error : colors.border,
+              color: colors.text,
+            }}
           />
-          <Mail
-            size={20}
-            color="#6b7280"
-            style={{ position: "absolute", top: 18, left: 16 }}
-          />
-          {errors.email ? (
-            <Text className="text-red-500 text-sm mt-1 ml-1">
-              {errors.email}
-            </Text>
-          ) : null}
+          <Mail size={20} color={colors.textSecondary} style={{ position: "absolute", top: 18, left: 16 }} />
+          {errors.email ? <Text style={{ color: colors.error, marginTop: 4 }}>{errors.email}</Text> : null}
         </View>
 
-        <View className="relative mb-2">
+        {/* Password */}
+        <View style={{ marginBottom: 16 }}>
           <TextInput
             placeholder="Password"
+            placeholderTextColor={colors.textSecondary}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
-            className={`bg-[#f6f7fb] px-12 py-4 rounded-xl border text-gray-900 ${
-              errors.password ? "border-red-500" : "border-gray-200"
-            }`}
             value={formData.password}
             onChangeText={(text) => {
               setFormData({ ...formData, password: text });
               if (errors.password) setErrors({ ...errors, password: "" });
             }}
+            style={{
+              backgroundColor: colors.surface,
+              paddingVertical: 16,
+              paddingLeft: 48,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: errors.password ? colors.error : colors.border,
+              color: colors.text,
+            }}
           />
-          <Lock
-            size={20}
-            color="#6b7280"
-            style={{ position: "absolute", top: 18, left: 16 }}
-          />
-          <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)}
-            style={{ position: "absolute", top: 16, right: 16 }}
-          >
-            {showPassword ? (
-              <EyeOff size={22} color="#6b7280" />
-            ) : (
-              <Eye size={22} color="#6b7280" />
-            )}
+          <Lock size={20} color={colors.textSecondary} style={{ position: "absolute", top: 18, left: 16 }} />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ position: "absolute", top: 16, right: 16 }}>
+            {showPassword ? <EyeOff size={22} color={colors.textSecondary} /> : <Eye size={22} color={colors.textSecondary} />}
           </TouchableOpacity>
-          {errors.password ? (
-            <Text className="text-red-500 text-sm mt-1 ml-1">
-              {errors.password}
-            </Text>
-          ) : null}
+          {errors.password ? <Text style={{ color: colors.error, marginTop: 4 }}>{errors.password}</Text> : null}
         </View>
 
         {/* Forgot Password */}
-        <View className="items-end mb-10">
-          <TouchableOpacity
-            onPress={handleForgotPassword}
-            disabled={isLoading || isGoogleLoading}
-          >
-            <Text
-              className={`text-sm font-semibold ${
-                isLoading || isGoogleLoading
-                  ? "text-gray-400"
-                  : "text-indigo-600"
-              }`}
-            >
+        <View style={{ alignItems: "flex-end", marginBottom: 32 }}>
+          <TouchableOpacity onPress={handleForgotPassword} disabled={isLoading || isGoogleLoading}>
+            <Text style={{ color: isLoading || isGoogleLoading ? colors.border : colors.primary, fontWeight: "600" }}>
               Forgot Password?
             </Text>
           </TouchableOpacity>
@@ -254,53 +203,59 @@ export default function SignInScreen() {
 
         {/* Sign In Button */}
         <TouchableOpacity
-          className={`rounded-xl py-4 items-center justify-center mb-4 ${
-            isLoading ? "bg-gray-400" : "bg-black"
-          }`}
           onPress={handleSignIn}
           disabled={isLoading || isGoogleLoading}
+          style={{
+            backgroundColor: isLoading ? colors.border : colors.primary,
+            borderColor: colors.border,
+            borderWidth: 1,
+            borderRadius: 16,
+            paddingVertical: 16,
+            alignItems: "center",
+            marginBottom: 16,
+          }}
         >
-          <Text className="text-white font-semibold text-lg">
+          <Text style={{ color: colors.text, fontWeight: "600", fontSize: 16 }}>
             {isLoading ? "Signing in..." : "Sign In"}
           </Text>
         </TouchableOpacity>
 
-        {/* Inline error message */}
-        {signInError ? (
-          <Text className="text-red-500 text-center mb-4">{signInError}</Text>
-        ) : null}
+        {signInError ? <Text style={{ color: colors.error, textAlign: "center", marginBottom: 16 }}>{signInError}</Text> : null}
 
         {/* Divider */}
-        <View className="flex-row items-center mb-4">
-          <View className="flex-1 h-px bg-gray-300" />
-          <Text className="mx-4 text-gray-500 text-sm">or</Text>
-          <View className="flex-1 h-px bg-gray-300" />
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+          <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+          <Text style={{ marginHorizontal: 12, color: colors.textSecondary }}>or</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
         </View>
 
-        {/* Google Sign In Button */}
+        {/* Google Sign In */}
         <TouchableOpacity
-          className={`rounded-xl py-4 items-center justify-center mb-6 border border-gray-300 flex-row ${
-            isGoogleLoading ? "bg-gray-100" : "bg-white"
-          }`}
           onPress={handleGoogleSignIn}
           disabled={isLoading || isGoogleLoading}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            paddingVertical: 16,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: isGoogleLoading ? colors.surface : colors.background,
+            marginBottom: 24,
+          }}
         >
-          <Image
-            source={GLogo}
-            style={{ width: 20, height: 20, marginRight: 12 }}
-            resizeMode="contain"
-          />
-
-          <Text className="text-gray-700 font-semibold text-lg">
+          <Image source={GLogo} style={{ width: 20, height: 20, marginRight: 12 }} resizeMode="contain" />
+          <Text style={{ color: colors.text, fontWeight: "600", fontSize: 16 }}>
             {isGoogleLoading ? "Signing in..." : "Continue with Google"}
           </Text>
         </TouchableOpacity>
 
-        {/* Sign Up Link */}
-        <View className="flex-row justify-center">
-          <Text className="text-gray-600">New here? </Text>
+        {/* Sign Up */}
+        <View style={{ flexDirection: "row", justifyContent: "center" }}>
+          <Text style={{ color: colors.textSecondary }}>New here? </Text>
           <TouchableOpacity onPress={() => router.push("/sign-up")}>
-            <Text className="text-black font-semibold">Create an account</Text>
+            <Text style={{ color: colors.text, fontWeight: "600" }}>Create an account</Text>
           </TouchableOpacity>
         </View>
       </View>

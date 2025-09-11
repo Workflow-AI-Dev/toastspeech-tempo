@@ -77,6 +77,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (res.ok) {
         const userData = await res.json();
         setUser(userData);
+        console.log(userData);
         await AsyncStorage.setItem("plan", userData.current_plan_id);
 
         const expoToken = await registerForPushNotificationsAsync();
@@ -122,7 +123,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     email: string,
     password: string,
     userData: any,
-  ): Promise<{ error: any }> => {
+  ): Promise<{ error: any; userId?: string }> => {
     try {
       const res = await fetch(`${BASE_URL}/auth/signup`, {
         method: "POST",
@@ -136,44 +137,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           profession: userData.profession,
           purposes: userData.purposes,
           custom_purpose: userData.customPurpose,
+          avatar: userData.avatar,
+          avatar_style: userData.avatar_style,
           store_audio: userData.store_audio,
           store_video: userData.store_video,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) return { error: data.detail || "Signup failed" };
 
-      // If signup returns a token, store it and authenticate the user
-      if (data.access_token) {
-        const token = data.access_token;
-        await AsyncStorage.setItem("auth_token", token);
-        await AsyncStorage.setItem("plan", data.current_plan_id);
-
-        // Fetch user data
-        const meRes = await fetch(`${BASE_URL}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const userDataResponse = await meRes.json();
-        if (meRes.ok) {
-          setUser(userDataResponse);
-          const expoToken = await registerForPushNotificationsAsync();
-          if (expoToken) {
-            await updatePushTokenOnBackend(expoToken);
-          }
-        }
-      } else {
-        // If no token returned, try to sign in automatically
-        const signInResult = await signIn(email, password);
-        if (signInResult.error) {
-          return { error: signInResult.error };
-        }
+      if (!res.ok) {
+        return { error: data.detail || "Signup failed" };
       }
 
-      return { error: null };
+      // ✅ only return userId for polling
+      return { error: null, userId: data.user_id };
     } catch (error) {
       return { error };
     }

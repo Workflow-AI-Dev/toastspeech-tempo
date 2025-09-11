@@ -17,8 +17,8 @@ const slides = [
   {
     title: "Welcome to Echozi",
     description: "AI-powered coaching to boost your public speaking game.",
-    image: require("../assets/images/public.jpg"),
-    bgColor: "#f6f2ef",
+    image: require("../assets/images/fulll.jpg"),
+    bgColor: "#925bd2",
   },
   {
     title: "AI-Powered Analysis",
@@ -42,6 +42,7 @@ const slides = [
     title: "Start Free",
     description: "To unlock your speech journey.",
     image: require("../assets/images/skillssss.gif"),
+    bgColor: "#ffffffff",
   },
 ];
 
@@ -93,67 +94,50 @@ export default function OnboardingScreen() {
       >
         {slides.map((slide, index) => {
           const isFirst = index === 0;
-          const isFourth = index === 3;
+          const isLast = index === slides.length - 1;
+          const useDarkFont = isLast; // Slide 1 & last
+          const textColor = useDarkFont ? "#111" : "#fff";
+          const subTextColor = useDarkFont ? "#444" : "#f0f0f0";
 
           return (
             <View
               key={index}
               style={{
                 width,
-                height,
+                flex: 1,
                 backgroundColor: slide.bgColor || colors.background,
               }}
-              className="flex-1"
             >
               <View
-                className="flex-1 items-center px-8"
+                className="flex-1 items-center justify-center px-8"
                 style={{
-                  paddingTop: isFirst ? 100 : 0,
-                  justifyContent: isFirst ? "flex-start" : "center",
+                  paddingTop: isFirst ? 60 : 40,
+                  paddingBottom: 40,
                 }}
               >
-                {isFirst && (
-                  <Image
-                    source={require("../assets/images/logots.png")}
-                    resizeMode="contain"
-                    style={{
-                      width: width * 0.35,
-                      height: height * 0.08,
-                      marginBottom: 16,
-                    }}
-                  />
-                )}
 
                 {slide.image && (
                   <Image
                     source={slide.image}
                     resizeMode="contain"
                     style={{
-                      width: width * 1,
+                      width: width * 0.85,
                       height: height * 0.35,
-                      marginBottom: 30,
+                      marginBottom: 32,
                     }}
                   />
                 )}
 
                 <Text
-                  className="text-3xl font-bold text-center mb-4"
-                  style={{
-                    color: isFourth ? "#fff" : isFirst ? "#000" : colors.text,
-                  }}
+                  className="text-3xl font-bold text-center mb-3"
+                  style={{ color: textColor }}
                 >
                   {slide.title}
                 </Text>
 
                 <Text
-                  className="text-base text-center leading-relaxed px-2"
-                  style={{
-                    color: isFourth
-                      ? "#fff"
-                      : isFirst
-                        ? "#444"
-                        : colors.textSecondary,
-                  }}
+                  className="text-base text-center leading-relaxed"
+                  style={{ color: subTextColor }}
                 >
                   {slide.description}
                 </Text>
@@ -182,7 +166,7 @@ export default function OnboardingScreen() {
           <>
             <TouchableOpacity
               onPress={handleGetStarted}
-              className="w-full py-4 rounded-2xl"
+              className="w-full py-4 rounded-2xl mb-3"
               style={{ backgroundColor: "#000000" }}
             >
               <Text className="text-white text-center font-bold text-lg">
