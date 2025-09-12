@@ -4,6 +4,7 @@ import { WebView } from "react-native-webview";
 import { BASE_URL } from "../api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const FeedbackScreen = () => {
   const [cannyUrl, setCannyUrl] = useState("");
@@ -47,23 +48,25 @@ const FeedbackScreen = () => {
   }
 
   return (
-    <WebView
-      source={{ uri: cannyUrl }}
-      style={{ flex: 1 }}
-      startInLoadingState
-      javaScriptEnabled
-      domStorageEnabled
-      mixedContentMode="always"
-      originWhitelist={["*"]}
-      onLoadStart={() => setLoading(true)}
-      onLoadEnd={() => setLoading(false)}
-      renderLoading={() => (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-        </View>
-      )}
-      onError={(e) => console.error("WebView error:", e.nativeEvent)}
-    />
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <WebView
+        source={{ uri: cannyUrl }}
+        style={{ flex: 1 }}
+        startInLoadingState
+        javaScriptEnabled
+        domStorageEnabled
+        mixedContentMode="always"
+        originWhitelist={["*"]}
+        onLoadStart={() => setLoading(true)}
+        onLoadEnd={() => setLoading(false)}
+        renderLoading={() => (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+          </View>
+        )}
+        onError={(e) => console.error("WebView error:", e.nativeEvent)}
+      />
+    </SafeAreaView>
   );
 };
 

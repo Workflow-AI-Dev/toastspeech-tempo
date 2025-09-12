@@ -18,6 +18,7 @@ import {
   Upload,
   FileText,
   ChevronRight,
+  Loader
 } from "lucide-react-native";
 import SpeechRecorder from "../components/SpeechRecorderSpeaker";
 import QuickFeedback from "../components/QuickFeedback";
@@ -82,6 +83,7 @@ export default function SpeakerModeScreen({
   const router = useRouter();
   const [plan, setPlan] = useState<string | null>(null);
   const [limits, setLimits] = useState(null);
+  const [partialReceived, setPartialReceived] = useState(false);
 
   useEffect(() => {
     const fetchPlan = async () => {
@@ -194,7 +196,7 @@ export default function SpeakerModeScreen({
     }
   };
 
-  const pollForResults = (taskId, token) => {
+  const pollForResults = (taskId, token, onPartial) => {
     return new Promise((resolve, reject) => {
       const pollInterval = setInterval(async () => {
         try {
@@ -202,34 +204,76 @@ export default function SpeakerModeScreen({
             `${BASE_URL}/speech/status/${taskId}`,
             {
               method: "GET",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
+              headers: { Authorization: `Bearer ${token}` },
             },
           );
 
-          if (!statusResponse.ok) {
-            const err = await statusResponse.text();
-            clearInterval(pollInterval);
-            reject(new Error(err || "Status check failed"));
+          const statusData = await statusResponse.json();
+
+          // ✅ Handle partials
+          if (statusResponse.status === 206 && statusData.partial) {
+            console.log("📡 Partial update:", statusData.partial);
+            if (onPartial) onPartial(statusData.partial);
           }
 
-          const statusData = await statusResponse.json();
-          console.log(`Polling for task ${taskId}:`, statusData.message);
-
-          // Check if the task is completed
+          // ✅ Handle final
           if (statusData.success) {
-            clearInterval(pollInterval); // Stop polling
-            console.log("✅ Polling success:", statusData);
-            resolve(statusData); // Return the final result
+            clearInterval(pollInterval);
+            console.log("✅ Final result:", statusData);
+            resolve(statusData);
           }
         } catch (err) {
           clearInterval(pollInterval);
           reject(err);
         }
-      }, 5000); // Poll every 5 seconds
+      }, 5000);
     });
   };
+
+  const mapResults = (data) => {
+    const finalData = data.result ?? data;
+
+    return {
+      analysisResults: {
+        overallScore: finalData.summary?.Metadata?.overall_score ?? 0,
+        pace: finalData.analytics?.speaker_analysis?.[0]?.words_per_minute || 0,
+        fillerWords: 0,
+        emotionalDelivery: 0,
+        clarity: 0,
+        confidence: 0,
+        engagement: 0,
+        improvement: "N/A",
+        duration: (() => {
+          const totalSpeakingSeconds =
+            finalData.analytics?.speaker_analysis?.[0]
+              ?.total_speaking_time_seconds || 0;
+          const minutes = Math.floor(totalSpeakingSeconds / 60);
+          const seconds = Math.floor(totalSpeakingSeconds % 60);
+          return `${minutes.toString().padStart(2, "0")}:${seconds
+            .toString()
+            .padStart(2, "0")}`;
+        })(),
+        avgPause: finalData.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
+        pausesData: finalData.analytics?.pauses || [],
+        fillerData: finalData.analytics?.filler_words || [],
+        crutchData: finalData.analytics?.crutch_phrases || [],
+        repeatedPhrases: finalData.analytics?.repeated_words || [],
+        grammarData: finalData.analytics?.grammar_mistakes || [],
+        environData: finalData.analytics?.environmental_elements || [],
+        pitchData: finalData.pitch_track || [],
+      },
+      feedback: {
+        strengths: finalData.summary?.Commendations ?? [],
+        improvements: finalData.summary?.Recommendations ?? [],
+        keyInsights: finalData.summary?.KeyInsights ?? [],
+      },
+      detailedFeedback: {
+        ...finalData.detailed,
+        url: finalData.url,
+      },
+    };
+  };
+
 
   const confirmSubmission = async () => {
     setShowConfirmModal(false);
@@ -249,59 +293,35 @@ export default function SpeakerModeScreen({
         mimeType: recordingData.mimeType || "application/octet-stream",
         taskType: taskType,
         modeType: "speaker",
-        speechType: speechType || "custom", // pulled from earlier step
+        speechType: speechType || "custom",
         token,
+        onPartial: (partial) => {
+        console.log("📡 Received partial update:", partial);
+        setPartialReceived(true);
+        
+        const { analysisResults, feedback, detailedFeedback } = mapResults(partial);
+        
+        // Update state with partial results
+        setAnalysisResults((prev) => ({ ...prev, ...analysisResults }));
+        setFeedback((prev) => ({ ...prev, ...feedback }));
+        setDetailedFeedback((prev) => ({ ...prev, ...detailedFeedback }));
+        
+        // IMPORTANT: Immediately switch to results view when first partial arrives
+        setCurrentStep("results");
+        setIsProcessing(false); // Stop showing the processing loader
+      },
+
+
       });
 
-      const finalData = result.result ?? result;
+      const { analysisResults, feedback, detailedFeedback } = mapResults(result);
+    setAnalysisResults(analysisResults);
+    setFeedback(feedback);
+    setDetailedFeedback(detailedFeedback);
 
-      const mappedResults = {
-        overallScore: finalData.summary?.Metadata?.overall_score ?? 0,
-        pace: finalData.analytics?.speaker_analysis?.[0]?.words_per_minute || 0,
-        fillerWords: 0,
-        emotionalDelivery: 0,
-        clarity: 0,
-        confidence: 0,
-        engagement: 0,
-        improvement: "N/A", // Or calculate based on history
-        duration: (() => {
-          const totalSpeakingSeconds =
-            finalData.analytics?.speaker_analysis?.[0]
-              ?.total_speaking_time_seconds || 0;
-          const minutes = Math.floor(totalSpeakingSeconds / 60);
-          const seconds = Math.floor(totalSpeakingSeconds % 60);
-          return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-        })(),
-        avgPause:
-          finalData.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
-        pausesData: finalData.analytics?.pauses || [],
-        fillerData: finalData.analytics?.filler_words || [],
-        crutchData: finalData.analytics?.crutch_phrases || [],
-        repeatedPhrases: finalData.analytics?.repeated_words || [],
-        grammarData: finalData.analytics?.grammar_mistakes || [],
-        environData: finalData.analytics?.environmental_elements || [],
-        pitchData: finalData.pitch_track || [],
-      };
-
-      const mappedFeedback = {
-        strengths: finalData.summary?.Commendations ?? [],
-        improvements: finalData.summary?.Recommendations ?? [],
-        keyInsights: finalData.summary?.KeyInsights ?? [],
-      };
-
-      const detailedFeedback = {
-        ...finalData.detailed,
-        url: finalData.url,
-      };
-
-      setAnalysisResults(mappedResults);
-      setFeedback(mappedFeedback);
-      setDetailedFeedback(detailedFeedback);
-
-      console.log(mappedResults);
-
-      setIsProcessing(false);
-      setCurrentStep("results");
+    // Ensure we're on results step and not processing
+    setIsProcessing(false);
+    setCurrentStep("results")
     } catch (error) {
       console.error("Upload failed:", error);
       setIsProcessing(false);
@@ -1304,17 +1324,32 @@ export default function SpeakerModeScreen({
 
       <ScrollView className="flex-1">
         <Text
-          className="text-2xl font-bold mb-2 text-center"
-          style={{ color: colors.text }}
-        >
-          Analysis Complete
-        </Text>
-        <Text
-          className="text-center mb-8 text-base"
-          style={{ color: colors.textSecondary }}
-        >
-          Here's your comprehensive speech analysis
-        </Text>
+        className="text-2xl font-bold mb-2 text-center mt-2"
+        style={{ color: colors.text }}
+      >
+        {isProcessing && partialReceived ? "Analysis in Progress..." : "Analysis Complete"}
+      </Text>
+      <Text
+        className="text-center mb-8 text-base"
+        style={{ color: colors.textSecondary }}
+      >
+        {isProcessing && partialReceived 
+          ? "Here are your initial results - more details coming soon!"
+          : "Here's your comprehensive speech analysis"
+        }
+      </Text>
+
+      {isProcessing && partialReceived && (
+        <View className="mx-6 mb-4 p-3 rounded-2xl" style={{ backgroundColor: colors.surface }}>
+          <View className="flex-row items-center">
+            <Loader size={16} color={colors.primary} />
+            <Text className="ml-2 text-sm" style={{ color: colors.textSecondary }}>
+              Analyzing remaining speech data...
+            </Text>
+          </View>
+        </View>
+      )}
+        
         <QuickFeedback
           analysisResults={analysisResults}
           feedback={feedback}
@@ -1342,7 +1377,7 @@ export default function SpeakerModeScreen({
       {currentStep === "speechDetails" && renderSpeechDetails()}
       {currentStep === "recordingMethod" && renderRecordingMethodSelection()}
       {currentStep === "record" && renderRecordingView()}
-      {currentStep === "results" && renderResultsView()}
+    {(partialReceived || currentStep === "results") && renderResultsView()}
     </SafeAreaView>
   );
 }

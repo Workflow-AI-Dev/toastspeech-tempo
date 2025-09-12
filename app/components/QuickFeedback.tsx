@@ -389,7 +389,6 @@ const QuickFeedback = ({
     },
   };
 
-  // ... Your existing Modal component structure ...
   const tabs = [
     "Key Insights",
     "Speech Patterns",

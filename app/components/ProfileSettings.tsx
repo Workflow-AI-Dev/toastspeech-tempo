@@ -499,14 +499,14 @@ export default function ProfileSettings({
     },
     {
       icon: Flame,
-      label: "Days streak",
+      label: "Streak",
       value: metrics?.streak ? metrics.streak.toString() : "0",
       color: "#ea580c",
       bgColor: "#fed7aa",
     },
     {
       icon: Trophy,
-      label: "Avg Score",
+      label: "Avg",
       value: metrics?.average_score
         ? Math.round(metrics.average_score).toString()
         : "0",

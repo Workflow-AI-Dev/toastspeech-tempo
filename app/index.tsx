@@ -161,9 +161,9 @@ export default function HomeScreen() {
   );
 
   const userLevel = {
-    current: 7,
+    current: 1,
     progress: 65,
-    nextLevel: 8,
+    nextLevel: 2,
     streakDays: streakDays,
   };
 

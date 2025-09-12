@@ -423,7 +423,7 @@ const DetailedFeedbackScreen = ({
               <View
                 key={index}
                 style={{ backgroundColor: strengthsCardBg }}
-                className="rounded-2xl p-4"
+                className="rounded-2xl p-4 mb-3"
               >
                 <View className="flex-row items-start justify-between mb-2">
                   <Text
