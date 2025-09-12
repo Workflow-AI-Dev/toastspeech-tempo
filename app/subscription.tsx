@@ -56,52 +56,54 @@ export default function SubscriptionScreen() {
   const [planStartsAt, setPlanStartsAt] = useState(null);
   const [isNewUser, setIsNewUser] = useState(false);
 
-
   const fetchStatus = useCallback(async () => {
-  try {
-    const token = await AsyncStorage.getItem("auth_token");
-    if (!token) {
-      console.warn("No auth token found.");
-      return;
-    }
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (!token) {
+        console.warn("No auth token found.");
+        return;
+      }
 
-    const res = await fetch(`${BASE_URL}/subscription/status`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+      const res = await fetch(`${BASE_URL}/subscription/status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (res.ok) {
-      setSubscriptionStatus(data.subscription_status);
+      if (res.ok) {
+        setSubscriptionStatus(data.subscription_status);
 
-      if (data.plan_starts_at) {
-        const planStartDate = new Date(data.plan_starts_at);
-        setPlanStartsAt(planStartDate);
+        if (data.plan_starts_at) {
+          const planStartDate = new Date(data.plan_starts_at);
+          setPlanStartsAt(planStartDate);
 
-        const now = new Date();
-        const minutesSinceStart = (now.getTime() - planStartDate.getTime()) / (1000 * 60);
-        if (minutesSinceStart < 5) {
-          setIsNewUser(true);
+          const now = new Date();
+          const minutesSinceStart =
+            (now.getTime() - planStartDate.getTime()) / (1000 * 60);
+          if (minutesSinceStart < 5) {
+            setIsNewUser(true);
+          }
         }
-      }
 
-      if (data.subscription_status === "trialing" && data.trial_ends_at) {
-        const endsAt = new Date(data.trial_ends_at);
-        const now = new Date();
-        const daysRemaining = Math.ceil((endsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        setTrialEndsInDays(daysRemaining);
+        if (data.subscription_status === "trialing" && data.trial_ends_at) {
+          const endsAt = new Date(data.trial_ends_at);
+          const now = new Date();
+          const daysRemaining = Math.ceil(
+            (endsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+          );
+          setTrialEndsInDays(daysRemaining);
+        }
+      } else {
+        console.error("Subscription status fetch failed:", data);
       }
-    } else {
-      console.error("Subscription status fetch failed:", data);
+    } catch (error) {
+      console.error("Error fetching subscription status", error);
     }
-  } catch (error) {
-    console.error("Error fetching subscription status", error);
-  }
-}, []);
+  }, []);
 
   useEffect(() => {
-        fetchStatus();
-    }, [fetchStatus]);
+    fetchStatus();
+  }, [fetchStatus]);
 
   const plans = [
     {
@@ -179,7 +181,6 @@ export default function SubscriptionScreen() {
     return plan;
   });
 
-
   return (
     <SafeAreaView className="flex-1 bg-neutral-50">
       <ScrollView
@@ -211,20 +212,26 @@ export default function SubscriptionScreen() {
             <View className="bg-blue-100 border-l-4 border-blue-500 p-4 rounded-lg mt-6 w-full">
               {isNewUser ? (
                 <Text className="text-blue-800 text-sm font-semibold">
-                  🎉 Welcome! You’ve unlocked a 14-day free trial of *Aspiring Speaker*. After that, we’ll slide you into *Casual Speaker* (Free). Take a peek at the paid plans below — no pressure, you can decide later!
+                  🎉 Welcome! You’ve unlocked a 14-day free trial of Aspiring
+                  Speaker. After that, we’ll slide you into Casual Speaker
+                  (Free). Take a peek at the paid plans below — no pressure, you
+                  can decide later!
                 </Text>
-              ) : subscriptionStatus === "trialing" && trialEndsInDays !== null ? (
+              ) : subscriptionStatus === "trialing" &&
+                trialEndsInDays !== null ? (
                 <Text className="text-blue-800 text-sm font-semibold">
-                  ⏳ {trialEndsInDays} day{trialEndsInDays !== 1 && "s"} left on your *Aspiring Speaker* trial! Then it’s back to *Casual Speaker* (Free) - or upgrade if you're loving it!
+                  ⏳ {trialEndsInDays} day{trialEndsInDays !== 1 && "s"} left on
+                  your Aspiring Speaker trial! Then it’s back to Casual Speaker
+                  (Free) - or upgrade if you're loving it!
                 </Text>
               ) : (
                 <Text className="text-blue-800 text-sm font-semibold">
-                  🚀 New here? Enjoy a 14-day free trial of *Aspiring Speaker*! We’ll drop you into *Casual Speaker* (Free) after.
+                  🚀 New here? Enjoy a 14-day free trial of Aspiring Speaker!
+                  We’ll drop you into Casual Speaker (Free) after.
                 </Text>
               )}
             </View>
           )}
-
         </View>
 
         <View className="space-y-8">

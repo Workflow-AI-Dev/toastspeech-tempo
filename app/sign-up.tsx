@@ -433,9 +433,12 @@ export default function SignUpScreen() {
 
       if (data.verified) {
         clearInterval(interval);
-        setIsVerified(true); // 🔑 show green check
+        setIsVerified(true);
         await AsyncStorage.setItem("auth_token", data.access_token);
         setUser(data.user);
+        const plan = data?.user?.current_plan_id || "aspiring";
+        await AsyncStorage.setItem("plan", plan);
+        router.push("/trial");
       }
     }, 1000);
   };

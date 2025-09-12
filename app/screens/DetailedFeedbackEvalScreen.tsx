@@ -315,7 +315,7 @@ const DetailedFeedbackEvalScreen = ({
         {/* Strengths */}
         <View
           style={{ backgroundColor: sectionBgColor }}
-          className="rounded-3xl p-6 shadow-sm"
+          className="rounded-3xl p-6 shadow-sm mb-3"
         >
           <View className="flex-row items-center mb-4">
             <CheckCircle size={24} color="#10b981" />

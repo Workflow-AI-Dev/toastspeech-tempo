@@ -1130,7 +1130,7 @@ const QuickFeedbackEvaluations = ({
                 <View className="space-y-4">
                   {Object.keys(fillerCounts).length > 0 && (
                     <View
-                      className="rounded-2xl p-4"
+                      className="rounded-2xl p-4 mb-2"
                       style={{
                         backgroundColor:
                           theme === "dark" ? "#1e3a8a" : "#eff6ff",
@@ -1220,7 +1220,7 @@ const QuickFeedbackEvaluations = ({
 
                   {Object.keys(crutchCounts).length > 0 && (
                     <View
-                      className="rounded-2xl p-4"
+                      className="rounded-2xl p-4 mb-2"
                       style={{
                         backgroundColor:
                           theme === "dark" ? "#581c87" : "#faf5ff",
@@ -1310,7 +1310,7 @@ const QuickFeedbackEvaluations = ({
 
                   {Object.keys(repeatCounts).length > 0 && (
                     <View
-                      className="rounded-2xl p-4"
+                      className="rounded-2xl p-4 mb-2"
                       style={{
                         backgroundColor:
                           theme === "dark" ? "#1e3a8a" : "#eff6ff",
@@ -1924,7 +1924,7 @@ const QuickFeedbackEvaluations = ({
                       return (
                         <View
                           key={element}
-                          className="rounded-2xl p-4"
+                          className="rounded-2xl p-4 mb-2"
                           style={{
                             backgroundColor:
                               theme === "dark" ? "#1f2937" : "#f9fafb",

@@ -563,12 +563,15 @@ export default function ProfileSettings({
               </Text>
             </View>
 
-            {/* Stats Row */}
-            <View className="flex-row justify-center space-x-4 mt-4">
+            <View className="flex-row justify-center mt-4">
               {stats.map((stat, index) => {
                 const IconComponent = stat.icon;
                 return (
-                  <View key={index} className="items-center">
+                  <View
+                    key={index}
+                    className="items-center"
+                    style={{ marginHorizontal: 8 }} // add horizontal spacing
+                  >
                     <View
                       className="rounded-2xl p-3 mb-2"
                       style={{ backgroundColor: stat.bgColor }}
