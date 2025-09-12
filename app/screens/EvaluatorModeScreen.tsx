@@ -911,7 +911,7 @@ export default function EvaluatorModeScreen({
           </TouchableOpacity>
 
           {/* Record Video */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={() => {
               setRecordMode("video");
               setShowRecorder(true);
@@ -980,7 +980,7 @@ export default function EvaluatorModeScreen({
                 • Visual context evaluation
               </Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Upload Speech File */}
           <TouchableOpacity
@@ -1306,7 +1306,7 @@ export default function EvaluatorModeScreen({
           </TouchableOpacity>
 
           {/* Record Video Evaluation */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={() => {
               setEvaluationRecordMode("video");
               setShowEvaluationRecorder(true);
@@ -1375,7 +1375,7 @@ export default function EvaluatorModeScreen({
                 • Full-body language cues
               </Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Upload Evaluation */}
           <TouchableOpacity

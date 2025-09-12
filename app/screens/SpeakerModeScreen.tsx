@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   TextInput,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import {
   ArrowLeft,
@@ -18,7 +19,7 @@ import {
   Upload,
   FileText,
   ChevronRight,
-  Loader
+  Loader,
 } from "lucide-react-native";
 import SpeechRecorder from "../components/SpeechRecorderSpeaker";
 import QuickFeedback from "../components/QuickFeedback";
@@ -29,6 +30,7 @@ import { Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { BASE_URL } from "../api";
 import * as FileSystem from "expo-file-system";
+import * as DocumentPicker from "expo-document-picker";
 
 interface SpeakerModeScreenProps {
   onBack?: () => void;
@@ -84,6 +86,7 @@ export default function SpeakerModeScreen({
   const [plan, setPlan] = useState<string | null>(null);
   const [limits, setLimits] = useState(null);
   const [partialReceived, setPartialReceived] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const fetchPlan = async () => {
@@ -253,7 +256,8 @@ export default function SpeakerModeScreen({
             .toString()
             .padStart(2, "0")}`;
         })(),
-        avgPause: finalData.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
+        avgPause:
+          finalData.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
         pausesData: finalData.analytics?.pauses || [],
         fillerData: finalData.analytics?.filler_words || [],
         crutchData: finalData.analytics?.crutch_phrases || [],
@@ -273,7 +277,6 @@ export default function SpeakerModeScreen({
       },
     };
   };
-
 
   const confirmSubmission = async () => {
     setShowConfirmModal(false);
@@ -296,35 +299,87 @@ export default function SpeakerModeScreen({
         speechType: speechType || "custom",
         token,
         onPartial: (partial) => {
-        console.log("📡 Received partial update:", partial);
-        setPartialReceived(true);
-        
-        const { analysisResults, feedback, detailedFeedback } = mapResults(partial);
-        
-        // Update state with partial results
-        setAnalysisResults((prev) => ({ ...prev, ...analysisResults }));
-        setFeedback((prev) => ({ ...prev, ...feedback }));
-        setDetailedFeedback((prev) => ({ ...prev, ...detailedFeedback }));
-        
-        // IMPORTANT: Immediately switch to results view when first partial arrives
-        setCurrentStep("results");
-        setIsProcessing(false); // Stop showing the processing loader
-      },
+          console.log("📡 Received partial update:", partial);
+          setPartialReceived(true);
 
+          const { analysisResults, feedback, detailedFeedback } =
+            mapResults(partial);
 
+          // Update state with partial results
+          setAnalysisResults((prev) => ({ ...prev, ...analysisResults }));
+          setFeedback((prev) => ({ ...prev, ...feedback }));
+          setDetailedFeedback((prev) => ({ ...prev, ...detailedFeedback }));
+
+          // IMPORTANT: Immediately switch to results view when first partial arrives
+          setCurrentStep("results");
+          setIsProcessing(false); // Stop showing the processing loader
+        },
       });
 
-      const { analysisResults, feedback, detailedFeedback } = mapResults(result);
-    setAnalysisResults(analysisResults);
-    setFeedback(feedback);
-    setDetailedFeedback(detailedFeedback);
+      const { analysisResults, feedback, detailedFeedback } =
+        mapResults(result);
+      setAnalysisResults(analysisResults);
+      setFeedback(feedback);
+      setDetailedFeedback(detailedFeedback);
 
-    // Ensure we're on results step and not processing
-    setIsProcessing(false);
-    setCurrentStep("results")
+      // Ensure we're on results step and not processing
+      setIsProcessing(false);
+      setCurrentStep("results");
     } catch (error) {
       console.error("Upload failed:", error);
       setIsProcessing(false);
+    }
+  };
+
+  const handleFormUpload = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "application/pdf",
+        copyToCacheDirectory: true,
+      });
+
+      if (result.type === "cancel") {
+        return; // no spinner because no request
+      }
+
+      const file1 = result.assets ? result.assets[0] : result;
+
+      const token = await AsyncStorage.getItem("auth_token");
+
+      // Start spinner right before sending the request
+      setUploading(true);
+
+      const formData = new FormData();
+      const res = await fetch(file1.uri);
+      const blob = await res.blob();
+      const file = new File([blob], file1.name, { type: file1.mimeType });
+      formData.append("file", file);
+
+      const response = await fetch(`${BASE_URL}/speech/process_form`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const formDataFromServer = await response.json();
+
+      setSpeechDetails((prev) => ({
+        ...prev,
+        title: formDataFromServer.title || prev.title,
+        evaluatorName: formDataFromServer.evaluatorName || prev.evaluatorName,
+        duration: formDataFromServer.duration || prev.duration,
+        purpose: formDataFromServer.purpose || prev.purpose,
+      }));
+    } catch (err) {
+      console.error("Upload error:", err);
+    } finally {
+      setUploading(false); // stop spinner after request completes
     }
   };
 
@@ -616,20 +671,27 @@ export default function SpeakerModeScreen({
                   backgroundColor: colors.surface,
                   borderColor: colors.primary,
                 }}
+                onPress={handleFormUpload}
               >
-                <FileText size={32} color={colors.primary} />
-                <Text
-                  className="font-semibold mt-2"
-                  style={{ color: colors.primary }}
-                >
-                  Tap to upload PDF
-                </Text>
-                <Text
-                  className="text-sm mt-1 text-center"
-                  style={{ color: colors.textSecondary }}
-                >
-                  Optional - you can fill details manually below
-                </Text>
+                {uploading ? (
+                  <ActivityIndicator size="large" color={colors.primary} />
+                ) : (
+                  <>
+                    <FileText size={32} color={colors.primary} />
+                    <Text
+                      className="font-semibold mt-2"
+                      style={{ color: colors.primary }}
+                    >
+                      Tap to upload PDF
+                    </Text>
+                    <Text
+                      className="text-sm mt-1 text-center"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Optional - you can fill details manually below
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           )}
@@ -979,7 +1041,7 @@ export default function SpeakerModeScreen({
           </TouchableOpacity>
 
           {/* Video + Audio Option */}
-          <TouchableOpacity
+          {/*<TouchableOpacity
             disabled={isVideoLocked}
             className="rounded-3xl p-6 mb-6 shadow-lg"
             style={{
@@ -1066,7 +1128,7 @@ export default function SpeakerModeScreen({
                 • Comprehensive evaluation
               </Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity>*/}
 
           {/* Upload Recording Option */}
           <TouchableOpacity
@@ -1324,32 +1386,39 @@ export default function SpeakerModeScreen({
 
       <ScrollView className="flex-1">
         <Text
-        className="text-2xl font-bold mb-2 text-center mt-2"
-        style={{ color: colors.text }}
-      >
-        {isProcessing && partialReceived ? "Analysis in Progress..." : "Analysis Complete"}
-      </Text>
-      <Text
-        className="text-center mb-8 text-base"
-        style={{ color: colors.textSecondary }}
-      >
-        {isProcessing && partialReceived 
-          ? "Here are your initial results - more details coming soon!"
-          : "Here's your comprehensive speech analysis"
-        }
-      </Text>
+          className="text-2xl font-bold mb-2 text-center mt-2"
+          style={{ color: colors.text }}
+        >
+          {isProcessing && partialReceived
+            ? "Analysis in Progress..."
+            : "Analysis Complete"}
+        </Text>
+        <Text
+          className="text-center mb-8 text-base"
+          style={{ color: colors.textSecondary }}
+        >
+          {isProcessing && partialReceived
+            ? "Here are your initial results - more details coming soon!"
+            : "Here's your comprehensive speech analysis"}
+        </Text>
 
-      {isProcessing && partialReceived && (
-        <View className="mx-6 mb-4 p-3 rounded-2xl" style={{ backgroundColor: colors.surface }}>
-          <View className="flex-row items-center">
-            <Loader size={16} color={colors.primary} />
-            <Text className="ml-2 text-sm" style={{ color: colors.textSecondary }}>
-              Analyzing remaining speech data...
-            </Text>
+        {isProcessing && partialReceived && (
+          <View
+            className="mx-6 mb-4 p-3 rounded-2xl"
+            style={{ backgroundColor: colors.surface }}
+          >
+            <View className="flex-row items-center">
+              <Loader size={16} color={colors.primary} />
+              <Text
+                className="ml-2 text-sm"
+                style={{ color: colors.textSecondary }}
+              >
+                Analyzing remaining speech data...
+              </Text>
+            </View>
           </View>
-        </View>
-      )}
-        
+        )}
+
         <QuickFeedback
           analysisResults={analysisResults}
           feedback={feedback}
@@ -1377,7 +1446,7 @@ export default function SpeakerModeScreen({
       {currentStep === "speechDetails" && renderSpeechDetails()}
       {currentStep === "recordingMethod" && renderRecordingMethodSelection()}
       {currentStep === "record" && renderRecordingView()}
-    {(partialReceived || currentStep === "results") && renderResultsView()}
+      {(partialReceived || currentStep === "results") && renderResultsView()}
     </SafeAreaView>
   );
 }

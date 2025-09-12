@@ -112,7 +112,8 @@ export default function PracticeModeScreen({
   }, []);
 
   const isAudioLocked = limits?.remaining_audio_practice === 0;
-  const isVideoLocked = limits?.remaining_video_practice === 0 || plan === "casual";
+  const isVideoLocked =
+    limits?.remaining_video_practice === 0 || plan === "casual";
   const isUploadLocked = limits?.total_remaining_practice === 0;
 
   const handleRecordingComplete = (data) => {
@@ -198,38 +199,41 @@ export default function PracticeModeScreen({
   };
 
   const pollForResults = (taskId, token) => {
-      return new Promise((resolve, reject) => {
-        const pollInterval = setInterval(async () => {
-          try {
-            const statusResponse = await fetch(`${BASE_URL}/practice/status/${taskId}`, {
+    return new Promise((resolve, reject) => {
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(
+            `${BASE_URL}/practice/status/${taskId}`,
+            {
               method: "GET",
               headers: {
                 Authorization: `Bearer ${token}`,
               },
-            });
-  
-            if (!statusResponse.ok) {
-              const err = await statusResponse.text();
-              clearInterval(pollInterval);
-              reject(new Error(err || "Status check failed"));
-            }
-  
-            const statusData = await statusResponse.json();
-            console.log(`Polling for task ${taskId}:`, statusData.message);
-  
-            // Check if the task is completed
-            if (statusData.success) {
-              clearInterval(pollInterval); // Stop polling
-              console.log("✅ Polling success:", statusData);
-              resolve(statusData); // Return the final result
-            }
-          } catch (err) {
+            },
+          );
+
+          if (!statusResponse.ok) {
+            const err = await statusResponse.text();
             clearInterval(pollInterval);
-            reject(err);
+            reject(new Error(err || "Status check failed"));
           }
-        }, 5000); // Poll every 5 seconds
-      });
-    };
+
+          const statusData = await statusResponse.json();
+          console.log(`Polling for task ${taskId}:`, statusData.message);
+
+          // Check if the task is completed
+          if (statusData.success) {
+            clearInterval(pollInterval); // Stop polling
+            console.log("✅ Polling success:", statusData);
+            resolve(statusData); // Return the final result
+          }
+        } catch (err) {
+          clearInterval(pollInterval);
+          reject(err);
+        }
+      }, 5000); // Poll every 5 seconds
+    });
+  };
 
   const confirmSubmission = async () => {
     setShowConfirmModal(false);
@@ -892,10 +896,12 @@ export default function PracticeModeScreen({
                   Record Audio
                 </Text>
                 {isAudioLocked && (
-                    <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
-                      <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
-                    </View>
-                  )}
+                  <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
+                    <Text className="text-xs font-bold text-gray-600">
+                      LOCKED
+                    </Text>
+                  </View>
+                )}
                 <Text
                   className="text-base"
                   style={{ color: colors.textSecondary }}
@@ -934,7 +940,7 @@ export default function PracticeModeScreen({
           </TouchableOpacity>
 
           {/* Video + Audio Option */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             disabled={isVideoLocked}
             className="rounded-3xl p-6 mb-6 shadow-lg"
             style={{
@@ -1012,7 +1018,7 @@ export default function PracticeModeScreen({
                 • Comprehensive evaluation
               </Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Upload Recording Option */}
           <TouchableOpacity
@@ -1057,7 +1063,9 @@ export default function PracticeModeScreen({
                 </Text>
                 {isUploadLocked && (
                   <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
-                    <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
+                    <Text className="text-xs font-bold text-gray-600">
+                      LOCKED
+                    </Text>
                   </View>
                 )}
                 <Text
