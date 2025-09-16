@@ -543,7 +543,7 @@ export default function ProfileSettings({
 
             <View className="items-center">
               <Text
-                className="text-2xl font-bold mb-1"
+                className="text-2xl font-bold mb-1 text-center"
                 style={{ color: colors.text }}
               >
                 {profileData?.name || "Loading..."}
@@ -570,7 +570,7 @@ export default function ProfileSettings({
                   <View
                     key={index}
                     className="items-center"
-                    style={{ marginHorizontal: 8 }} // add horizontal spacing
+                    style={{ marginHorizontal: 8 }}
                   >
                     <View
                       className="rounded-2xl p-3 mb-2"

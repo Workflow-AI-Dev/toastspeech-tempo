@@ -68,12 +68,11 @@ export default function SignUpScreen() {
   });
   const scrollViewRef = useRef<ScrollView>(null);
   const [signedUpUser, setSignedUpUser] = useState(null);
-  const [isGoogleSignUp, setIsGoogleSignUp] = useState(false);
   const [isGoogleUser, setIsGoogleUser] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
 
-  const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"];
+  const genderOptions = ["Male", "Female", "Prefer not to say"];
   const ageGroups = ["18-25", "26-35", "36-45", "46-55", "56-65", "65+"];
   const professions = [
     "Student",
@@ -328,8 +327,8 @@ export default function SignUpScreen() {
             : error.message || "Please try again",
         );
       } else {
-        setSignedUpUser(user); // we already have the user
-        setIsGoogleUser(true); // flag this as a Google signup
+        setSignedUpUser(user);
+        setIsGoogleUser(true);
         setCurrentStep(2);
       }
     } catch (error) {
@@ -385,39 +384,44 @@ export default function SignUpScreen() {
         setSignedUpUser(user);
       }
 
-      // Common path (normal + Google): Complete profile
-      const token = await AsyncStorage.getItem("auth_token");
+      if (isGoogleUser) {
+        const token = await AsyncStorage.getItem("auth_token");
+        console.log(token);
+        if (!token) throw new Error("No auth token found");
 
-      const res = await fetch(`${BASE_URL}/auth/complete-profile`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          gender: formData.gender,
-          age_group: formData.ageGroup,
-          profession: formData.profession,
-          purposes: formData.purposes,
-          custom_purpose: formData.customPurpose,
-          avatar: formData.avatar,
-          avatar_style: formData.avatar_style,
-          store_audio: formData.store_audio ?? false,
-          store_video: formData.store_video ?? false,
-        }),
-      });
+        const res = await fetch(`${BASE_URL}/auth/complete-profile`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            gender: formData.gender,
+            age_group: formData.ageGroup,
+            profession: formData.profession,
+            purposes: formData.purposes,
+            custom_purpose: formData.customPurpose,
+            avatar: formData.avatar,
+            avatar_style: formData.avatar_style,
+            store_audio: formData.store_audio ?? false,
+            store_video: formData.store_video ?? false,
+          }),
+        });
 
-      const resJson = await res.json();
-      console.log("Response JSON:", resJson);
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || "Failed to complete profile");
+        }
 
-      if (!res.ok) throw new Error("Failed to complete profile");
-      const meRes = await fetch(`${BASE_URL}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const userData = await meRes.json();
-      setUser(userData);
+        const meRes = await fetch(`${BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const userData = await meRes.json();
+        setUser(userData);
+        await AsyncStorage.setItem("just_signed_up", "true");
+        router.push("/trial");
+      }
+
       router.push("/trial");
     } catch (error) {
       console.log(error);
@@ -1047,8 +1051,9 @@ export default function SignUpScreen() {
                 textAlign: "center",
               }}
             >
-              Check your email
+              {isVerified ? "Email Verified" : "Check your email"}
             </Text>
+
             <Text
               style={{
                 marginTop: 8,
@@ -1057,16 +1062,19 @@ export default function SignUpScreen() {
                 textAlign: "center",
               }}
             >
-              We've sent you a verification link. Please confirm your email to
-              continue.
+              {!isVerified
+                ? "We've sent you a verification link. Please confirm your email to continue."
+                : "Great! Your email has been verified. You can now continue."}
             </Text>
 
-            <View style={{ marginTop: 20 }}>
+            <View>
               {!isVerified ? (
-                <ActivityIndicator size="large" color={colors.primary} />
-              ) : (
-                <Check size={40} color="green" />
-              )}
+                <ActivityIndicator
+                  size="large"
+                  color={colors.primary}
+                  style={{ marginTop: 20 }}
+                />
+              ) : null}
             </View>
 
             {isVerified && (

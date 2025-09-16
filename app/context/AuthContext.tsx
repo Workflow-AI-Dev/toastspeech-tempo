@@ -11,6 +11,10 @@ import { BASE_URL } from "../api";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { registerForPushNotificationsAsync } from "../hooks/NotificationManager";
+import { Platform } from "react-native";
+import Constants from "expo-constants";
+
+const isWeb = Platform.OS === "web";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -95,7 +99,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     if (loading) return;
 
-    // These are routes that an unauthenticated user should be able to access.
     const unauthenticatedRoutes = [
       "(auth)",
       "onboarding",
@@ -108,15 +111,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const isInUnauthenticatedGroup =
       unauthenticatedRoutes.includes(currentSegment);
 
-    if (!user && !isInUnauthenticatedGroup) {
-      router.replace("/onboarding");
-    } else if (
-      user &&
-      isInUnauthenticatedGroup &&
-      currentSegment !== "subscription"
-    ) {
-      router.replace("/");
-    }
+    const checkJustSignedUp = async () => {
+      const justSignedUp = await AsyncStorage.getItem("just_signed_up");
+      if (user && justSignedUp) {
+        await AsyncStorage.removeItem("just_signed_up");
+        router.replace("/trial"); // redirect to trial first
+        return;
+      }
+
+      if (!user && !isInUnauthenticatedGroup) {
+        router.replace("/onboarding");
+      } else if (
+        user &&
+        isInUnauthenticatedGroup &&
+        currentSegment !== "subscription"
+      ) {
+        router.replace("/"); // default post-login route
+      }
+    };
+
+    checkJustSignedUp();
   }, [user, segments, loading]);
 
   const signUp = async (
@@ -150,7 +164,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error: data.detail || "Signup failed" };
       }
 
-      // ✅ only return userId for polling
       return { error: null, userId: data.user_id };
     } catch (error) {
       return { error };
@@ -259,17 +272,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const fetchGoogleClientId = async (platform: "web" | "android") => {
+    const res = await fetch(
+      `${BASE_URL}/auth/google-client-id?platform=${platform}`,
+    );
+    if (!res.ok) throw new Error("Failed to fetch Google client ID");
+    const data = await res.json();
+    return data.client_id;
+  };
+
   const signInWithGoogle = async (): Promise<{ error: any; user?: any }> => {
     try {
       console.log("Google sign-in initiated");
 
+      const platform = isWeb ? "web" : "android";
+      const clientId = await fetchGoogleClientId(platform);
+
       const redirectUri = AuthSession.makeRedirectUri({
         useProxy: __DEV__,
-        native: "com.yourapp:/oauthredirect",
+        native: "myapp:/oauthredirect",
       });
 
+      console.log(redirectUri);
+
       const request = new AuthSession.AuthRequest({
-        clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!,
+        clientId,
         redirectUri,
         scopes: ["openid", "profile", "email"],
         responseType: AuthSession.ResponseType.Code,
@@ -287,7 +314,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           body: JSON.stringify({
             code: result.params.code,
             code_verifier: request.codeVerifier,
-            redirect_uri: redirectUri, // send it to backend too
+            redirect_uri: redirectUri,
           }),
         });
 
@@ -316,16 +343,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log("Google sign-up initiated");
 
+      const platform = isWeb ? "web" : "android";
+      const clientId = await fetchGoogleClientId(platform);
+
       const redirectUri = AuthSession.makeRedirectUri({
         useProxy: __DEV__,
-        native: "com.yourapp:/oauthredirect",
+        native: "myapp:/oauthredirect",
       });
 
       console.log(redirectUri);
 
       const request = new AuthSession.AuthRequest({
-        clientId:
-          "278297929608-v6ifsorbpol0t4jq19t7ch2a7s14a72g.apps.googleusercontent.com",
+        clientId,
         redirectUri,
         scopes: ["openid", "profile", "email"],
         responseType: AuthSession.ResponseType.Code,
@@ -344,7 +373,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             code: result.params.code,
             code_verifier: request.codeVerifier,
             redirect_uri: redirectUri,
-            ...userData, // include optional signup fields
+            ...userData,
           }),
         });
 
@@ -352,7 +381,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (!res.ok) return { error: data.detail || "Google sign up failed" };
 
         await AsyncStorage.setItem("auth_token", data.access_token);
-        setUser(data.user);
+        await AsyncStorage.setItem("plan", data.user.current_plan_id);
 
         const expoToken = await registerForPushNotificationsAsync();
         if (expoToken) await updatePushTokenOnBackend(expoToken);

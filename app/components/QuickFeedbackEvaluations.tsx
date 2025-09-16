@@ -1974,6 +1974,41 @@ const QuickFeedbackEvaluations = ({
     }
   };
 
+  const getScoreStyle = (score: number, theme: "light" | "dark") => {
+    if (score >= 90) {
+      return {
+        bg: theme === "dark" ? "#14532d" : "#dcfce7",
+        scoreColor: theme === "dark" ? "#4ade80" : "#10b981",
+        text: "#ffffff",
+        msg: "Excellent Performance!",
+      };
+    }
+    if (score >= 80) {
+      return {
+        bg: theme === "dark" ? "#1e3a8a" : "#dbeafe",
+        scoreColor: theme === "dark" ? "#60a5fa" : "#3b82f6",
+        text: "#ffffff",
+        msg: "Great Effort!",
+      };
+    }
+    if (score >= 70) {
+      return {
+        bg: theme === "dark" ? "#78350f" : "#fef3c7",
+        scoreColor: theme === "dark" ? "#fbbf24" : "#f59e0b",
+        text: "#ffffff",
+        msg: "Good Progress!",
+      };
+    }
+    return {
+      bg: theme === "dark" ? "#7f1d1d" : "#fee2e2",
+      scoreColor: theme === "dark" ? "#f87171" : "#ef4444",
+      text: "#ffffff",
+      msg: "Keep Growing!",
+    };
+  };
+
+  const s = getScoreStyle(evaluationResults.overallScore, theme);
+
   return (
     <View className="p-3">
       {/* Overall Score */}
@@ -1991,25 +2026,20 @@ const QuickFeedbackEvaluations = ({
         <View className="items-center mb-6">
           <View
             className="rounded-full w-24 h-24 items-center justify-center mb-4"
-            style={{
-              backgroundColor: theme === "dark" ? "#14532d" : "#dcfce7",
-            }}
+            style={{ backgroundColor: s.bg }}
           >
             <Text
               className="text-4xl font-bold"
-              style={{
-                color: theme === "dark" ? "#4ade80" : "#10b981",
-              }}
+              style={{ color: s.scoreColor }}
             >
               {evaluationResults.overallScore}
             </Text>
           </View>
-          <Text
-            className="text-2xl font-bold mb-2"
-            style={{ color: colors.text }}
-          >
-            Strong Evaluation!
+
+          <Text className="text-2xl font-bold mb-2" style={{ color: s.text }}>
+            {s.msg}
           </Text>
+
           {evaluationResults.improvement?.trim().toLowerCase() !== "n/a" &&
             evaluationResults.improvement &&
             (() => {
@@ -2021,7 +2051,7 @@ const QuickFeedbackEvaluations = ({
                 <View className="flex-row items-center">
                   <Icon size={16} color={color} />
                   <Text className="font-bold ml-1" style={{ color }}>
-                    {evaluationResults.improvement} from last evaluation
+                    {evaluationResults.improvement} from last speech
                   </Text>
                 </View>
               );
@@ -2059,7 +2089,7 @@ const QuickFeedbackEvaluations = ({
               className="text-sm mt-1"
               style={{ color: colors.textSecondary }}
             >
-              Avg Pause
+              Pauses /min
             </Text>
             <Text className="font-bold" style={{ color: colors.text }}>
               {evaluationResults.avgPause}

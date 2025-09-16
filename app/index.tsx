@@ -32,6 +32,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import relativeTime from "dayjs/plugin/relativeTime";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
+import LevelCard from "./components/LevelCard";
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
@@ -94,6 +95,87 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const LEVELS = [
+    { level: 1, xp: 0, name: "Beginner", avgRequired: 0 },
+    { level: 2, xp: 300, name: "Ice Breaker", avgRequired: 70 },
+    { level: 3, xp: 700, name: "Storyteller", avgRequired: 74 },
+    { level: 4, xp: 1200, name: "Persuader", avgRequired: 78 },
+    { level: 5, xp: 2000, name: "Engager", avgRequired: 80 },
+    { level: 6, xp: 3200, name: "Connector", avgRequired: 82 },
+    { level: 7, xp: 5000, name: "Orator", avgRequired: 84 },
+    { level: 8, xp: 7500, name: "Influencer", avgRequired: 86 },
+    { level: 9, xp: 10000, name: "Master Speaker", avgRequired: 88 },
+    { level: 10, xp: 15000, name: "World-Class Communicator", avgRequired: 90 },
+  ];
+
+  const fetchProgress = useCallback(async () => {
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (!token) return;
+
+      const res = await fetch(`${BASE_URL}/user/progress`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      if (!data.success) return;
+
+      const totalXP = data.total_xp || 0;
+
+      // Determine current level
+      let currentLevel = LEVELS[0];
+      let nextLevel = LEVELS[LEVELS.length - 1];
+
+      for (let i = 0; i < LEVELS.length; i++) {
+        if (totalXP >= LEVELS[i].xp) currentLevel = LEVELS[i];
+        if (totalXP < LEVELS[i].xp) {
+          nextLevel = LEVELS[i];
+          break;
+        }
+      }
+
+      // Calculate progress percentage towards next level
+      const xpIntoLevel = totalXP - currentLevel.xp;
+      const xpForNextLevel = nextLevel.xp - currentLevel.xp;
+      const progressPercent = Math.min(
+        100,
+        Math.round((xpIntoLevel / xpForNextLevel) * 100),
+      );
+
+      // XP remaining to next level
+      const xpRemaining = nextLevel.xp - totalXP;
+
+      return {
+        current: currentLevel.level,
+        currentName: currentLevel.name,
+        nextLevel: nextLevel.level,
+        nextName: nextLevel.name,
+        progress: progressPercent,
+        xpRemaining,
+        totalXP: totalXP,
+      };
+    } catch (error) {
+      console.error("Error fetching progress", error);
+      return null;
+    }
+  }, []);
+
+  const [userLevel, setUserLevel] = useState({
+    current: 1,
+    currentName: "Beginner",
+    nextLevel: 2,
+    nextName: "Ice Breaker",
+    progress: 0,
+    xpRemaining: 0,
+    totalXP: 0,
+  });
+
+  const fetchAndSetProgress = useCallback(async () => {
+    const progress = await fetchProgress();
+    if (progress) setUserLevel(progress);
+  }, [fetchProgress]);
+
   const fetchSessions = useCallback(async () => {
     const token = await AsyncStorage.getItem("auth_token");
     try {
@@ -124,7 +206,12 @@ export default function HomeScreen() {
     const initializeAppData = async () => {
       setDataLoading(true);
       try {
-        await Promise.all([fetchPlan(), fetchLimits(), fetchSessions()]);
+        await Promise.all([
+          fetchPlan(),
+          fetchLimits(),
+          fetchSessions(),
+          fetchAndSetProgress(),
+        ]);
       } catch (error) {
         console.error("Initialization error:", error);
       } finally {
@@ -159,13 +246,6 @@ export default function HomeScreen() {
     () => calculateStreak(recentSessions),
     [recentSessions],
   );
-
-  const userLevel = {
-    current: 1,
-    progress: 65,
-    nextLevel: 2,
-    streakDays: streakDays,
-  };
 
   const handleFeaturePress = (
     featureId: string,
@@ -374,7 +454,7 @@ export default function HomeScreen() {
                 className="rounded-full px-3 py-1"
                 style={{
                   backgroundColor:
-                    userLevel.streakDays > 0
+                    streakDays > 0
                       ? theme === "light"
                         ? colors.warning + "20"
                         : colors.surface
@@ -382,15 +462,15 @@ export default function HomeScreen() {
                 }}
               >
                 <View className="flex-row items-center">
-                  {userLevel.streakDays > 0 ? (
+                  {streakDays > 0 ? (
                     <>
                       <Flame size={14} color={colors.warning} />
                       <Text
                         className="text-sm font-semibold ml-1"
                         style={{ color: colors.warning }}
                       >
-                        {userLevel.streakDays} day
-                        {userLevel.streakDays > 1 ? "s" : ""}
+                        {streakDays} day
+                        {streakDays > 1 ? "s" : ""}
                       </Text>
                     </>
                   ) : (
@@ -421,42 +501,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <View className="px-6 mb-8">
-          <View
-            className="rounded-3xl p-6"
-            style={{ backgroundColor: colors.surface }}
-          >
-            <View className="flex-row justify-between items-center mb-3">
-              <Text
-                className="text-lg font-bold"
-                style={{ color: colors.text }}
-              >
-                Level {userLevel.nextLevel} Progress
-              </Text>
-              <Text
-                className="text-sm font-semibold"
-                style={{ color: colors.textSecondary }}
-              >
-                {userLevel.progress}%
-              </Text>
-            </View>
-            <View
-              className="rounded-full h-2 mb-3"
-              style={{ backgroundColor: colors.border }}
-            >
-              <View
-                className="rounded-full h-2"
-                style={{
-                  width: `${userLevel.progress}%`,
-                  backgroundColor: colors.primary,
-                }}
-              />
-            </View>
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>
-              2 more speeches to reach Level {userLevel.nextLevel}
-            </Text>
-          </View>
-        </View>
+        <LevelCard userLevel={userLevel} colors={colors} />
 
         <View className="px-6 mb-8">
           <Text

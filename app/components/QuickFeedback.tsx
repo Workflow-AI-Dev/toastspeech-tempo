@@ -1984,7 +1984,7 @@ const QuickFeedback = ({
         bg: theme === "dark" ? "#14532d" : "#dcfce7",
         scoreColor: theme === "dark" ? "#4ade80" : "#10b981",
         text: "#ffffff",
-        msg: "Excellent Performance",
+        msg: "Excellent Performance!",
       };
     }
     if (score >= 80) {
@@ -1992,7 +1992,7 @@ const QuickFeedback = ({
         bg: theme === "dark" ? "#1e3a8a" : "#dbeafe",
         scoreColor: theme === "dark" ? "#60a5fa" : "#3b82f6",
         text: "#ffffff",
-        msg: "Great Effort",
+        msg: "Great Effort!",
       };
     }
     if (score >= 70) {
@@ -2000,14 +2000,14 @@ const QuickFeedback = ({
         bg: theme === "dark" ? "#78350f" : "#fef3c7",
         scoreColor: theme === "dark" ? "#fbbf24" : "#f59e0b",
         text: "#ffffff",
-        msg: "Good Progress",
+        msg: "Good Progress!",
       };
     }
     return {
       bg: theme === "dark" ? "#7f1d1d" : "#fee2e2",
       scoreColor: theme === "dark" ? "#f87171" : "#ef4444",
       text: "#ffffff",
-      msg: "Keep Growing",
+      msg: "Keep Growing!",
     };
   };
 

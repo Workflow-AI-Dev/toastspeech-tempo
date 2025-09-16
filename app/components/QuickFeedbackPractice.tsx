@@ -51,6 +51,41 @@ const QuickFeedbackPractice = ({
   const colors = getThemeColors(theme);
   const isDark = theme === "dark";
 
+  const getScoreStyle = (score: number, theme: "light" | "dark") => {
+    if (score >= 90) {
+      return {
+        bg: theme === "dark" ? "#14532d" : "#dcfce7",
+        scoreColor: theme === "dark" ? "#4ade80" : "#10b981",
+        text: "#ffffff",
+        msg: "Excellent Performance!",
+      };
+    }
+    if (score >= 80) {
+      return {
+        bg: theme === "dark" ? "#1e3a8a" : "#dbeafe",
+        scoreColor: theme === "dark" ? "#60a5fa" : "#3b82f6",
+        text: "#ffffff",
+        msg: "Great Effort!",
+      };
+    }
+    if (score >= 70) {
+      return {
+        bg: theme === "dark" ? "#78350f" : "#fef3c7",
+        scoreColor: theme === "dark" ? "#fbbf24" : "#f59e0b",
+        text: "#ffffff",
+        msg: "Good Progress!",
+      };
+    }
+    return {
+      bg: theme === "dark" ? "#7f1d1d" : "#fee2e2",
+      scoreColor: theme === "dark" ? "#f87171" : "#ef4444",
+      text: "#ffffff",
+      msg: "Keep Growing!",
+    };
+  };
+
+  const s = getScoreStyle(analysisResults.overallScore, theme);
+
   return (
     <View className="p-3">
       {/* Overall Score */}
@@ -68,23 +103,20 @@ const QuickFeedbackPractice = ({
         <View className="items-center mb-6">
           <View
             className="rounded-full w-24 h-24 items-center justify-center mb-4"
-            style={{
-              backgroundColor: theme === "dark" ? "#14532d" : "#dcfce7",
-            }}
+            style={{ backgroundColor: s.bg }}
           >
             <Text
               className="text-4xl font-bold"
-              style={{ color: theme === "dark" ? "#4ade80" : "#10b981" }}
+              style={{ color: s.scoreColor }}
             >
               {analysisResults.overallScore}
             </Text>
           </View>
-          <Text
-            className="text-2xl font-bold mb-2"
-            style={{ color: colors.text }}
-          >
-            Excellent Performance!
+
+          <Text className="text-2xl font-bold mb-2" style={{ color: s.text }}>
+            {s.msg}
           </Text>
+
           {analysisResults.improvement?.trim().toLowerCase() !== "n/a" &&
             analysisResults.improvement &&
             (() => {
@@ -101,6 +133,45 @@ const QuickFeedbackPractice = ({
                 </View>
               );
             })()}
+        </View>
+
+        <View className="flex-row justify-between">
+          <View className="items-center">
+            <Clock size={20} color={colors.textSecondary} />
+            <Text
+              className="text-sm mt-1"
+              style={{ color: colors.textSecondary }}
+            >
+              Duration
+            </Text>
+            <Text className="font-bold" style={{ color: colors.text }}>
+              {analysisResults.duration}
+            </Text>
+          </View>
+          <View className="items-center">
+            <Mic size={20} color={colors.textSecondary} />
+            <Text
+              className="text-sm mt-1"
+              style={{ color: colors.textSecondary }}
+            >
+              Pace(WPM)
+            </Text>
+            <Text className="font-bold" style={{ color: colors.text }}>
+              {analysisResults.pace}
+            </Text>
+          </View>
+          <View className="items-center">
+            <Zap size={20} color={colors.textSecondary} />
+            <Text
+              className="text-sm mt-1"
+              style={{ color: colors.textSecondary }}
+            >
+              Pauses /min
+            </Text>
+            <Text className="font-bold" style={{ color: colors.text }}>
+              {analysisResults.avgPause}
+            </Text>
+          </View>
         </View>
       </View>
 
