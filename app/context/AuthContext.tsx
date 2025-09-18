@@ -288,10 +288,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const platform = isWeb ? "web" : "android";
       const clientId = await fetchGoogleClientId(platform);
 
-      const redirectUri = AuthSession.makeRedirectUri({
-        useProxy: __DEV__,
-        native: "myapp:/oauthredirect",
-      });
+      const redirectUri = isWeb
+        ? AuthSession.makeRedirectUri({ useProxy: __DEV__ })
+        : AuthSession.makeRedirectUri({
+            native:
+              "com.googleusercontent.apps.278297929608-kosre9rlgcvpr7tpmbhagr2aphjjskth.apps.googleusercontent.com:/oauthredirect",
+          });
 
       console.log(redirectUri);
 
@@ -346,10 +348,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const platform = isWeb ? "web" : "android";
       const clientId = await fetchGoogleClientId(platform);
 
-      const redirectUri = AuthSession.makeRedirectUri({
-        useProxy: __DEV__,
-        native: "myapp:/oauthredirect",
-      });
+      const redirectUri = isWeb
+        ? AuthSession.makeRedirectUri({ useProxy: __DEV__ })
+        : AuthSession.makeRedirectUri({
+            native:
+              "com.googleusercontent.apps.278297929608-kosre9rlgcvpr7tpmbhagr2aphjjskth.apps.googleusercontent.com:/oauthredirect",
+          });
 
       console.log(redirectUri);
 
