@@ -100,11 +100,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const configureGoogleSignIn = async () => {
       try {
-        const platformClientId = await fetchGoogleClientId("web");
-
         GoogleSignin.configure({
-          webClientId: platformClientId,
-          offlineAccess: true,
+          webClientId:
+            "278297929608-v6ifsorbpol0t4jq19t7ch2a7s14a72g.apps.googleusercontent.com",
+          offlineAccess: false,
           scopes: ["profile", "email"],
         });
       } catch (error) {
@@ -362,13 +361,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         await GoogleSignin.hasPlayServices();
         const userInfo = await GoogleSignin.signIn();
+        console.log("Google sign-in result:", userInfo);
 
         // Get server-side access token
         const res = await fetch(`${BASE_URL}/auth/google-signin`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            id_token: userInfo.idToken, // Send idToken to your backend
+            id_token: (userInfo as any).idToken,
           }),
         });
 
@@ -463,12 +463,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         await GoogleSignin.hasPlayServices();
         const userInfo = await GoogleSignin.signIn();
+        console.log("Google sign-in result:", userInfo);
 
         const res = await fetch(`${BASE_URL}/auth/google-signup`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            id_token: userInfo.idToken,
+            id_token: (userInfo as any).idToken,
             ...userData,
           }),
         });
