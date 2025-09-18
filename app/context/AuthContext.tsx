@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const configureGoogleSignIn = async () => {
       try {
-        const platformClientId = await fetchGoogleClientId("android");
+        const platformClientId = await fetchGoogleClientId("web");
 
         GoogleSignin.configure({
           webClientId: platformClientId,
