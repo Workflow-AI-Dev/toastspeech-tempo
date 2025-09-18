@@ -363,13 +363,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userInfo = await GoogleSignin.signIn();
         console.log("Google sign-in result:", userInfo);
 
-        // Get server-side access token
+        const bodyToSend = {
+          id_token: userInfo.data.idToken,
+        };
+
+        console.log("Sending body to backend:", bodyToSend);
+
         const res = await fetch(`${BASE_URL}/auth/google-signin`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id_token: (userInfo as any).idToken,
-          }),
+          body: JSON.stringify(bodyToSend),
         });
 
         const data = await res.json();
@@ -465,13 +468,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userInfo = await GoogleSignin.signIn();
         console.log("Google sign-in result:", userInfo);
 
+        const bodyToSend = {
+          id_token: userInfo.data.idToken,
+          ...userData,
+        };
+
+        console.log("Sending body to backend:", bodyToSend);
+
         const res = await fetch(`${BASE_URL}/auth/google-signup`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id_token: (userInfo as any).idToken,
-            ...userData,
-          }),
+          body: JSON.stringify(bodyToSend),
         });
 
         const data = await res.json();
