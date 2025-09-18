@@ -13,6 +13,7 @@ import * as WebBrowser from "expo-web-browser";
 import { registerForPushNotificationsAsync } from "../hooks/NotificationManager";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
 const isWeb = Platform.OS === "web";
 
@@ -94,6 +95,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     checkAuth();
+  }, []);
+
+  useEffect(() => {
+    const configureGoogleSignIn = async () => {
+      try {
+        const platformClientId = await fetchGoogleClientId("android");
+
+        GoogleSignin.configure({
+          webClientId: platformClientId,
+          offlineAccess: true,
+          scopes: ["profile", "email"],
+        });
+      } catch (error) {
+        console.error("Google SignIn configuration error:", error);
+      }
+    };
+
+    configureGoogleSignIn();
   }, []);
 
   useEffect(() => {
@@ -282,115 +301,201 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signInWithGoogle = async (): Promise<{ error: any; user?: any }> => {
-    try {
-      console.log("Google sign-in initiated");
+    if (isWeb) {
+      try {
+        console.log("Google sign-in initiated");
 
-      const platform = isWeb ? "web" : "android";
-      const clientId = await fetchGoogleClientId(platform);
+        const platform = isWeb ? "web" : "android";
+        const clientId = await fetchGoogleClientId(platform);
 
-      const redirectUri = AuthSession.makeRedirectUri({
-        useProxy: isWeb ? __DEV__ : false,
-      });
+        const redirectUri = isWeb
+          ? AuthSession.makeRedirectUri({ useProxy: __DEV__ })
+          : AuthSession.makeRedirectUri({
+              useProxy: false,
+              native:
+                "com.googleusercontent.apps.278297929608-kosre9rlgcvpr7tpmbhagr2aphjjskth.apps.googleusercontent.com:/oauthredirect",
+            });
 
-      console.log(redirectUri);
+        console.log(redirectUri);
 
-      const request = new AuthSession.AuthRequest({
-        clientId,
-        redirectUri,
-        scopes: ["openid", "profile", "email"],
-        responseType: AuthSession.ResponseType.Code,
-        usePKCE: true,
-      });
+        const request = new AuthSession.AuthRequest({
+          clientId,
+          redirectUri,
+          scopes: ["openid", "profile", "email"],
+          responseType: AuthSession.ResponseType.Code,
+          usePKCE: true,
+        });
 
-      const result = await request.promptAsync(discovery, {
-        useProxy: isWeb ? __DEV__ : false,
-      });
+        const result = await request.promptAsync(discovery, {
+          useProxy: isWeb ? __DEV__ : false,
+        });
 
-      if (result.type === "success") {
+        if (result.type === "success") {
+          const res = await fetch(`${BASE_URL}/auth/google-signin`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              code: result.params.code,
+              code_verifier: request.codeVerifier,
+              redirect_uri: redirectUri,
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) return { error: data.detail || "Google sign in failed" };
+
+          await AsyncStorage.setItem("auth_token", data.access_token);
+          setUser(data.user);
+
+          const expoToken = await registerForPushNotificationsAsync();
+          if (expoToken) await updatePushTokenOnBackend(expoToken);
+
+          return { error: null, user: data.user };
+        }
+
+        return { error: "Google sign in was cancelled" };
+      } catch (error) {
+        console.error("Google sign-in error", error);
+        return { error };
+      }
+    } else {
+      try {
+        await GoogleSignin.hasPlayServices();
+        const userInfo = await GoogleSignin.signIn();
+
+        // Get server-side access token
         const res = await fetch(`${BASE_URL}/auth/google-signin`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            code: result.params.code,
-            code_verifier: request.codeVerifier,
-            redirect_uri: redirectUri,
+            id_token: userInfo.idToken, // Send idToken to your backend
           }),
         });
 
         const data = await res.json();
-        if (!res.ok) return { error: data.detail || "Google sign in failed" };
+        if (!res.ok) return { error: data.detail || "Google sign-in failed" };
 
         await AsyncStorage.setItem("auth_token", data.access_token);
-        setUser(data.user);
+        await AsyncStorage.setItem("plan", data.user.current_plan_id);
 
         const expoToken = await registerForPushNotificationsAsync();
-        if (expoToken) await updatePushTokenOnBackend(expoToken);
+        if (expoToken) {
+          await fetch(`${BASE_URL}/notifications/register-token`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${data.access_token}`,
+            },
+            body: JSON.stringify({ expo_push_token: expoToken }),
+          });
+        }
 
         return { error: null, user: data.user };
+      } catch (error) {
+        console.error("Google sign-in error", error);
+        return { error };
       }
-
-      return { error: "Google sign in was cancelled" };
-    } catch (error) {
-      console.error("Google sign-in error", error);
-      return { error };
     }
   };
 
   const signUpWithGoogle = async (
     userData?: any,
   ): Promise<{ error: any; user?: any }> => {
-    try {
-      console.log("Google sign-up initiated");
+    if (isWeb) {
+      try {
+        console.log("Google sign-up initiated");
 
-      const platform = isWeb ? "web" : "android";
-      const clientId = await fetchGoogleClientId(platform);
+        const platform = isWeb ? "web" : "android";
+        const clientId = await fetchGoogleClientId(platform);
 
-      const redirectUri = AuthSession.makeRedirectUri({
-        useProxy: isWeb ? __DEV__ : false,
-      });
+        const redirectUri = isWeb
+          ? AuthSession.makeRedirectUri({ useProxy: __DEV__ })
+          : AuthSession.makeRedirectUri({
+              useProxy: false,
+              native:
+                "com.googleusercontent.apps.278297929608-kosre9rlgcvpr7tpmbhagr2aphjjskth.apps.googleusercontent.com:/oauthredirect",
+            });
 
-      console.log(redirectUri);
+        console.log(redirectUri);
 
-      const request = new AuthSession.AuthRequest({
-        clientId,
-        redirectUri,
-        scopes: ["openid", "profile", "email"],
-        responseType: AuthSession.ResponseType.Code,
-        usePKCE: true,
-      });
+        const request = new AuthSession.AuthRequest({
+          clientId,
+          redirectUri,
+          scopes: ["openid", "profile", "email"],
+          responseType: AuthSession.ResponseType.Code,
+          usePKCE: true,
+        });
 
-      const result = await request.promptAsync(discovery, {
-        useProxy: isWeb ? __DEV__ : false,
-      });
+        const result = await request.promptAsync(discovery, {
+          useProxy: isWeb ? __DEV__ : false,
+        });
 
-      if (result.type === "success") {
+        if (result.type === "success") {
+          const res = await fetch(`${BASE_URL}/auth/google-signup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              code: result.params.code,
+              code_verifier: request.codeVerifier,
+              redirect_uri: redirectUri,
+              ...userData,
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) return { error: data.detail || "Google sign up failed" };
+
+          await AsyncStorage.setItem("auth_token", data.access_token);
+          await AsyncStorage.setItem("plan", data.user.current_plan_id);
+
+          const expoToken = await registerForPushNotificationsAsync();
+          if (expoToken) await updatePushTokenOnBackend(expoToken);
+
+          return { error: null, user: data.user };
+        }
+
+        return { error: "Google sign up was cancelled" };
+      } catch (error) {
+        console.error("Google sign-up error", error);
+        return { error };
+      }
+    } else {
+      try {
+        await GoogleSignin.hasPlayServices();
+        const userInfo = await GoogleSignin.signIn();
+
         const res = await fetch(`${BASE_URL}/auth/google-signup`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            code: result.params.code,
-            code_verifier: request.codeVerifier,
-            redirect_uri: redirectUri,
+            id_token: userInfo.idToken,
             ...userData,
           }),
         });
 
         const data = await res.json();
-        if (!res.ok) return { error: data.detail || "Google sign up failed" };
+        if (!res.ok) return { error: data.detail || "Google sign-up failed" };
 
         await AsyncStorage.setItem("auth_token", data.access_token);
         await AsyncStorage.setItem("plan", data.user.current_plan_id);
 
         const expoToken = await registerForPushNotificationsAsync();
-        if (expoToken) await updatePushTokenOnBackend(expoToken);
+        if (expoToken) {
+          await fetch(`${BASE_URL}/notifications/register-token`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${data.access_token}`,
+            },
+            body: JSON.stringify({ expo_push_token: expoToken }),
+          });
+        }
 
         return { error: null, user: data.user };
+      } catch (error) {
+        console.error("Google sign-up error", error);
+        return { error };
       }
-
-      return { error: "Google sign up was cancelled" };
-    } catch (error) {
-      console.error("Google sign-up error", error);
-      return { error };
     }
   };
 
