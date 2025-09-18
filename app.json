@@ -26,6 +26,18 @@
         "android.permission.INTERNET"
       ],
       "package": "com.mazar.testtempo",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "myapp",
+              "path": "/oauthredirect"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "usesCleartextTraffic": true,
       "hardwareAccelerated": true
     },
