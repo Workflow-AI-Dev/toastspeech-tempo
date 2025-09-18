@@ -314,6 +314,12 @@ export default function SignUpScreen() {
     }
   };
 
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
   const handleGoogleSignUp = async () => {
     setIsGoogleLoading(true);
     try {
@@ -338,12 +344,6 @@ export default function SignUpScreen() {
       );
     } finally {
       setIsGoogleLoading(false);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
     }
   };
 

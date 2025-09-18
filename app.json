@@ -31,7 +31,7 @@
           "action": "VIEW",
           "data": [
             {
-              "scheme": "myapp",
+              "scheme": "com.googleusercontent.apps.278297929608-kosre9rlgcvpr7tpmbhagr2aphjjskth.apps.googleusercontent.com",
               "path": "/oauthredirect"
             }
           ],
