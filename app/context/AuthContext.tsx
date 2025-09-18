@@ -291,6 +291,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const redirectUri = isWeb
         ? AuthSession.makeRedirectUri({ useProxy: __DEV__ })
         : AuthSession.makeRedirectUri({
+            useProxy: false,
             native:
               "com.googleusercontent.apps.278297929608-kosre9rlgcvpr7tpmbhagr2aphjjskth.apps.googleusercontent.com:/oauthredirect",
           });
@@ -306,7 +307,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const result = await request.promptAsync(discovery, {
-        useProxy: __DEV__,
+        useProxy: isWeb ? __DEV__ : false,
       });
 
       if (result.type === "success") {
@@ -351,6 +352,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const redirectUri = isWeb
         ? AuthSession.makeRedirectUri({ useProxy: __DEV__ })
         : AuthSession.makeRedirectUri({
+            useProxy: false,
             native:
               "com.googleusercontent.apps.278297929608-kosre9rlgcvpr7tpmbhagr2aphjjskth.apps.googleusercontent.com:/oauthredirect",
           });
@@ -366,7 +368,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const result = await request.promptAsync(discovery, {
-        useProxy: __DEV__,
+        useProxy: isWeb ? __DEV__ : false,
       });
 
       if (result.type === "success") {
