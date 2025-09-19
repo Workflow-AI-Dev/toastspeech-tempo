@@ -381,6 +381,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await AsyncStorage.setItem("auth_token", data.access_token);
         await AsyncStorage.setItem("plan", data.user.current_plan_id);
 
+        setUser(data.user);
+
         const expoToken = await registerForPushNotificationsAsync();
         if (expoToken) {
           await fetch(`${BASE_URL}/notifications/register-token`, {

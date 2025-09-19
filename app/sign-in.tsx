@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, TextInput, Alert, Image } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  Image,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "./context/AuthContext";
@@ -21,7 +28,8 @@ export default function SignInScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validateEmail = (email: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleSignIn = async () => {
     const newErrors = { email: "", password: "" };
@@ -49,7 +57,11 @@ export default function SignInScreen() {
     try {
       const { error } = await signIn(formData.email, formData.password);
       if (error) {
-        setSignInError(typeof error === "string" ? error : error.message || "Invalid credentials");
+        setSignInError(
+          typeof error === "string"
+            ? error
+            : error.message || "Invalid credentials",
+        );
         setIsLoading(false);
         return;
       }
@@ -88,12 +100,17 @@ export default function SignInScreen() {
         Toast.show({
           type: "error",
           text1: "Email Not Found",
-          text2: typeof error === "string" ? error : error.message || "This email is not registered.",
+          text2:
+            typeof error === "string"
+              ? error
+              : error.message || "This email is not registered.",
           position: "top",
           visibilityTime: 4000,
         });
       } else {
-        router.push(`/reset-password?email=${encodeURIComponent(formData.email)}`);
+        router.push(
+          `/reset-password?email=${encodeURIComponent(formData.email)}`,
+        );
       }
     } catch {
       Toast.show({
@@ -111,9 +128,12 @@ export default function SignInScreen() {
     try {
       const { error, user } = await signInWithGoogle();
       if (error) {
-        Alert.alert("Google Sign In", typeof error === "string" ? error : error.message || "Please try again");
-      } else {
-        router.push("/"); 
+        Alert.alert(
+          "Google Sign In",
+          typeof error === "string"
+            ? error
+            : error.message || "Please try again",
+        );
       }
     } finally {
       setIsGoogleLoading(false);
@@ -124,16 +144,34 @@ export default function SignInScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ flex: 1, paddingHorizontal: 24, paddingVertical: 32 }}>
         {/* Header */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 24 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            marginBottom: 24,
+          }}
+        >
           <TouchableOpacity
-            style={{ padding: 8, borderRadius: 9999, borderWidth: 1, borderColor: colors.border }}
+            style={{
+              padding: 8,
+              borderRadius: 9999,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
             onPress={() => router.back()}
           >
             <ArrowLeft size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
 
-        <Text style={{ fontSize: 28, fontWeight: "600", color: colors.text, marginBottom: 40 }}>
+        <Text
+          style={{
+            fontSize: 28,
+            fontWeight: "600",
+            color: colors.text,
+            marginBottom: 40,
+          }}
+        >
           Welcome Back
         </Text>
 
@@ -159,8 +197,16 @@ export default function SignInScreen() {
               color: colors.text,
             }}
           />
-          <Mail size={20} color={colors.textSecondary} style={{ position: "absolute", top: 18, left: 16 }} />
-          {errors.email ? <Text style={{ color: colors.error, marginTop: 4 }}>{errors.email}</Text> : null}
+          <Mail
+            size={20}
+            color={colors.textSecondary}
+            style={{ position: "absolute", top: 18, left: 16 }}
+          />
+          {errors.email ? (
+            <Text style={{ color: colors.error, marginTop: 4 }}>
+              {errors.email}
+            </Text>
+          ) : null}
         </View>
 
         {/* Password */}
@@ -185,17 +231,41 @@ export default function SignInScreen() {
               color: colors.text,
             }}
           />
-          <Lock size={20} color={colors.textSecondary} style={{ position: "absolute", top: 18, left: 16 }} />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ position: "absolute", top: 16, right: 16 }}>
-            {showPassword ? <EyeOff size={22} color={colors.textSecondary} /> : <Eye size={22} color={colors.textSecondary} />}
+          <Lock
+            size={20}
+            color={colors.textSecondary}
+            style={{ position: "absolute", top: 18, left: 16 }}
+          />
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+            style={{ position: "absolute", top: 16, right: 16 }}
+          >
+            {showPassword ? (
+              <EyeOff size={22} color={colors.textSecondary} />
+            ) : (
+              <Eye size={22} color={colors.textSecondary} />
+            )}
           </TouchableOpacity>
-          {errors.password ? <Text style={{ color: colors.error, marginTop: 4 }}>{errors.password}</Text> : null}
+          {errors.password ? (
+            <Text style={{ color: colors.error, marginTop: 4 }}>
+              {errors.password}
+            </Text>
+          ) : null}
         </View>
 
         {/* Forgot Password */}
         <View style={{ alignItems: "flex-end", marginBottom: 32 }}>
-          <TouchableOpacity onPress={handleForgotPassword} disabled={isLoading || isGoogleLoading}>
-            <Text style={{ color: isLoading || isGoogleLoading ? colors.border : colors.primary, fontWeight: "600" }}>
+          <TouchableOpacity
+            onPress={handleForgotPassword}
+            disabled={isLoading || isGoogleLoading}
+          >
+            <Text
+              style={{
+                color:
+                  isLoading || isGoogleLoading ? colors.border : colors.primary,
+                fontWeight: "600",
+              }}
+            >
               Forgot Password?
             </Text>
           </TouchableOpacity>
@@ -220,13 +290,35 @@ export default function SignInScreen() {
           </Text>
         </TouchableOpacity>
 
-        {signInError ? <Text style={{ color: colors.error, textAlign: "center", marginBottom: 16 }}>{signInError}</Text> : null}
+        {signInError ? (
+          <Text
+            style={{
+              color: colors.error,
+              textAlign: "center",
+              marginBottom: 16,
+            }}
+          >
+            {signInError}
+          </Text>
+        ) : null}
 
         {/* Divider */}
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
-          <Text style={{ marginHorizontal: 12, color: colors.textSecondary }}>or</Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
+          <View
+            style={{ flex: 1, height: 1, backgroundColor: colors.border }}
+          />
+          <Text style={{ marginHorizontal: 12, color: colors.textSecondary }}>
+            or
+          </Text>
+          <View
+            style={{ flex: 1, height: 1, backgroundColor: colors.border }}
+          />
         </View>
 
         {/* Google Sign In */}
@@ -241,11 +333,17 @@ export default function SignInScreen() {
             borderRadius: 16,
             borderWidth: 1,
             borderColor: colors.border,
-            backgroundColor: isGoogleLoading ? colors.surface : colors.background,
+            backgroundColor: isGoogleLoading
+              ? colors.surface
+              : colors.background,
             marginBottom: 24,
           }}
         >
-          <Image source={GLogo} style={{ width: 20, height: 20, marginRight: 12 }} resizeMode="contain" />
+          <Image
+            source={GLogo}
+            style={{ width: 20, height: 20, marginRight: 12 }}
+            resizeMode="contain"
+          />
           <Text style={{ color: colors.text, fontWeight: "600", fontSize: 16 }}>
             {isGoogleLoading ? "Signing in..." : "Continue with Google"}
           </Text>
@@ -255,7 +353,9 @@ export default function SignInScreen() {
         <View style={{ flexDirection: "row", justifyContent: "center" }}>
           <Text style={{ color: colors.textSecondary }}>New here? </Text>
           <TouchableOpacity onPress={() => router.push("/sign-up")}>
-            <Text style={{ color: colors.text, fontWeight: "600" }}>Create an account</Text>
+            <Text style={{ color: colors.text, fontWeight: "600" }}>
+              Create an account
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
