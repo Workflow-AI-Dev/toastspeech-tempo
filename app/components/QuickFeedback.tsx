@@ -9,6 +9,8 @@ import {
   StyleSheet,
   Animated,
   Easing,
+  ActivityIndicator,
+  Image,
 } from "react-native";
 import {
   CheckCircle,
@@ -39,6 +41,7 @@ import {
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import { BarChart, LineChart, PieChart } from "react-native-chart-kit";
+import Toast from "react-native-toast-message";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -172,6 +175,7 @@ interface QuickFeedbackProps {
     detailedFeedback: QuickFeedbackProps["detailedFeedback"],
   ) => void;
   onRecordAnother: () => void;
+  isProcessing: boolean;
 }
 
 const QuickFeedback = ({
@@ -180,6 +184,7 @@ const QuickFeedback = ({
   detailedFeedback,
   onViewDetailedFeedback,
   onRecordAnother,
+  isProcessing,
 }: QuickFeedbackProps) => {
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
@@ -559,28 +564,40 @@ const QuickFeedback = ({
             </View>
 
             {pausesData.length === 0 ? (
-              <View className="items-center py-8">
-                <View
-                  className="rounded-full p-4 mb-4"
-                  style={{
-                    backgroundColor: theme === "dark" ? "#374151" : "#f3f4f6",
-                  }}
-                >
-                  <PauseCircle size={32} color={colors.textSecondary} />
+              isProcessing ? (
+                <View className="items-center py-8">
+                  <ActivityIndicator size={32} color={colors.primary} />
+                  <Text
+                    className="mt-4 text-base font-medium"
+                    style={{ color: colors.text }}
+                  >
+                    Analyzing your pause power...
+                  </Text>
                 </View>
-                <Text
-                  className="text-lg font-medium mb-2"
-                  style={{ color: colors.text }}
-                >
-                  No Pause Data
-                </Text>
-                <Text
-                  className="text-center"
-                  style={{ color: colors.textSecondary }}
-                >
-                  No pause data available for this speech.
-                </Text>
-              </View>
+              ) : (
+                <View className="items-center py-8">
+                  <View
+                    className="rounded-full p-4 mb-4"
+                    style={{
+                      backgroundColor: theme === "dark" ? "#374151" : "#f3f4f6",
+                    }}
+                  >
+                    <PauseCircle size={32} color={colors.textSecondary} />
+                  </View>
+                  <Text
+                    className="text-lg font-medium mb-2"
+                    style={{ color: colors.text }}
+                  >
+                    No Pause Data
+                  </Text>
+                  <Text
+                    className="text-center"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    No pause data available for this speech.
+                  </Text>
+                </View>
+              )
             ) : (
               <>
                 {/* Statistics Cards */}
@@ -773,13 +790,13 @@ const QuickFeedback = ({
 
         if (stdPitch < 25) {
           vocalLabel = "😐 Flat";
-          labelColor = theme === "dark" ? "#f87171" : "#b91c1c"; // red-ish
+          labelColor = theme === "dark" ? "#f87171" : "#b91c1c";
         } else if (stdPitch < 60) {
           vocalLabel = "🙂 Balanced";
-          labelColor = theme === "dark" ? "#fbbf24" : "#b45309"; // amber-ish
+          labelColor = theme === "dark" ? "#fbbf24" : "#b45309";
         } else {
           vocalLabel = "🎭 Expressive";
-          labelColor = theme === "dark" ? "#34d399" : "#047857"; // green-ish
+          labelColor = theme === "dark" ? "#34d399" : "#047857";
         }
 
         return (
@@ -819,28 +836,40 @@ const QuickFeedback = ({
             </View>
 
             {pitchData.length === 0 ? (
-              <View className="items-center py-8">
-                <View
-                  className="rounded-full p-4 mb-4"
-                  style={{
-                    backgroundColor: theme === "dark" ? "#374151" : "#f3f4f6",
-                  }}
-                >
-                  <PauseCircle size={32} color={colors.textSecondary} />
+              isProcessing ? (
+                <View className="items-center py-8">
+                  <ActivityIndicator size={32} color={colors.primary} />
+                  <Text
+                    className="mt-4 text-base font-medium"
+                    style={{ color: colors.text }}
+                  >
+                    Analyzing your pitch...
+                  </Text>
                 </View>
-                <Text
-                  className="text-lg font-medium mb-2"
-                  style={{ color: colors.text }}
-                >
-                  No Pitch Data
-                </Text>
-                <Text
-                  className="text-center"
-                  style={{ color: colors.textSecondary }}
-                >
-                  No pitch data available for this speech.
-                </Text>
-              </View>
+              ) : (
+                <View className="items-center py-8">
+                  <View
+                    className="rounded-full p-4 mb-4"
+                    style={{
+                      backgroundColor: theme === "dark" ? "#374151" : "#f3f4f6",
+                    }}
+                  >
+                    <PauseCircle size={32} color={colors.textSecondary} />
+                  </View>
+                  <Text
+                    className="text-lg font-medium mb-2"
+                    style={{ color: colors.text }}
+                  >
+                    No Pitch Data
+                  </Text>
+                  <Text
+                    className="text-center"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    No pitch data available for this speech.
+                  </Text>
+                </View>
+              )
             ) : (
               <>
                 {/* Statistics Cards */}
@@ -1113,28 +1142,40 @@ const QuickFeedback = ({
             </View>
 
             {pieData.length === 0 ? (
-              <View className="items-center py-8">
-                <View
-                  className="rounded-full p-4 mb-4"
-                  style={{
-                    backgroundColor: theme === "dark" ? "#374151" : "#f3f4f6",
-                  }}
-                >
-                  <Mic size={32} color={colors.textSecondary} />
+              isProcessing ? (
+                <View className="items-center py-8">
+                  <ActivityIndicator size={32} color={colors.primary} />
+                  <Text
+                    className="mt-4 text-base font-medium"
+                    style={{ color: colors.text }}
+                  >
+                    Analyzing your speech patterns...
+                  </Text>
                 </View>
-                <Text
-                  className="text-lg font-medium mb-2"
-                  style={{ color: colors.text }}
-                >
-                  Clean Speech!
-                </Text>
-                <Text
-                  className="text-center"
-                  style={{ color: colors.textSecondary }}
-                >
-                  No filler or crutch words detected.
-                </Text>
-              </View>
+              ) : (
+                <View className="items-center py-8">
+                  <View
+                    className="rounded-full p-4 mb-4"
+                    style={{
+                      backgroundColor: theme === "dark" ? "#374151" : "#f3f4f6",
+                    }}
+                  >
+                    <Mic size={32} color={colors.textSecondary} />
+                  </View>
+                  <Text
+                    className="text-lg font-medium mb-2"
+                    style={{ color: colors.text }}
+                  >
+                    Clean Speech!
+                  </Text>
+                  <Text
+                    className="text-center"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    No filler or crutch words detected.
+                  </Text>
+                </View>
+              )
             ) : (
               <>
                 {/* Word Lists */}
@@ -1417,7 +1458,6 @@ const QuickFeedback = ({
             .join(" ");
         };
 
-        // Grouping logic is still useful for total counts, but not for direct rendering order here
         const groupedMistakes: Record<string, typeof grammarMistakes> = {};
         grammarMistakes.forEach((mistake) => {
           if (!groupedMistakes[mistake.mistake_type]) {
@@ -1521,29 +1561,41 @@ const QuickFeedback = ({
               </TouchableOpacity>
             </View>
 
-            {totalMistakes === 0 ? ( // Use totalMistakes for the condition
-              <View className="items-center py-8">
-                <View
-                  className="rounded-full p-4 mb-4"
-                  style={{
-                    backgroundColor: theme === "dark" ? "#065f46" : "#ecfdf5",
-                  }}
-                >
-                  <CheckCircle size={32} color={colors.success} />
+            {totalMistakes === 0 ? (
+              isProcessing ? (
+                <View className="items-center py-8">
+                  <ActivityIndicator size={32} color={colors.primary} />
+                  <Text
+                    className="mt-4 text-base font-medium"
+                    style={{ color: colors.text }}
+                  >
+                    Checking your grammar...
+                  </Text>
                 </View>
-                <Text
-                  className="text-lg font-medium mb-2"
-                  style={{ color: colors.success }}
-                >
-                  Perfect Grammar!
-                </Text>
-                <Text
-                  className="text-center"
-                  style={{ color: colors.textSecondary }}
-                >
-                  No grammar mistakes were found in this speech.
-                </Text>
-              </View>
+              ) : (
+                <View className="items-center py-8">
+                  <View
+                    className="rounded-full p-4 mb-4"
+                    style={{
+                      backgroundColor: theme === "dark" ? "#065f46" : "#ecfdf5",
+                    }}
+                  >
+                    <CheckCircle size={32} color={colors.success} />
+                  </View>
+                  <Text
+                    className="text-lg font-medium mb-2"
+                    style={{ color: colors.success }}
+                  >
+                    Perfect Grammar!
+                  </Text>
+                  <Text
+                    className="text-center"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    No grammar mistakes were found in this speech.
+                  </Text>
+                </View>
+              )
             ) : (
               <>
                 {/* Summary Stats */}
@@ -1664,8 +1716,7 @@ const QuickFeedback = ({
               </>
             )}
 
-            {/* Tooltip Modal - Ensure this is outside the conditional rendering and at the end */}
-            {tooltipVisible && ( // Only render modal if visible to avoid unnecessary overhead
+            {tooltipVisible && (
               <Modal
                 transparent={true}
                 visible={tooltipVisible}
@@ -1680,10 +1731,7 @@ const QuickFeedback = ({
                     style={[
                       styles.tooltipContainer,
                       {
-                        // Adjust these values based on actual visual testing for optimal placement
                         top: tooltipPosition.y + 10,
-                        // Dynamically adjust left to attempt to center the tooltip over the touch point
-                        // This assumes styles.tooltipContainer.maxWidth is 200 (200 / 2 = 100)
                         left:
                           tooltipPosition.x -
                           (styles.tooltipContainer.maxWidth / 2 || 100),
@@ -1763,7 +1811,7 @@ const QuickFeedback = ({
           }
         });
 
-        const environLabels = expectedElements; // All 5 labels
+        const environLabels = expectedElements;
         const elementCountValues = environLabels.map(
           (el) => elementCounts[el] || 0,
         );
@@ -1800,9 +1848,6 @@ const QuickFeedback = ({
           ],
         };
 
-        const maxCount = Math.max(...barChartData2.datasets[0].data);
-        const yAxisMax = Math.ceil(maxCount * 1.2); // add buffer so bars don’t touch top
-
         return (
           <View>
             <View className="flex-row items-center justify-between mb-6">
@@ -1837,7 +1882,18 @@ const QuickFeedback = ({
               </TouchableOpacity>
             </View>
 
-            {environLabels.length === 0 ? (
+            {/* Processing State */}
+            {isProcessing ? (
+              <View className="items-center py-8">
+                <ActivityIndicator size={32} color={colors.primary} />
+                <Text
+                  className="mt-4 text-base font-medium"
+                  style={{ color: colors.text }}
+                >
+                  Analyzing audience engagement...
+                </Text>
+              </View>
+            ) : environLabels.length === 0 ? (
               <View className="items-center py-8">
                 <View
                   className="rounded-full p-4 mb-4"
@@ -1978,6 +2034,12 @@ const QuickFeedback = ({
     }
   };
 
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   const getScoreStyle = (score: number, theme: "light" | "dark") => {
     if (score >= 90) {
       return {
@@ -2013,6 +2075,186 @@ const QuickFeedback = ({
 
   const s = getScoreStyle(analysisResults.overallScore, theme);
 
+  const variationImages = [
+    require("../../assets/images/variations/closeup2.png"),
+    require("../../assets/images/variations/closeup3.png"),
+    require("../../assets/images/variations/closeup4.png"),
+    require("../../assets/images/variations/closeup5.png"),
+    require("../../assets/images/variations/closeup6.jpg"),
+  ];
+
+  const dogMessages = [
+    "Almost done!",
+    "Hold tight…",
+    "Still with me?",
+    "Won’t be long!",
+    "Nearly finished!",
+    "Good human!",
+    "Just a sec!",
+    "One moment!",
+    "Stay tuned!",
+    "Almost there!",
+    "Hang on!",
+  ];
+
+  const [currentFrame, setCurrentFrame] = useState(0);
+  const [nextFrame, setNextFrame] = useState(1);
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [showMessage, setShowMessage] = useState(false);
+
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const bubbleFadeAnim = useRef(new Animated.Value(1)).current;
+  const scoreFadeAnim = useRef(new Animated.Value(0)).current;
+
+  // debug
+  // isProcessing = true;
+
+  const processingToasts = [
+    {
+      text1: "Quick insights ready! ✨",
+      text2: "See strengths, improvements, and feedback now.",
+    },
+    {
+      text1: "Hang tight… ⏳",
+      text2: "Stay here to watch, or come back later!",
+    },
+    {
+      text1: "Finishing up… 🔧",
+      text2: "Final touches on your speech analysis.",
+    },
+    {
+      text1: "No worries! 🛌",
+      text2: "Processing continues in background. Check Library later.",
+    },
+    {
+      text1: "Almost done! 🚀",
+      text2: "Hang on, or explore your Library.",
+    },
+    {
+      text1: "Wrapping it up 🎁",
+      text2: "Detailed feedback available. Stay or visit Library.",
+    },
+  ];
+
+  useEffect(() => {
+    let timers: NodeJS.Timeout[] = [];
+
+    if (isProcessing) {
+      processingToasts.forEach((toast, index) => {
+        // first toast after 10s, then each subsequent after 20s more
+        const delay = index === 0 ? 10000 : 10000 + index * 20000;
+        const timer = setTimeout(() => {
+          if (!isProcessing) return; // stop if no longer processing
+
+          Toast.show({
+            type: "info",
+            text1: toast.text1,
+            text2: toast.text2,
+            position: "top",
+            visibilityTime: 6000,
+            topOffset: 50,
+            props: {
+              style: { paddingHorizontal: 10 },
+              text1Style: { fontSize: 16, fontWeight: "bold" },
+              text2Style: { fontSize: 12, flexWrap: "wrap" },
+            },
+          });
+        }, delay);
+        timers.push(timer);
+      });
+    }
+
+    return () => {
+      timers.forEach((t) => clearTimeout(t));
+    };
+  }, [isProcessing]);
+
+  // Image cycling
+  useEffect(() => {
+    let imageInterval: NodeJS.Timeout | null = null;
+    if (isProcessing) {
+      // cycle images
+      imageInterval = setInterval(() => {
+        const upcoming = (currentFrame + 1) % variationImages.length;
+        setNextFrame(upcoming);
+
+        fadeAnim.setValue(0);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }).start(() => {
+          setCurrentFrame(upcoming);
+        });
+      }, 1500);
+
+      // spin loader ring
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ).start();
+    } else {
+      if (imageInterval) clearInterval(imageInterval);
+      rotateAnim.stopAnimation();
+    }
+
+    return () => {
+      if (imageInterval) clearInterval(imageInterval);
+    };
+  }, [isProcessing, currentFrame]);
+
+  // Bubble pop animation when message changes
+  useEffect(() => {
+    if (isProcessing) {
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.1,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 4,
+          tension: 120,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [messageIndex, isProcessing]);
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout | null = null;
+
+    const triggerMessage = () => {
+      // Pick a random message index
+      setMessageIndex(Math.floor(Math.random() * dogMessages.length));
+      setShowMessage(true);
+
+      // Keep it visible for 2s
+      setTimeout(() => {
+        setShowMessage(false);
+
+        // Random gap AFTER hiding, min 2s
+        const nextDelay = Math.floor(Math.random() * 3000) + 2000; // 2–5s gap
+        timeout = setTimeout(triggerMessage, nextDelay);
+      }, 2000); // visible duration
+    };
+
+    if (isProcessing) {
+      triggerMessage();
+    }
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [isProcessing]);
+
   return (
     <View className="p-3">
       {/* Overall Score */}
@@ -2028,38 +2270,87 @@ const QuickFeedback = ({
         }}
       >
         <View className="items-center mb-6">
+          {/* Loader (circle) */}
           <View
-            className="rounded-full w-24 h-24 items-center justify-center mb-4"
-            style={{ backgroundColor: s.bg }}
+            className="rounded-full w-28 h-28 items-center justify-center mb-4 overflow-hidden"
+            style={{ backgroundColor: isProcessing ? "#925ad1" : s.bg }}
           >
-            <Text
-              className="text-4xl font-bold"
-              style={{ color: s.scoreColor }}
-            >
-              {analysisResults.overallScore}
-            </Text>
+            {isProcessing ? (
+              <>
+                <Animated.Image
+                  source={variationImages[currentFrame]}
+                  style={[styles.image, { opacity: 1, borderRadius: 9999 }]}
+                  resizeMode="cover"
+                />
+                <Animated.Image
+                  source={variationImages[nextFrame]}
+                  style={[
+                    styles.image,
+                    { opacity: fadeAnim, borderRadius: 9999 },
+                  ]}
+                  resizeMode="cover"
+                />
+              </>
+            ) : (
+              <Text
+                className="text-4xl font-bold"
+                style={{ color: s.scoreColor }}
+              >
+                {analysisResults.overallScore}
+              </Text>
+            )}
           </View>
 
-          <Text className="text-2xl font-bold mb-2" style={{ color: s.text }}>
-            {s.msg}
-          </Text>
+          {/* Speech bubble floating above the circle */}
+          {isProcessing && showMessage && (
+            <Animated.View
+              style={[
+                styles.bubble,
+                {
+                  position: "absolute",
+                  bottom: "90%", // stick above the circle
+                  left: "60%",
+                  transform: [
+                    { translateX: -50 }, // center horizontally
+                    { translateY: -8 }, // small gap
+                    { scale: scaleAnim }, // pop effect
+                  ],
+                  opacity: bubbleFadeAnim,
+                },
+              ]}
+            >
+              <Text style={styles.bubbleText}>{dogMessages[messageIndex]}</Text>
+              <View style={styles.bubbleArrow} />
+            </Animated.View>
+          )}
 
-          {analysisResults.improvement?.trim().toLowerCase() !== "n/a" &&
-            analysisResults.improvement &&
-            (() => {
-              const isNegative = analysisResults.improvement.includes("-");
-              const Icon = isNegative ? TrendingDown : TrendingUp;
-              const color = isNegative ? "#f87171" : "#4ade80";
+          {!isProcessing && (
+            <>
+              <Text
+                className="text-2xl font-bold mb-2"
+                style={{ color: s.text }}
+              >
+                {s.msg}
+              </Text>
 
-              return (
-                <View className="flex-row items-center">
-                  <Icon size={16} color={color} />
-                  <Text className="font-bold ml-1" style={{ color }}>
-                    {analysisResults.improvement} from last speech
-                  </Text>
-                </View>
-              );
-            })()}
+              {analysisResults.improvement?.trim().toLowerCase() !== "n/a" &&
+                analysisResults.improvement &&
+                (() => {
+                  const isNegative = analysisResults.improvement.includes("-");
+                  const Icon = isNegative ? TrendingDown : TrendingUp;
+                  const color = isNegative ? "#f87171" : "#4ade80";
+
+                  return (
+                    <View className="flex-row items-center">
+                      <Icon size={16} color={color} />
+                      <Text className="font-bold ml-1" style={{ color }}>
+                        {analysisResults.improvement} from last speech
+                      </Text>
+                    </View>
+                  );
+                })()}
+            </>
+          )}
         </View>
 
         <View className="flex-row justify-between">
@@ -2071,22 +2362,41 @@ const QuickFeedback = ({
             >
               Duration
             </Text>
-            <Text className="font-bold" style={{ color: colors.text }}>
-              {analysisResults.duration}
-            </Text>
+            {isProcessing ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                className="mt-1"
+              />
+            ) : (
+              <Text className="font-bold" style={{ color: colors.text }}>
+                {/* {formatDuration(analysisResults.duration)} */}
+                {analysisResults.duration}
+              </Text>
+            )}
           </View>
+
           <View className="items-center">
             <Mic size={20} color={colors.textSecondary} />
             <Text
               className="text-sm mt-1"
               style={{ color: colors.textSecondary }}
             >
-              Pace(WPM)
+              Pace (WPM)
             </Text>
-            <Text className="font-bold" style={{ color: colors.text }}>
-              {analysisResults.pace}
-            </Text>
+            {isProcessing ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                className="mt-1"
+              />
+            ) : (
+              <Text className="font-bold" style={{ color: colors.text }}>
+                {analysisResults.pace}
+              </Text>
+            )}
           </View>
+
           <View className="items-center">
             <Zap size={20} color={colors.textSecondary} />
             <Text
@@ -2095,9 +2405,17 @@ const QuickFeedback = ({
             >
               Pauses /min
             </Text>
-            <Text className="font-bold" style={{ color: colors.text }}>
-              {analysisResults.avgPause}
-            </Text>
+            {isProcessing ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                className="mt-1"
+              />
+            ) : (
+              <Text className="font-bold" style={{ color: colors.text }}>
+                {analysisResults.avgPause}
+              </Text>
+            )}
           </View>
         </View>
       </View>
@@ -2467,5 +2785,80 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  loaderWrapper: {
+    width: 128,
+    height: 128,
+    borderRadius: 64,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+    backgroundColor: "#f3f4f6",
+  },
+  image: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+    borderRadius: 9999,
+  },
+
+  ring: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 9999,
+    borderWidth: 6,
+    borderColor: "#3b82f6",
+    borderTopColor: "transparent",
+  },
+  score: { fontSize: 32, fontWeight: "bold", color: "black" },
+  button: {
+    backgroundColor: "#3b82f6",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  buttonText: { color: "white", fontWeight: "bold" },
+
+  // Speech bubble
+  bubble: {
+    backgroundColor: "#925ad1",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 16,
+    position: "relative",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
+    maxWidth: 180,
+  },
+  bubbleText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  bubbleArrow: {
+    position: "absolute",
+    bottom: -8,
+    left: "50%",
+    marginLeft: -8,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 8,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: "#925ad1",
   },
 });

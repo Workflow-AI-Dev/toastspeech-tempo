@@ -144,6 +144,7 @@ export default function SpeakerModeScreen({
     modeType,
     speechType,
     token,
+    onPartial,
   }) => {
     try {
       if (Platform.OS === "web") {
@@ -165,7 +166,7 @@ export default function SpeakerModeScreen({
 
         if (!response.ok) throw new Error(await response.text());
         const data = await response.json();
-        return await pollForResults(data.task_id, token);
+        return await pollForResults(data.task_id, token, onPartial);
       } else {
         // Mobile upload using expo-file-system
         const result = await FileSystem.uploadAsync(
@@ -191,7 +192,7 @@ export default function SpeakerModeScreen({
         }
 
         const data = JSON.parse(result.body);
-        return await pollForResults(data.task_id, token);
+        return await pollForResults(data.task_id, token, onPartial);
       }
     } catch (err) {
       console.error("❌ Upload error:", err);
@@ -234,46 +235,40 @@ export default function SpeakerModeScreen({
   };
 
   const mapResults = (data) => {
-    const finalData = data.result ?? data;
+    const source = data.partial
+      ? {
+          summary: data.partial.summary?.response ?? data.partial.summary,
+          detailed: data.partial.detailed?.response ?? data.partial.detailed,
+          analytics: data.partial.analytics?.response ?? data.partial.analytics,
+          pitch_track:
+            data.partial.pitch_track?.response ?? data.partial.pitch_track,
+          url: data.partial.url,
+        }
+      : (data.result ?? data);
 
     return {
       analysisResults: {
-        overallScore: finalData.summary?.Metadata?.overall_score ?? 0,
-        pace: finalData.analytics?.speaker_analysis?.[0]?.words_per_minute || 0,
-        fillerWords: 0,
-        emotionalDelivery: 0,
-        clarity: 0,
-        confidence: 0,
-        engagement: 0,
-        improvement: "N/A",
-        duration: (() => {
-          const totalSpeakingSeconds =
-            finalData.analytics?.speaker_analysis?.[0]
-              ?.total_speaking_time_seconds || 0;
-          const minutes = Math.floor(totalSpeakingSeconds / 60);
-          const seconds = Math.floor(totalSpeakingSeconds % 60);
-          return `${minutes.toString().padStart(2, "0")}:${seconds
-            .toString()
-            .padStart(2, "0")}`;
-        })(),
-        avgPause:
-          finalData.analytics?.speaker_analysis?.[0]?.pause_frequency || 0,
-        pausesData: finalData.analytics?.pauses || [],
-        fillerData: finalData.analytics?.filler_words || [],
-        crutchData: finalData.analytics?.crutch_phrases || [],
-        repeatedPhrases: finalData.analytics?.repeated_words || [],
-        grammarData: finalData.analytics?.grammar_mistakes || [],
-        environData: finalData.analytics?.environmental_elements || [],
-        pitchData: finalData.pitch_track || [],
+        overallScore: source.summary?.Metadata?.overall_score,
+        pace: source.analytics?.speaker_analysis?.[0]?.words_per_minute,
+        duration:
+          source.analytics?.speaker_analysis?.[0]?.total_speaking_time_seconds,
+        avgPause: source.analytics?.speaker_analysis?.[0]?.pause_frequency,
+        pausesData: source.analytics?.pauses ?? [],
+        fillerData: source.analytics?.filler_words ?? [],
+        crutchData: source.analytics?.crutch_phrases ?? [],
+        repeatedPhrases: source.analytics?.repeated_words ?? [],
+        grammarData: source.analytics?.grammar_mistakes ?? [],
+        environData: source.analytics?.environmental_elements ?? [],
+        pitchData: source.pitch_track ?? [],
       },
       feedback: {
-        strengths: finalData.summary?.Commendations ?? [],
-        improvements: finalData.summary?.Recommendations ?? [],
-        keyInsights: finalData.summary?.KeyInsights ?? [],
+        strengths: source.summary?.Commendations ?? [],
+        improvements: source.summary?.Recommendations ?? [],
+        keyInsights: source.summary?.KeyInsights ?? [],
       },
       detailedFeedback: {
-        ...finalData.detailed,
-        url: finalData.url,
+        ...(source.detailed ?? {}),
+        url: source.url,
       },
     };
   };
@@ -291,10 +286,10 @@ export default function SpeakerModeScreen({
       );
 
       const result = await uploadFileToBackend({
-        fileUri: recordingData.recordingUri,
-        fileName: recordingData.fileName || "recording.mp4",
-        mimeType: recordingData.mimeType || "application/octet-stream",
-        taskType: taskType,
+        fileUri: recordingData?.recordingUri,
+        fileName: recordingData?.fileName || "recording.mp4",
+        mimeType: recordingData?.mimeType || "application/octet-stream",
+        taskType,
         modeType: "speaker",
         speechType: speechType || "custom",
         token,
@@ -302,27 +297,51 @@ export default function SpeakerModeScreen({
           console.log("📡 Received partial update:", partial);
           setPartialReceived(true);
 
-          const { analysisResults, feedback, detailedFeedback } =
-            mapResults(partial);
+          // Pass the whole statusData, not just the nested partial
+          const { analysisResults, feedback, detailedFeedback } = mapResults({
+            partial,
+          });
 
-          // Update state with partial results
-          setAnalysisResults((prev) => ({ ...prev, ...analysisResults }));
-          setFeedback((prev) => ({ ...prev, ...feedback }));
-          setDetailedFeedback((prev) => ({ ...prev, ...detailedFeedback }));
+          // Merge carefully (skip undefined values)
+          setAnalysisResults((prev) => ({
+            ...prev,
+            ...Object.fromEntries(
+              Object.entries(analysisResults).filter(
+                ([_, v]) => v !== undefined,
+              ),
+            ),
+          }));
+          setFeedback((prev) => ({
+            ...prev,
+            ...Object.fromEntries(
+              Object.entries(feedback).filter(([_, v]) => v !== undefined),
+            ),
+          }));
+          setDetailedFeedback((prev) => ({
+            ...prev,
+            ...Object.fromEntries(
+              Object.entries(detailedFeedback).filter(
+                ([_, v]) => v !== undefined,
+              ),
+            ),
+          }));
 
-          // IMPORTANT: Immediately switch to results view when first partial arrives
           setCurrentStep("results");
-          setIsProcessing(false); // Stop showing the processing loader
         },
       });
 
-      const { analysisResults, feedback, detailedFeedback } =
-        mapResults(result);
+      // Final result
+      const {
+        analysisResults = {},
+        feedback = {},
+        detailedFeedback = {},
+      } = mapResults(result);
+
       setAnalysisResults(analysisResults);
       setFeedback(feedback);
       setDetailedFeedback(detailedFeedback);
 
-      // Ensure we're on results step and not processing
+      // Ensure we end processing only here
       setIsProcessing(false);
       setCurrentStep("results");
     } catch (error) {
@@ -379,7 +398,7 @@ export default function SpeakerModeScreen({
     } catch (err) {
       console.error("Upload error:", err);
     } finally {
-      setUploading(false); // stop spinner after request completes
+      setUploading(false);
     }
   };
 
@@ -1363,24 +1382,29 @@ export default function SpeakerModeScreen({
         }}
       >
         <View className="flex-row items-center justify-between mb-4 mt-4">
+          {/* Back button goes to "/" */}
           <TouchableOpacity
-            onPress={() => setCurrentStep("record")}
+            onPress={() => router.push("/")}
             className="rounded-full p-2"
             style={{ backgroundColor: colors.surface }}
           >
             <ArrowLeft size={24} color={colors.primary} />
           </TouchableOpacity>
+
           <Text className="text-xl font-bold" style={{ color: colors.text }}>
             Speaker Mode
           </Text>
+
           <View className="w-10" />
         </View>
+
+        {/* Progress indicator disabled in results view */}
         <ProgressIndicator
           steps={stepKeys}
           stepLabels={stepLabels}
           currentStep={currentStep}
-          onStepPress={(step) => setCurrentStep(step as CurrentStep)}
-          allowBackNavigation={true}
+          allowBackNavigation={false}
+          onStepPress={() => {}}
         />
       </View>
 
@@ -1390,7 +1414,7 @@ export default function SpeakerModeScreen({
           style={{ color: colors.text }}
         >
           {isProcessing && partialReceived
-            ? "Analysis in Progress..."
+            ? "Finishing Up..."
             : "Analysis Complete"}
         </Text>
         <Text
@@ -1398,13 +1422,13 @@ export default function SpeakerModeScreen({
           style={{ color: colors.textSecondary }}
         >
           {isProcessing && partialReceived
-            ? "Here are your initial results - more details coming soon!"
+            ? ""
             : "Here's your comprehensive speech analysis"}
         </Text>
 
         {isProcessing && partialReceived && (
           <View
-            className="mx-6 mb-4 p-3 rounded-2xl"
+            className="mx-6 mb-4 p-3 rounded-2xl items-center"
             style={{ backgroundColor: colors.surface }}
           >
             <View className="flex-row items-center">
@@ -1413,25 +1437,30 @@ export default function SpeakerModeScreen({
                 className="ml-2 text-sm"
                 style={{ color: colors.textSecondary }}
               >
-                Analyzing remaining speech data...
+                Almost done, just preparing the final results...
               </Text>
             </View>
           </View>
         )}
 
         <QuickFeedback
-          analysisResults={analysisResults}
-          feedback={feedback}
-          detailedFeedback={detailedFeedback}
+          analysisResults={analysisResults ?? {}}
+          feedback={{
+            strengths: feedback?.strengths ?? [],
+            improvements: feedback?.improvements ?? [],
+            keyInsights: feedback?.keyInsights ?? [],
+          }}
+          detailedFeedback={detailedFeedback ?? {}}
           onViewDetailedFeedback={() => {
             router.push({
               pathname: "/detailed-feedback",
               params: {
-                feedback: JSON.stringify(detailedFeedback),
+                feedback: JSON.stringify(detailedFeedback ?? {}),
               },
             });
           }}
           onRecordAnother={() => setCurrentStep("record")}
+          isProcessing={isProcessing}
         />
       </ScrollView>
     </View>

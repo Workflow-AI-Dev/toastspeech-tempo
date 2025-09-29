@@ -8,6 +8,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { Audio } from "expo-av";
 import { Video as VideoCompressor } from "react-native-compressor";
 import * as FileSystem from "expo-file-system";
+import RealisticProgressLoader from "./RealisticProgressLoader";
 
 interface SpeechRecorderSpeakerProps {
   onRecordingComplete?: (recordingData: any) => void;
@@ -55,30 +56,31 @@ const SpeechRecorderSpeaker = ({
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const cameraRef = useRef<any>(null);
   const [recordedVideoUri, setRecordedVideoUri] = useState<string | null>(null);
-  const processingMessages = [
-    "Processing file...",
-    "Hang tight...",
-    "AI is analyzing...",
-    "Curating results for you...",
-    "Almost done...",
-  ];
-
   const [messageIndex, setMessageIndex] = useState(0);
   type CameraDirection = "front" | "back";
   const [cameraType, setCameraType] = useState<CameraDirection>("front");
   const devices = useCameraDevices();
   const device = devices ? devices[cameraType] : undefined;
 
+  // Stage durations in ms: 1m, 1m, 2m, 1m
+  const stageDurations = [60000, 60000, 120000, 60000];
+
   useEffect(() => {
     if (isProcessing || recordingState === "uploading") {
-      const interval = setInterval(() => {
-        setMessageIndex((prev) => (prev + 1) % processingMessages.length);
-      }, 2000); // switch message every 2s
+      let timers = [];
+      let elapsed = 0;
 
-      return () => clearInterval(interval);
+      stageDurations.forEach((duration, idx) => {
+        const t = setTimeout(() => {
+          setMessageIndex(idx);
+        }, elapsed);
+        timers.push(t);
+        elapsed += duration;
+      });
+
+      return () => timers.forEach(clearTimeout);
     }
   }, [isProcessing, recordingState]);
-
   // Animation value for audio visualization
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
 
@@ -430,8 +432,8 @@ const SpeechRecorderSpeaker = ({
         safeUri,
         {
           compressionMethod: "manual",
-          bitrate: 400, // kbps — tuned for small file size
-          maxSize: 480, // resolution cap
+          bitrate: 800, // kbps
+          maxSize: 360, // resolution
         },
         (progress) => {
           console.log(`Compression progress: ${Math.round(progress * 100)}%`);
@@ -555,86 +557,172 @@ const SpeechRecorderSpeaker = ({
   };
 
   return (
-    <View className="bg-gradient-to-b from-purple-50 to-indigo-50 w-full h-[500px] rounded-2xl overflow-hidden">
-      {/* Header */}
-      <View className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 items-center">
-        <View className="flex-row items-center">
-          {recordingMethod === "video" ? (
-            <VideoIcon size={24} color="white" />
-          ) : recordingMethod === "upload" ? (
-            <Upload size={24} color="white" />
-          ) : (
-            <Zap size={24} color="white" />
-          )}
-          <Text className="text-white text-xl font-bold ml-2">
-            {getRecordingTitle()}
-          </Text>
-        </View>
-      </View>
-
-      {/* Main Content */}
-      <View className="flex-1 items-center justify-center p-6">
-        {recordingState === "idle" && (
-          <View className="items-center">
-            <Text className="text-xl font-bold text-gray-800 mb-2 text-center">
-              Ready?
-            </Text>
-            <Text className="text-gray-600 mb-8 text-center">
-              {getRecordingDescription()}
-            </Text>
-
-            <TouchableOpacity
-              onPress={
-                recordingMethod === "upload"
-                  ? handleFileUpload
-                  : handleStartRecording
-              }
-              className="bg-gradient-to-r from-red-500 to-pink-500 w-24 h-24 rounded-full items-center justify-center shadow-lg"
-            >
-              {getRecordingIcon()}
-            </TouchableOpacity>
+    <>
+      {isProcessing || recordingState === "uploading" ? (
+        // Show only the loader, no header/gradient
+        <RealisticProgressLoader
+          isProcessing={true}
+          file={selectedFile ? { name: selectedFile.name } : undefined}
+        />
+      ) : (
+        <View className="bg-gradient-to-b from-purple-50 to-indigo-50 w-full h-[500px] rounded-2xl overflow-hidden">
+          {/* Header */}
+          <View className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 items-center">
+            <View className="flex-row items-center">
+              {recordingMethod === "video" ? (
+                <VideoIcon size={24} color="white" />
+              ) : recordingMethod === "upload" ? (
+                <Upload size={24} color="white" />
+              ) : (
+                <Zap size={24} color="white" />
+              )}
+              <Text className="text-white text-xl font-bold ml-2">
+                {getRecordingTitle()}
+              </Text>
+            </View>
           </View>
-        )}
 
-        {(recordingState === "recording" || recordingState === "paused") && (
-          <View className="w-full items-center">
-            {/* Video preview for video recording */}
-            {Platform.OS !== "web" &&
-            recordingMethod === "video" &&
-            hasCameraPermission &&
-            device ? (
-              <View className="flex-1 w-full relative">
-                <CameraComponent
-                  ref={cameraRef}
-                  style={{ flex: 1 }}
-                  device={device}
-                  isActive={isRecordingVideo}
-                  video={true}
-                />
+          {/* Main Content */}
+          <View className="flex-1 items-center justify-center p-6">
+            {recordingState === "idle" && (
+              <View className="items-center">
+                <Text className="text-xl font-bold text-gray-800 mb-2 text-center">
+                  Ready?
+                </Text>
+                <Text className="text-gray-600 mb-8 text-center">
+                  {getRecordingDescription()}
+                </Text>
 
-                {/* Overlay: Controls */}
-                <View
-                  style={{
-                    position: "absolute",
-                    bottom: 40,
-                    left: 0,
-                    right: 0,
-                    flexDirection: "row",
-                    justifyContent: "space-around",
-                    alignItems: "center",
-                  }}
+                <TouchableOpacity
+                  onPress={
+                    recordingMethod === "upload"
+                      ? handleFileUpload
+                      : handleStartRecording
+                  }
+                  className="bg-gradient-to-r from-red-500 to-pink-500 w-24 h-24 rounded-full items-center justify-center shadow-lg"
                 >
-                  {/* Pause/Resume (disabled for video) */}
+                  {getRecordingIcon()}
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {(recordingState === "recording" ||
+              recordingState === "paused") && (
+              <View className="w-full items-center">
+                {/* Video preview for video recording */}
+                {Platform.OS !== "web" &&
+                recordingMethod === "video" &&
+                hasCameraPermission &&
+                device ? (
+                  <View className="flex-1 w-full relative">
+                    <CameraComponent
+                      ref={cameraRef}
+                      style={{ flex: 1 }}
+                      device={device}
+                      isActive={isRecordingVideo}
+                      video={true}
+                    />
+
+                    {/* Overlay: Controls */}
+                    <View
+                      style={{
+                        position: "absolute",
+                        bottom: 40,
+                        left: 0,
+                        right: 0,
+                        flexDirection: "row",
+                        justifyContent: "space-around",
+                        alignItems: "center",
+                      }}
+                    >
+                      {/* Pause/Resume (disabled for video) */}
+                      <TouchableOpacity
+                        onPress={handlePauseRecording}
+                        style={{
+                          backgroundColor: "white",
+                          width: 60,
+                          height: 60,
+                          borderRadius: 30,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {recordingState === "recording" ? (
+                          <Pause size={28} color="#7c3aed" />
+                        ) : (
+                          <Mic size={28} color="#7c3aed" />
+                        )}
+                      </TouchableOpacity>
+
+                      {/* Stop */}
+                      <TouchableOpacity
+                        onPress={handleStopRecording}
+                        style={{
+                          backgroundColor: "red",
+                          width: 80,
+                          height: 80,
+                          borderRadius: 40,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Square size={36} color="white" />
+                      </TouchableOpacity>
+
+                      {/* Flip Camera */}
+                      <TouchableOpacity
+                        onPress={toggleCamera}
+                        style={{
+                          backgroundColor: "rgba(0,0,0,0.6)",
+                          width: 60,
+                          height: 60,
+                          borderRadius: 30,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Text style={{ color: "white", fontWeight: "bold" }}>
+                          Flip
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : recordingMethod === "video" && Platform.OS === "web" ? (
+                  <View className="h-32 w-full items-center justify-center bg-yellow-100 rounded-2xl p-4 mb-8">
+                    <Text className="text-yellow-800 text-center font-medium">
+                      Video recording is not supported on the web.{"\n"}
+                      Please use audio recording or upload a file instead.
+                    </Text>
+                  </View>
+                ) : recordingMethod === "audio" ? (
+                  /* Audio visualization */
+                  <View className="h-32 w-full flex-row items-end justify-center mb-8 bg-white/30 rounded-2xl p-4">
+                    {audioLevels.map((level, index) => (
+                      <Animated.View
+                        key={index}
+                        style={{
+                          height: recordingState === "recording" ? level : 5,
+                          opacity: recordingState === "paused" ? 0.5 : 1,
+                          backgroundColor: "#a855f7",
+                          width: 8,
+                          marginHorizontal: 1,
+                          borderTopLeftRadius: 4,
+                          borderTopRightRadius: 4,
+                          transform:
+                            recordingState === "recording"
+                              ? [{ scaleY: pulseAnim }]
+                              : [{ scaleY: 1 }],
+                        }}
+                      />
+                    ))}
+                  </View>
+                ) : null}
+
+                {/* Recording controls */}
+                <View className="flex-row justify-center items-center space-x-8">
                   <TouchableOpacity
                     onPress={handlePauseRecording}
-                    style={{
-                      backgroundColor: "white",
-                      width: 60,
-                      height: 60,
-                      borderRadius: 30,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
+                    className="bg-white w-16 h-16 rounded-full items-center justify-center shadow-lg"
                   >
                     {recordingState === "recording" ? (
                       <Pause size={28} color="#7c3aed" />
@@ -643,133 +731,19 @@ const SpeechRecorderSpeaker = ({
                     )}
                   </TouchableOpacity>
 
-                  {/* Stop */}
                   <TouchableOpacity
                     onPress={handleStopRecording}
-                    style={{
-                      backgroundColor: "red",
-                      width: 80,
-                      height: 80,
-                      borderRadius: 40,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
+                    className="bg-gradient-to-r from-red-500 to-pink-500 w-20 h-20 rounded-full items-center justify-center shadow-lg"
                   >
-                    <Square size={36} color="white" />
-                  </TouchableOpacity>
-
-                  {/* Flip Camera */}
-                  <TouchableOpacity
-                    onPress={toggleCamera}
-                    style={{
-                      backgroundColor: "rgba(0,0,0,0.6)",
-                      width: 60,
-                      height: 60,
-                      borderRadius: 30,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Text style={{ color: "white", fontWeight: "bold" }}>
-                      Flip
-                    </Text>
+                    <Square size={32} color="white" />
                   </TouchableOpacity>
                 </View>
               </View>
-            ) : recordingMethod === "video" && Platform.OS === "web" ? (
-              <View className="h-32 w-full items-center justify-center bg-yellow-100 rounded-2xl p-4 mb-8">
-                <Text className="text-yellow-800 text-center font-medium">
-                  Video recording is not supported on the web.{"\n"}
-                  Please use audio recording or upload a file instead.
-                </Text>
-              </View>
-            ) : recordingMethod === "audio" ? (
-              /* Audio visualization */
-              <View className="h-32 w-full flex-row items-end justify-center mb-8 bg-white/30 rounded-2xl p-4">
-                {audioLevels.map((level, index) => (
-                  <Animated.View
-                    key={index}
-                    style={{
-                      height: recordingState === "recording" ? level : 5,
-                      opacity: recordingState === "paused" ? 0.5 : 1,
-                      backgroundColor: "#a855f7",
-                      width: 8,
-                      marginHorizontal: 1,
-                      borderTopLeftRadius: 4,
-                      borderTopRightRadius: 4,
-                      transform:
-                        recordingState === "recording"
-                          ? [{ scaleY: pulseAnim }]
-                          : [{ scaleY: 1 }],
-                    }}
-                  />
-                ))}
-              </View>
-            ) : null}
-
-            {/* Recording controls */}
-            <View className="flex-row justify-center items-center space-x-8">
-              <TouchableOpacity
-                onPress={handlePauseRecording}
-                className="bg-white w-16 h-16 rounded-full items-center justify-center shadow-lg"
-              >
-                {recordingState === "recording" ? (
-                  <Pause size={28} color="#7c3aed" />
-                ) : (
-                  <Mic size={28} color="#7c3aed" />
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleStopRecording}
-                className="bg-gradient-to-r from-red-500 to-pink-500 w-20 h-20 rounded-full items-center justify-center shadow-lg"
-              >
-                <Square size={32} color="white" />
-              </TouchableOpacity>
-            </View>
+            )}
           </View>
-        )}
-
-        {(isProcessing || recordingState === "uploading") && (
-          <View className="items-center">
-            <Animated.View
-              style={{
-                backgroundColor: "white",
-                borderRadius: 50,
-                padding: 24,
-                marginBottom: 16,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 3.84,
-                elevation: 5,
-                transform: [
-                  {
-                    rotate: pulseAnim.interpolate({
-                      inputRange: [1, 1.2],
-                      outputRange: ["0deg", "360deg"],
-                    }),
-                  },
-                ],
-              }}
-            >
-              <Loader size={60} color="#7c3aed" />
-            </Animated.View>
-
-            <Text className="text-xl font-bold text-gray-800 mb-2">
-              {processingMessages[messageIndex]}
-            </Text>
-            <Text className="text-gray-600 text-center">
-              {recordingState === "uploading"
-                ? selectedFile
-                  ? `Optimizing ${selectedFile.name} for upload...`
-                  : "Compressing video and preparing it for analysis."
-                : "Analyzing speech patterns, emotional delivery, and pacing..."}
-            </Text>
-          </View>
-        )}
-      </View>
-    </View>
+        </View>
+      )}
+    </>
   );
 };
 

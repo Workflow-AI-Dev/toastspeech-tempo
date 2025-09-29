@@ -13,7 +13,8 @@ import "../global.css";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
 import OfflineScreen from "./components/OfflineScreen";
-import { useNetworkStatus } from './hooks/useNetworkStatus';
+import { useNetworkStatus } from "./hooks/useNetworkStatus";
+import Toast from "react-native-toast-message";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -35,15 +36,21 @@ export default function RootLayout() {
       if (Platform.OS === "web") {
         const posthogModule = await import("posthog-js");
         posthogRef.current = posthogModule.default;
-        posthogRef.current.init("phc_CxsXAjKygNnvbinadZkNfINpJM68vnzGPvvuu9Ok2tV", {
-          api_host: "https://app.posthog.com",
-        });
+        posthogRef.current.init(
+          "phc_CxsXAjKygNnvbinadZkNfINpJM68vnzGPvvuu9Ok2tV",
+          {
+            api_host: "https://app.posthog.com",
+          },
+        );
       } else {
         const { PostHog } = await import("posthog-react-native");
-        posthogRef.current = new PostHog("phc_CxsXAjKygNnvbinadZkNfINpJM68vnzGPvvuu9Ok2tV", {
-          host: "https://app.posthog.com",
-          captureApplicationLifecycleEvents: false,
-        });
+        posthogRef.current = new PostHog(
+          "phc_CxsXAjKygNnvbinadZkNfINpJM68vnzGPvvuu9Ok2tV",
+          {
+            host: "https://app.posthog.com",
+            captureApplicationLifecycleEvents: false,
+          },
+        );
       }
       setPosthogReady(true);
     }
@@ -73,11 +80,14 @@ export default function RootLayout() {
   useEffect(() => {
     if (!posthogReady) return;
 
-    const timer = setTimeout(() => {
-      posthogRef.current.capture("engaged_1_min", {
-        timestamp: new Date().toISOString(),
-      });
-    }, 1 * 60 * 1000);
+    const timer = setTimeout(
+      () => {
+        posthogRef.current.capture("engaged_1_min", {
+          timestamp: new Date().toISOString(),
+        });
+      },
+      1 * 60 * 1000,
+    );
 
     return () => clearTimeout(timer);
   }, [posthogReady]);
@@ -129,10 +139,7 @@ export default function RootLayout() {
               name="subscription"
               options={{ headerShown: false }}
             />
-            <Stack.Screen
-              name="trial"
-              options={{ headerShown: false }}
-            />
+            <Stack.Screen name="trial" options={{ headerShown: false }} />
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen
               name="speaker-mode"
@@ -182,11 +189,10 @@ export default function RootLayout() {
               name="reset-password"
               options={{ headerShown: false }}
             />
-            <Stack.Screen
-              name="feedback"
-              options={{ headerShown: false }}
-            />
+            <Stack.Screen name="feedback" options={{ headerShown: false }} />
+            <Stack.Screen name="test" options={{ headerShown: false }} />
           </Stack>
+          <Toast />
           <StatusBar style="auto" />
         </NavigationThemeProvider>
       </AuthProvider>
