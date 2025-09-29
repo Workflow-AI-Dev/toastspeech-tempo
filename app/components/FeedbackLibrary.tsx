@@ -1,17 +1,11 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-} from "react-native";
-import {
-  X,
-} from "lucide-react-native";
+import { View, Text, TouchableOpacity, Modal } from "react-native";
+import { X } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import SpeechLibrary from "./SpeechLibrary";
 import EvaluationsLibrary from "./EvaluationsLibrary";
 import PracticeLibrary from "./PracticeLibrary";
+import { usePostHogContext } from "../context/PostHogContext";
 
 interface SpeechEntry {
   id: string;
@@ -58,6 +52,11 @@ export default function FeedbackLibrary({
   const [dateRange, setDateRange] = useState<
     "yesterday" | "last7days" | "last30days" | null
   >(null);
+  const { capture } = usePostHogContext();
+
+  useEffect(() => {
+    capture("viewed_library");
+  }, [capture]);
 
   useEffect(() => {
     setSearchQuery("");
@@ -385,7 +384,6 @@ export default function FeedbackLibrary({
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-
       {renderContent()}
 
       {renderFilterModal()}

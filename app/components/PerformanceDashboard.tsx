@@ -28,6 +28,7 @@ import {
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
+import { usePostHogContext } from "../context/PostHogContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BASE_URL } from "../api";
@@ -89,6 +90,7 @@ const PerformanceDashboard = ({
   const [last6MonthsFillerWords, setLast6MonthsFillerWords] = useState<
     number[]
   >([]);
+  const { capture } = usePostHogContext();
 
   const [recentAchievements, setRecentAchievements] = useState([]);
 
@@ -151,6 +153,10 @@ const PerformanceDashboard = ({
     "Engagement",
   ];
   const [plan, setPlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    capture("viewed_performance_dashboard");
+  }, [capture]);
 
   useEffect(() => {
     const fetchPlan = async () => {

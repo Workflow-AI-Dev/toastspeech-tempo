@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -31,6 +31,7 @@ import { useRouter } from "expo-router";
 import { BASE_URL } from "../api";
 import * as FileSystem from "expo-file-system";
 import * as DocumentPicker from "expo-document-picker";
+import { usePostHogContext } from "../context/PostHogContext";
 
 interface SpeakerModeScreenProps {
   onBack?: () => void;
@@ -88,6 +89,8 @@ export default function SpeakerModeScreen({
   const [partialReceived, setPartialReceived] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const { capture } = usePostHogContext();
+
   useEffect(() => {
     const fetchPlan = async () => {
       try {
@@ -108,6 +111,10 @@ export default function SpeakerModeScreen({
       }
     })();
   }, []);
+
+  useEffect(() => {
+    capture("viewed_speaker_mode");
+  }, [capture]);
 
   const isAudioLocked = limits?.remaining_audio_speeches === 0;
   const isVideoLocked =

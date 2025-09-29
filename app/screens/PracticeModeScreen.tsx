@@ -11,21 +11,11 @@ import {
 import {
   ArrowLeft,
   Mic,
-  Video,
   Award,
-  TrendingUp,
-  Clock,
   Target,
-  Zap,
-  Star,
   CheckCircle,
-  AlertCircle,
-  Lightbulb,
   Upload,
   FileText,
-  User,
-  Calendar,
-  BookOpen,
   ChevronRight,
 } from "lucide-react-native";
 import SpeechRecorder from "../components/SpeechRecorderSpeaker";
@@ -34,8 +24,8 @@ import ProgressIndicator from "../components/ProgressIndicator";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
-import { useRouter } from "expo-router";
 import { BASE_URL } from "../api";
+import { usePostHogContext } from "../context/PostHogContext";
 
 interface PracticeModeScreenProps {
   onBack?: () => void;
@@ -85,10 +75,13 @@ export default function PracticeModeScreen({
     improvements: [],
     keyInsights: [],
   });
-  const [detailedFeedback, setDetailedFeedback] = useState(null);
-  const router = useRouter();
   const [plan, setPlan] = useState<string | null>(null);
   const [limits, setLimits] = useState(null);
+  const { capture } = usePostHogContext();
+
+  useEffect(() => {
+    capture("viewed_practice_mode");
+  }, [capture]);
 
   useEffect(() => {
     const fetchPlan = async () => {
