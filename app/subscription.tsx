@@ -116,7 +116,7 @@ export default function SubscriptionScreen() {
         "3 Practice sessions (audio only)",
       ],
       limitations: ["No progress tracker or analytics", "Not storing speeches"],
-      tag: null, // No special tag for this plan
+      tag: null,
     },
     {
       id: "aspiring",

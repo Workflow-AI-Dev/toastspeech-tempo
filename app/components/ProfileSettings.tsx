@@ -9,15 +9,12 @@ import {
   Modal,
   Dimensions,
   Image,
-  Pressable,
   ActivityIndicator,
 } from "react-native";
 import {
   User,
-  Settings,
   Bell,
   Shield,
-  HelpCircle,
   LogOut,
   Edit3,
   Crown,
@@ -25,26 +22,27 @@ import {
   Trophy,
   ChevronRight,
   Mail,
-  Phone,
   Calendar,
-  MapPin,
   Moon,
   Sun,
-  Camera,
   X,
-  Shuffle,
   Check,
   BriefcaseIcon,
   MessageCircle,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
-import { supabase } from "../../lib/supabase";
 import { useRouter } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { BASE_URL } from "../api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  usePrivacySettingsQuery,
+  useProfileQuery,
+  useMetricsQuery,
+} from "../queries/useProfileQueries";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ProfileSettingsProps {
   user?: {
@@ -108,21 +106,20 @@ export default function ProfileSettings({
 }: ProfileSettingsProps) {
   const { theme, toggleTheme, isDark } = useTheme();
   const colors = getThemeColors(theme);
-  const { user: authUser } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [dailyReminders, setDailyReminders] = useState(true);
-  const [weeklyReports, setWeeklyReports] = useState(false);
+  const queryClient = useQueryClient();
+
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(user.avatar || "felix");
   const [selectedAvatarStyle, setSelectedAvatarStyle] = useState(
     user.avatarStyle || "avataaars",
   );
   const [avatarSeeds, setAvatarSeeds] = useState<string[]>([]);
-  const [isShuffling, setIsShuffling] = useState(false);
+
   const router = useRouter();
   const { width } = Dimensions.get("window");
   const { signOut } = useAuth();
-  const [profileData, setProfileData] = useState<any | null>(null);
   const [metrics, setMetrics] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
@@ -135,6 +132,30 @@ export default function ProfileSettings({
   const [audioConsent, setAudioConsent] = useState(false);
   const [videoConsent, setVideoConsent] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const fetchProfile = async () => {
+    const token = await AsyncStorage.getItem("auth_token");
+    const { data } = await axios.get(`${BASE_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return data;
+  };
+
+  const fetchPrivacy = async () => {
+    const token = await AsyncStorage.getItem("auth_token");
+    const { data } = await axios.get(`${BASE_URL}/user/privacy-settings`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return data;
+  };
+
+  const fetchMetrics = async () => {
+    const token = await AsyncStorage.getItem("auth_token");
+    const { data } = await axios.get(`${BASE_URL}/user/user-metrics`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return data;
+  };
 
   // Initialize avatar seeds on component mount
   const curatedAvatarSeeds = [
@@ -161,105 +182,110 @@ export default function ProfileSettings({
     }
   };
 
-  const fetchProfile = async () => {
-    try {
-      const token = await AsyncStorage.getItem("auth_token");
-      if (!token) {
-        console.warn("No access token found");
-        return;
-      }
+  const { data: profileData, isLoading: loadingProfile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: fetchProfile,
+  });
 
-      const response = await fetch(`${BASE_URL}/auth/me`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+  const { data: privacyData, isLoading: loadingPrivacy } = useQuery({
+    queryKey: ["privacy-settings"],
+    queryFn: fetchPrivacy,
+    enabled: privacyVisible,
+  });
 
-      const data = await response.json();
+  const { data: metricsData, isLoading: loadingMetrics } = useQuery({
+    queryKey: ["metrics"],
+    queryFn: fetchMetrics,
+  });
 
-      console.log("✅ Profile fetched:", data);
-      setProfileData(data);
-      setSelectedAvatar(data.avatar || "felix");
-      setSelectedAvatarStyle(data.avatar_style || "avataaars");
-    } catch (err) {
-      console.error("❌ Error fetching profile:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Sync privacyData into switches
   useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchMetrics = async () => {
-    try {
-      const token = await AsyncStorage.getItem("auth_token");
-      if (!token) {
-        console.warn("No access token found");
-        return;
-      }
-
-      const res = await fetch(`${BASE_URL}/user/user-metrics`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await res.json();
-
-      console.log("✅ Metrics fetched:", data);
-      setMetrics(data);
-    } catch (err) {
-      console.error("❌ Error fetching metrics:", err);
-    } finally {
-      setIsLoading(false);
+    if (privacyData) {
+      setAudioConsent(privacyData.store_audio);
+      setVideoConsent(privacyData.store_video);
     }
-  };
+  }, [privacyData]);
 
+  // Sync profile into editing states
   useEffect(() => {
-    fetchMetrics();
-  }, []);
+    if (profileData) {
+      setSelectedAvatar(profileData.avatar || "felix");
+      setSelectedAvatarStyle(profileData.avatar_style || "avataaars");
+    }
+  }, [profileData]);
 
-  const handleAvatarSelect = async (avatarSeed: string) => {
-    try {
+  // ----- Mutations -----
+  const updateProfileMutation = useMutation({
+    mutationFn: async (updates: any) => {
       const token = await AsyncStorage.getItem("auth_token");
-      if (!token) {
-        console.warn("No access token found");
-        return;
-      }
-
-      // Call API to update avatar
-      const res = await axios.put(
+      const { data } = await axios.put(
         `${BASE_URL}/user/edit-profile`,
+        updates,
         {
-          avatar: avatarSeed,
-          avatar_style: selectedAvatarStyle,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         },
       );
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile"] }),
+  });
 
-      // Update UI
-      setSelectedAvatar(avatarSeed);
-      setProfileData((prev: any) => ({
-        ...prev,
-        avatar: avatarSeed,
-        avatar_style: selectedAvatarStyle,
-      }));
+  const updateAvatarMutation = useMutation({
+    mutationFn: async (updates: { avatar: string; avatar_style: string }) => {
+      const token = await AsyncStorage.getItem("auth_token");
+      const { data } = await axios.put(
+        `${BASE_URL}/user/edit-profile`,
+        updates,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries(["profile"]),
+  });
 
-      setShowAvatarModal(false);
-      console.log("✅ Avatar updated:", res.data);
-    } catch (err) {
-      console.error("❌ Failed to update avatar:", err);
-    }
+  const updatePrivacyMutation = useMutation({
+    mutationFn: async (updates: {
+      store_audio: boolean;
+      store_video: boolean;
+    }) => {
+      const token = await AsyncStorage.getItem("auth_token");
+      const { data } = await axios.post(
+        `${BASE_URL}/user/update-privacy`,
+        updates,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      await AsyncStorage.setItem(
+        "consent_audio",
+        JSON.stringify(updates.store_audio),
+      );
+      await AsyncStorage.setItem(
+        "consent_video",
+        JSON.stringify(updates.store_video),
+      );
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries(["privacy-settings"]),
+  });
+
+  const handleAvatarSelect = (seed: string) => {
+    setSelectedAvatar(seed);
+    updateAvatarMutation.mutate({
+      avatar: seed,
+      avatar_style: selectedAvatarStyle,
+    });
+    setShowAvatarModal(false);
+  };
+
+  const handlePrivacySave = () => {
+    updatePrivacyMutation.mutate({
+      store_audio: audioConsent,
+      store_video: videoConsent,
+    });
+    setPrivacyVisible(false);
   };
 
   const handleStyleChange = (style: string) => {
@@ -282,80 +308,28 @@ export default function ProfileSettings({
     return regex.test(email);
   };
 
-  const onSave = async () => {
-    if (!validateEmail(editedEmail)) {
+  const onSave = () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editedEmail)) {
       setEmailError("Please enter a valid email address");
       return;
     }
-    try {
-      const token = await AsyncStorage.getItem("auth_token");
-      if (!token) return;
-
-      const res = await axios.put(
-        `${BASE_URL}/user/edit-profile`,
-        {
-          name: editedName,
-          email: editedEmail,
-          gender: editedGender,
-          age_group: editedAgeGroup,
-          profession: editedProfession,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setProfileData(res.data);
-      setIsEditing(false);
-      setEmailError("");
-      console.log("✅ Profile updated", res.data);
-    } catch (err) {
-      console.error("❌ Failed to update profile", err);
-    }
+    updateProfileMutation.mutate({
+      name: editedName,
+      email: editedEmail,
+      gender: editedGender,
+      age_group: editedAgeGroup,
+      profession: editedProfession,
+    });
+    setIsEditing(false);
   };
 
-  const fetchPrivacySettings = async () => {
-    try {
-      const token = await AsyncStorage.getItem("auth_token");
-      const response = await fetch(`${BASE_URL}/user/privacy-settings`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setAudioConsent(data.store_audio);
-        setVideoConsent(data.store_video);
-      } else {
-        console.warn("Failed to load privacy settings", data.detail);
-      }
-    } catch (error) {
-      console.error("Error fetching privacy settings:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (privacyVisible) {
-      fetchPrivacySettings();
-    }
-  }, [privacyVisible]);
-
-  if (isLoading) {
+  if (loadingProfile || loadingMetrics || (privacyVisible && loadingPrivacy)) {
     return (
       <SafeAreaView
-        className="flex-1 justify-center items-center mt-9" // Centers content both horizontally and vertically
+        className="flex-1 justify-center items-center mt-9"
         style={{ backgroundColor: colors.background }}
       >
         <ActivityIndicator size="large" color={colors.primary} />
-        {/* Provides clear visual separation and emphasis for the loading message */}
         <Text
           style={{
             color: colors.text,
@@ -369,42 +343,6 @@ export default function ProfileSettings({
       </SafeAreaView>
     );
   }
-
-  const handlePrivacySave = async (
-    audioConsent: boolean,
-    videoConsent: boolean,
-  ) => {
-    try {
-      const token = await AsyncStorage.getItem("auth_token");
-
-      const response = await fetch(`${BASE_URL}/user/update-privacy`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          store_audio: audioConsent,
-          store_video: videoConsent,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error("Privacy update failed", data);
-        return;
-      }
-
-      await AsyncStorage.setItem("consent_audio", JSON.stringify(audioConsent));
-      await AsyncStorage.setItem("consent_video", JSON.stringify(videoConsent));
-
-      console.log("Privacy settings saved!");
-      setPrivacyVisible(false);
-    } catch (error) {
-      console.error("Error saving privacy settings:", error);
-    }
-  };
 
   const settingsGroups = [
     {

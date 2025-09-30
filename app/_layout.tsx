@@ -17,9 +17,27 @@ import { useNetworkStatus } from "./hooks/useNetworkStatus";
 import Toast from "react-native-toast-message";
 import { usePostHog } from "./hooks/usePostHog";
 import { PostHogProvider } from "./context/PostHogContext";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 1000 * 60, // 1 minute fresh
+      cacheTime: 1000 * 60 * 10, // 10 minutes in cache
+    },
+  },
+});
+
+const persister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+});
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -121,83 +139,91 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <PostHogProvider value={{ posthogRef, posthogReady, capture }}>
-          <NavigationThemeProvider value={DefaultTheme}>
-            <Stack
-              screenOptions={({ route }) => ({
-                headerShown: !route.name.startsWith("tempobook"),
-              })}
-            >
-              <Stack.Screen
-                name="onboarding"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen name="sign-up" options={{ headerShown: false }} />
-              <Stack.Screen name="sign-in" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="subscription"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen name="trial" options={{ headerShown: false }} />
-              <Stack.Screen name="index" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="speaker-mode"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="ai-evaluation-summary"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="detailed-feedback"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="detailed-feedback-eval"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="evaluator-mode"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="practice-mode"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="profile-settings"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="performance-dashboard"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="feedback-library"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="evaluator-summary"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="evaluator-complete"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="reset-password"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen name="feedback" options={{ headerShown: false }} />
-              <Stack.Screen name="test" options={{ headerShown: false }} />
-            </Stack>
-            <Toast />
-            <StatusBar style="auto" />
-          </NavigationThemeProvider>
-        </PostHogProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister }}
+    >
+      <ThemeProvider>
+        <AuthProvider>
+          <PostHogProvider value={{ posthogRef, posthogReady, capture }}>
+            <NavigationThemeProvider value={DefaultTheme}>
+              <Stack
+                screenOptions={({ route }) => ({
+                  headerShown: !route.name.startsWith("tempobook"),
+                })}
+              >
+                <Stack.Screen
+                  name="onboarding"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen name="sign-up" options={{ headerShown: false }} />
+                <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="subscription"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen name="trial" options={{ headerShown: false }} />
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="speaker-mode"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="ai-evaluation-summary"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="detailed-feedback"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="detailed-feedback-eval"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="evaluator-mode"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="practice-mode"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="profile-settings"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="performance-dashboard"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="feedback-library"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="evaluator-summary"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="evaluator-complete"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="reset-password"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="feedback"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen name="test" options={{ headerShown: false }} />
+              </Stack>
+              <Toast />
+              <StatusBar style="auto" />
+            </NavigationThemeProvider>
+          </PostHogProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </PersistQueryClientProvider>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -27,200 +27,40 @@ import {
   House,
 } from "lucide-react-native";
 import { useTheme, getThemeColors } from "./context/ThemeContext";
-import { BASE_URL } from "./api";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import relativeTime from "dayjs/plugin/relativeTime";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import LevelCard from "./components/LevelCard";
+import { usePlanQuery } from "./queries/usePlanQuery";
+import { useLimitsQuery } from "./queries/useLimitsQuery";
+import { useProgressQuery } from "./queries/useProgressQuery";
+import { useSessionsQuery } from "./queries/useSessionsQuery";
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const [dataLoading, setDataLoading] = useState(true);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [modalTitle, setModalTitle] = useState("");
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
-  const [plan, setPlan] = useState<string | null>(null);
-  const [limits, setLimits] = useState<any>(null);
-  const [recentSessions, setRecentSessions] = useState([]);
-  const [recentAchievements, setRecentAchievements] = useState([]);
 
-  const greeting = useMemo(() => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return "Good morning!";
-    if (hour >= 12 && hour < 17) return "Good afternoon!";
-    if (hour >= 17 && hour < 21) return "Good evening!";
-    return "Hey there!";
-  }, []);
+  const { data: plan, isLoading: planLoading } = usePlanQuery();
+  const { data: limits, isLoading: limitsLoading } = useLimitsQuery();
+  const { data: progress, isLoading: progressLoading } = useProgressQuery();
+  const { data: sessions, isLoading: sessionsLoading } = useSessionsQuery();
 
-  const fetchPlan = useCallback(async () => {
-    try {
-      const plan = await AsyncStorage.getItem("plan");
-      setPlan(plan);
-      console.log(plan);
-    } catch (error) {
-      console.error("Error fetching subscription plan", error);
-    }
-  }, []);
-
-  const fetchLimits = useCallback(async () => {
-    try {
-      const token = await AsyncStorage.getItem("auth_token");
-      const plan = await AsyncStorage.getItem("plan");
-      if (!token) {
-        console.warn("No auth token found. User might not be authenticated.");
-        return;
-      }
-      const res = await fetch(`${BASE_URL}/user/limits/${plan}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setLimits(data);
-        console.log(data);
-        await AsyncStorage.setItem("limits", JSON.stringify(data));
-      } else {
-        console.error("Limits fetch failed", data);
-      }
-    } catch (error) {
-      console.error("Error fetching limits", error);
-    }
-  }, []);
-
-  const LEVELS = [
-    { level: 1, xp: 0, name: "Beginner", avgRequired: 0 },
-    { level: 2, xp: 300, name: "Ice Breaker", avgRequired: 70 },
-    { level: 3, xp: 700, name: "Storyteller", avgRequired: 74 },
-    { level: 4, xp: 1200, name: "Persuader", avgRequired: 78 },
-    { level: 5, xp: 2000, name: "Engager", avgRequired: 80 },
-    { level: 6, xp: 3200, name: "Connector", avgRequired: 82 },
-    { level: 7, xp: 5000, name: "Orator", avgRequired: 84 },
-    { level: 8, xp: 7500, name: "Influencer", avgRequired: 86 },
-    { level: 9, xp: 10000, name: "Master Speaker", avgRequired: 88 },
-    { level: 10, xp: 15000, name: "World-Class Communicator", avgRequired: 90 },
-  ];
-
-  const fetchProgress = useCallback(async () => {
-    try {
-      const token = await AsyncStorage.getItem("auth_token");
-      if (!token) return;
-
-      const res = await fetch(`${BASE_URL}/user/progress`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = await res.json();
-
-      if (!data.success) return;
-
-      const totalXP = data.total_xp || 0;
-
-      // Determine current level
-      let currentLevel = LEVELS[0];
-      let nextLevel = LEVELS[LEVELS.length - 1];
-
-      for (let i = 0; i < LEVELS.length; i++) {
-        if (totalXP >= LEVELS[i].xp) currentLevel = LEVELS[i];
-        if (totalXP < LEVELS[i].xp) {
-          nextLevel = LEVELS[i];
-          break;
-        }
-      }
-
-      // Calculate progress percentage towards next level
-      const xpIntoLevel = totalXP - currentLevel.xp;
-      const xpForNextLevel = nextLevel.xp - currentLevel.xp;
-      const progressPercent = Math.min(
-        100,
-        Math.round((xpIntoLevel / xpForNextLevel) * 100),
-      );
-
-      // XP remaining to next level
-      const xpRemaining = nextLevel.xp - totalXP;
-
-      return {
-        current: currentLevel.level,
-        currentName: currentLevel.name,
-        nextLevel: nextLevel.level,
-        nextName: nextLevel.name,
-        progress: progressPercent,
-        xpRemaining,
-        totalXP: totalXP,
-      };
-    } catch (error) {
-      console.error("Error fetching progress", error);
-      return null;
-    }
-  }, []);
-
-  const [userLevel, setUserLevel] = useState({
-    current: 1,
-    currentName: "Beginner",
-    nextLevel: 2,
-    nextName: "Ice Breaker",
-    progress: 0,
-    xpRemaining: 0,
-    totalXP: 0,
-  });
-
-  const fetchAndSetProgress = useCallback(async () => {
-    const progress = await fetchProgress();
-    if (progress) setUserLevel(progress);
-  }, [fetchProgress]);
-
-  const fetchSessions = useCallback(async () => {
-    const token = await AsyncStorage.getItem("auth_token");
-    try {
-      const response = await fetch(`${BASE_URL}/dashboard/recent`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const { recent_sessions } = await response.json();
-      const sessions = recent_sessions || [];
-
-      setRecentSessions(sessions);
-
-      const achievements = sessions
-        .slice(0, 3)
-        .flatMap((s) => s.analytics?.achievement?.tag || [])
-        .filter((tag, index, self) => self.indexOf(tag) === index);
-
-      setRecentAchievements(achievements);
-    } catch (err) {
-      console.error("Failed to fetch sessions:", err);
-    }
-  }, []);
-
-  useEffect(() => {
-    const initializeAppData = async () => {
-      setDataLoading(true);
-      try {
-        await Promise.all([
-          fetchPlan(),
-          fetchLimits(),
-          fetchSessions(),
-          fetchAndSetProgress(),
-        ]);
-      } catch (error) {
-        console.error("Initialization error:", error);
-      } finally {
-        setDataLoading(false);
-      }
-    };
-
-    initializeAppData();
-  }, []);
+  const recentSessions = sessions ?? [];
+  const recentAchievements = useMemo(() => {
+    return recentSessions
+      .slice(0, 3)
+      .flatMap((s) => s.analytics?.achievement?.tag || [])
+      .filter((tag, idx, arr) => arr.indexOf(tag) === idx);
+  }, [recentSessions]);
 
   const calculateStreak = (sessions: any[]) => {
     const today = dayjs().startOf("day");
@@ -242,10 +82,32 @@ export default function HomeScreen() {
     return streak;
   };
 
+  // streak from sessions
   const streakDays = useMemo(
     () => calculateStreak(recentSessions),
     [recentSessions],
   );
+
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Good morning!";
+    if (hour >= 12 && hour < 17) return "Good afternoon!";
+    if (hour >= 17 && hour < 21) return "Good evening!";
+    return "Hey there!";
+  }, []);
+
+  const loading =
+    planLoading || limitsLoading || progressLoading || sessionsLoading;
+
+  const userLevel = progress ?? {
+    current: 1,
+    currentName: "Beginner",
+    nextLevel: 2,
+    nextName: "Ice Breaker",
+    progress: 0,
+    xpRemaining: 0,
+    totalXP: 0,
+  };
 
   const handleFeaturePress = (
     featureId: string,
@@ -393,7 +255,7 @@ export default function HomeScreen() {
 
   const randomTip = tips[currentTip];
 
-  if (loading || dataLoading) {
+  if (loading) {
     return (
       <SafeAreaView
         className="flex-1 justify-center items-center"

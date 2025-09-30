@@ -31,7 +31,11 @@ import { useTheme, getThemeColors } from "../context/ThemeContext";
 import { usePostHogContext } from "../context/PostHogContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BASE_URL } from "../api";
+import {
+  useDashboardAllQuery,
+  useDashboardRecentQuery,
+} from "../queries/useDashboardQueries";
+
 import dayjs from "dayjs";
 import weekday from "dayjs/plugin/weekday";
 dayjs.extend(weekday);
@@ -70,6 +74,7 @@ const PerformanceDashboard = ({
 }: PerformanceDashboardProps) => {
   const [selectedTimeFrame, setSelectedTimeFrame] = useState("Week");
   const [selectedMetric, setSelectedMetric] = useState("Overall Score");
+
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
   const router = useRouter();
@@ -78,7 +83,7 @@ const PerformanceDashboard = ({
   const isLoading = loadingCount > 0;
   const [isFilteringTime, setIsFilteringTime] = useState(true);
 
-  const screenWidth = Dimensions.get("window").width - 32; // Accounting for padding
+  const screenWidth = Dimensions.get("window").width - 32;
   const [avgScore, setAvgScore] = useState<number>(0);
   const [totalSessions, setTotalSessions] = useState<number>(0);
   const [weeklyScores, setWeeklyScores] = useState<number[]>([]);
@@ -94,6 +99,17 @@ const PerformanceDashboard = ({
 
   const [recentAchievements, setRecentAchievements] = useState([]);
 
+  const {
+    data: allData,
+    isLoading: isLoadingAll,
+    error: allError,
+  } = useDashboardAllQuery(selectedTimeFrame);
+  const {
+    data: recentData,
+    isLoading: isLoadingRecent,
+    error: recentError,
+  } = useDashboardRecentQuery();
+
   const achievementIcons = [
     { Icon: Flame, color: "#f97316" },
     { Icon: TrendingUp, color: "#10b981" },
@@ -103,7 +119,6 @@ const PerformanceDashboard = ({
     { Icon: Trophy, color: "#d97706" },
   ];
 
-  // New states for breakdown charts (dynamic based on fetched data)
   const [dynamicFillerWordsBreakdown, setDynamicFillerWordsBreakdown] =
     useState<{ labels: string[]; data: number[] }>(fillerWordsBreakdown);
   const [dynamicCrutchPhrasesBreakdown, setDynamicCrutchPhrasesBreakdown] =
@@ -176,16 +191,9 @@ const PerformanceDashboard = ({
   useEffect(() => {
     const fetchSessions = async () => {
       setIsFilteringTime(true);
-      const token = await AsyncStorage.getItem("auth_token");
       try {
-        const response = await fetch(`${BASE_URL}/dashboard/all`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const { evaluations, speeches } = await response.json();
+        if (!allData) return;
+        const { evaluations, speeches } = allData;
 
         if (
           (!evaluations || evaluations.length === 0) &&
@@ -533,21 +541,14 @@ const PerformanceDashboard = ({
     };
 
     fetchSessions();
-  }, [selectedTimeFrame]); // Re-fetch when time frame changes for breakdown charts
+  }, [selectedTimeFrame]);
 
   useEffect(() => {
     const fetchSessions = async () => {
-      const token = await AsyncStorage.getItem("auth_token");
       setLoadingCount((prev) => prev + 1);
       try {
-        const response = await fetch(`${BASE_URL}/dashboard/recent`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const { recent_sessions } = await response.json();
+        if (!recentData) return;
+        const { recent_sessions } = recentData;
         const sessions = recent_sessions || [];
 
         // Extract up to 3 recent achievements (with tag + description)

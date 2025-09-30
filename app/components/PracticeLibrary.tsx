@@ -41,6 +41,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../api";
 import { SafeAreaView } from "react-native-safe-area-context";
 import LibraryHeader from "./LibraryHeader";
+import { usePracticeQuery } from "../queries/usePracticeQuery";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface PracticeEntry {
   id: string;
@@ -104,13 +106,13 @@ export default function PracticeLibrary({
   setIsFilterModalVisible,
   setSearchQuery,
 }: PracticeLibraryProps) {
+  const queryClient = useQueryClient();
+
   const [selectedPractice, setSelectedPractice] =
     useState<PracticeEntry | null>(null);
-  const [practices, setPractices] = useState([]);
+  const { data: practices = [], isLoading, isError } = usePracticeQuery();
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const hasActiveFilters =
     searchQuery ||
@@ -184,64 +186,6 @@ export default function PracticeLibrary({
         return true;
     }
   };
-
-  useEffect(() => {
-    const fetchPractices = async () => {
-      setIsLoading(true);
-      try {
-        const token = await AsyncStorage.getItem("auth_token");
-
-        const response = await fetch(`${BASE_URL}/practice/all`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch evaluations");
-        }
-
-        const data = await response.json();
-        console.log("✅ Loaded practice records from Supabase", data.practices);
-
-        const transformed = data.practices.map((practice, idx, arr) => {
-          const currentScore = practice.evaluation.OverallScore || 0;
-          const previousScore =
-            idx < arr.length - 1
-              ? arr[idx + 1].evaluation.OverallScore || 0
-              : null;
-
-          const improvement =
-            previousScore !== null
-              ? `${currentScore - previousScore > 0 ? "+" : ""}${currentScore - previousScore}`
-              : "first practice session";
-
-          return {
-            id: practice.id || `practice-${idx}`,
-            // date: 'Aug 17, 2025',
-            date: formatDate(practice.created_at),
-            title: practice.speech_title,
-            category: practice.speech_type,
-            duration: practice.speech_target_duration || "N/A",
-            score: practice.evaluation.OverallScore || 0,
-            pace: 0,
-            pause: 0,
-            emoji: { name: "mic", color: "#7c3aed" },
-            improvement,
-            evaluation: practice.evaluation,
-          };
-        });
-
-        setPractices(transformed);
-      } catch (err) {
-        console.error("❌ Failed to load evaluation:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchPractices();
-  }, []);
 
   const filteredPractices = useMemo(() => {
     return practices.filter((practice) => {
@@ -328,25 +272,6 @@ export default function PracticeLibrary({
       .map((s) => parseDurationToSeconds(s.duration))
       .reduce((sum, val) => sum + val, 0);
 
-    // Calculate streak (consecutive days with practices)
-    // Get unique speech dates sorted ascending (in yyyy-mm-dd)
-    // const datesSet = new Set(
-    //   practices.map((s) => new Date(s.date).toISOString().slice(0, 10)),
-    // );
-    // const uniqueDates = Array.from(datesSet).sort();
-
-    // let streak = 1;
-    // for (let i = uniqueDates.length - 1; i > 0; i--) {
-    //   const currDate = new Date(uniqueDates[i]);
-    //   const prevDate = new Date(uniqueDates[i - 1]);
-    //   const diffDays =
-    //     (currDate.getTime() - prevDate.getTime()) / (1000 * 3600 * 24);
-    //   if (diffDays === 1) {
-    //     streak++;
-    //   } else {
-    //     break; // streak broken
-    //   }
-    // }
     const streak = 0;
 
     return {
@@ -384,9 +309,7 @@ export default function PracticeLibrary({
         return;
       }
 
-      setPractices((prev) =>
-        prev.filter((practice) => practice.id !== practiceId),
-      );
+      queryClient.invalidateQueries(["practice"]);
     } catch (error) {
       console.error("Delete failed:", error);
     }
