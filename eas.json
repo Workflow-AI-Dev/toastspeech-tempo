@@ -10,9 +10,7 @@
       "android": {
         "buildType": "apk"
       },
-      "ios": {
-        "buildType": "release"
-      }
+      "ios": {}
     },
     "preview": {
       "distribution": "internal"
