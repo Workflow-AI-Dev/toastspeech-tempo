@@ -911,7 +911,7 @@ export default function EvaluatorModeScreen({
           </TouchableOpacity>
 
           {/* Record Video */}
-          {/* <TouchableOpacity
+          <TouchableOpacity
             onPress={() => {
               setRecordMode("video");
               setShowRecorder(true);
@@ -980,7 +980,7 @@ export default function EvaluatorModeScreen({
                 • Visual context evaluation
               </Text>
             </View>
-          </TouchableOpacity> */}
+          </TouchableOpacity>
 
           {/* Upload Speech File */}
           <TouchableOpacity
