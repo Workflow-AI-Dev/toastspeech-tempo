@@ -37,12 +37,14 @@ import axios from "axios";
 import { BASE_URL } from "../api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  usePrivacySettingsQuery,
-  useProfileQuery,
-  useMetricsQuery,
-} from "../queries/useProfileQueries";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useProgressQuery } from "../queries/useProgressQuery";
+import { AVATAR_STYLES, AVATAR_SEEDS } from "../constants/avatars";
+import {
+  GENDER_OPTIONS,
+  PROFESSIONS,
+  AGE_GROUPS,
+} from "../constants/personal_details";
 
 interface ProfileSettingsProps {
   user?: {
@@ -59,28 +61,6 @@ interface ProfileSettingsProps {
     avatarStyle?: string;
   };
 }
-
-// DiceBear avatar styles
-const avatarStyles = [
-  "avataaars",
-  "adventurer",
-  "big-smile",
-  "lorelei",
-  "micah",
-  "personas",
-];
-
-const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"];
-const ageGroups = ["18-25", "26-35", "36-45", "46-55", "56-65", "65+"];
-const professions = [
-  "Student",
-  "Professional",
-  "Manager",
-  "Executive",
-  "Entrepreneur",
-  "Teacher",
-  "Other",
-];
 
 // Generate DiceBear avatar URL
 const generateAvatarUrl = (
@@ -131,7 +111,7 @@ export default function ProfileSettings({
   const [privacyVisible, setPrivacyVisible] = useState(false);
   const [audioConsent, setAudioConsent] = useState(false);
   const [videoConsent, setVideoConsent] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: progress } = useProgressQuery();
 
   const fetchProfile = async () => {
     const token = await AsyncStorage.getItem("auth_token");
@@ -157,21 +137,8 @@ export default function ProfileSettings({
     return data;
   };
 
-  // Initialize avatar seeds on component mount
-  const curatedAvatarSeeds = [
-    "felix",
-    "luna",
-    "maximus",
-    "pixelpete",
-    "nimbus",
-    "echo",
-    "blip",
-    "zara",
-    "orbit",
-  ];
-
   useEffect(() => {
-    setAvatarSeeds(curatedAvatarSeeds);
+    setAvatarSeeds(AVATAR_SEEDS);
   }, []);
 
   const handleLogout = async () => {
@@ -431,7 +398,7 @@ export default function ProfileSettings({
     {
       icon: Crown,
       label: "Level",
-      value: profileData?.level.toString(),
+      value: progress?.current.toString(),
       color: "#f59e0b",
       bgColor: "#fef3c7",
     },
@@ -445,8 +412,8 @@ export default function ProfileSettings({
     {
       icon: Trophy,
       label: "Avg",
-      value: metrics?.average_score
-        ? Math.round(metrics.average_score).toString()
+      value: metricsData?.average_score
+        ? Math.round(metricsData.average_score).toString()
         : "0",
       color: "#10b981",
       bgColor: "#d1fae5",
@@ -660,7 +627,7 @@ export default function ProfileSettings({
                   </Text>
                 </View>
                 <View className="flex-row flex-wrap">
-                  {genderOptions.map((option) => {
+                  {GENDER_OPTIONS.map((option) => {
                     const selected = editedGender === option;
                     return (
                       <TouchableOpacity
@@ -709,7 +676,7 @@ export default function ProfileSettings({
                   </Text>
                 </View>
                 <View className="flex-row flex-wrap">
-                  {ageGroups.map((option) => {
+                  {AGE_GROUPS.map((option) => {
                     const selected = editedAgeGroup === option;
                     return (
                       <TouchableOpacity
@@ -758,7 +725,7 @@ export default function ProfileSettings({
                   </Text>
                 </View>
                 <View className="flex-row flex-wrap">
-                  {professions.map((option) => {
+                  {PROFESSIONS.map((option) => {
                     const selected = editedProfession === option;
                     return (
                       <TouchableOpacity
@@ -1161,7 +1128,7 @@ export default function ProfileSettings({
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View className="flex-row space-x-3">
-                  {avatarStyles.slice(0, 6).map((style) => (
+                  {AVATAR_STYLES.slice(0, 6).map((style) => (
                     <TouchableOpacity
                       key={style}
                       className={`px-4 py-2 rounded-full border-2`}

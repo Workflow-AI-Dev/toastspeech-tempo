@@ -46,9 +46,9 @@ export function usePrivacySettingsQuery(enabled = true) {
   return useQuery({
     queryKey: ["privacy-settings"],
     queryFn: fetchPrivacySettings,
-    enabled, // lets you control fetch on visibility
-    staleTime: 1000 * 60 * 5, // 5 min
-    cacheTime: 1000 * 60 * 30, // 30 min
+    enabled,
+    staleTime: 1000 * 60 * 5,
+    cacheTime: 1000 * 60 * 30,
   });
 }
 
@@ -65,7 +65,8 @@ export function useMetricsQuery() {
   return useQuery({
     queryKey: ["metrics"],
     queryFn: fetchMetrics,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 0,
     cacheTime: 1000 * 60 * 10,
+    refetchInterval: 1000 * 60,
   });
 }

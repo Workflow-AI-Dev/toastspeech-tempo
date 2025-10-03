@@ -35,14 +35,13 @@ import { usePlanQuery } from "./queries/usePlanQuery";
 import { useLimitsQuery } from "./queries/useLimitsQuery";
 import { useProgressQuery } from "./queries/useProgressQuery";
 import { useSessionsQuery } from "./queries/useSessionsQuery";
+import { LOADING_TIPS } from "./constants/tips";
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [dataLoading, setDataLoading] = useState(true);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [modalTitle, setModalTitle] = useState("");
@@ -223,37 +222,16 @@ export default function HomeScreen() {
     ];
   }, [plan, router, theme, colors]);
 
-  const tips = [
-    "Greatness takes time… and a fast internet connection.",
-    "Did you hydrate today? Your voice matters.",
-    "Fun fact: The fear of public speaking is called glossophobia.",
-    "Warming up your charisma engine…",
-    "Preparing the stage for your brilliance...",
-    "Even the best speakers need a dramatic pause…",
-    "Checking mic levels... Testing, testing... 1, 2, YOU!",
-    "Behind every great speech is a loading spinner.",
-    "Aligning your confidence chakras",
-    "Powering up your persuasive powers",
-    "Downloading applause. This may take a moment...",
-    "The audience is getting seated. Please hold.",
-    "Applying your charisma filter...",
-    "Searching for your inner TED Talk.",
-    "Installing virtual standing ovations...",
-    "Getting your 'um's and 'uh's under control...",
-    "Unmuting your potential...",
-    "Almost there… your voice is warming up!",
-  ];
-
   const [currentTip, setCurrentTip] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTip((prev) => (prev + 1) % tips.length);
+      setCurrentTip((prev) => (prev + 1) % LOADING_TIPS.length);
     }, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  const randomTip = tips[currentTip];
+  const randomTip = LOADING_TIPS[currentTip];
 
   if (loading) {
     return (
