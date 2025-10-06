@@ -16,6 +16,7 @@ import { Audio } from "expo-av";
 import { Video as VideoCompressor } from "react-native-compressor";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTheme, getThemeColors } from "../context/ThemeContext";
 
 interface SpeechRecorderProps {
   onRecordingComplete?: (recordingData: any) => void;
@@ -48,6 +49,8 @@ const SpeechRecorder = ({
   recordingMethod = "audio",
   plan,
 }: SpeechRecorderProps) => {
+  const { theme } = useTheme();
+  const colors = getThemeColors(theme);
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "paused" | "completed" | "uploading"
   >("idle");
@@ -585,13 +588,14 @@ const SpeechRecorder = ({
   };
 
   const getRecordingIcon = () => {
+    const iconColor = colors.background;
     switch (recordingMethod) {
       case "video":
-        return <Video size={40} color="white" />;
+        return <Video size={40} color={iconColor} />;
       case "upload":
-        return <Upload size={40} color="white" />;
+        return <Upload size={40} color={iconColor} />;
       default:
-        return <Mic size={40} color="white" />;
+        return <Mic size={40} color={iconColor} />;
     }
   };
 
@@ -618,9 +622,25 @@ const SpeechRecorder = ({
   };
 
   return (
-    <View className="bg-gradient-to-b from-purple-50 to-indigo-50 w-full h-[500px] rounded-2xl overflow-hidden">
+    <View
+      style={{
+        backgroundColor: colors.background,
+        borderRadius: 16,
+        width: "100%",
+        height: 500,
+        overflow: "hidden",
+      }}
+    >
       {/* Header */}
-      <View className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 items-center">
+      <View
+        style={{
+          backgroundColor: colors.purple,
+          padding: 16,
+          alignItems: "center",
+          flexDirection: "row",
+          justifyContent: "center",
+        }}
+      >
         <View className="flex-row items-center">
           {recordingMethod === "video" ? (
             <Video size={24} color="white" />
@@ -646,13 +666,34 @@ const SpeechRecorder = ({
       </View>
 
       {/* Main Content */}
-      <View className="flex-1 items-center justify-center p-6">
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: colors.surface,
+          padding: 16,
+        }}
+      >
         {recordingState === "idle" && (
           <View className="items-center">
-            <Text className="text-xl font-bold text-gray-800 mb-2 text-center">
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: 18,
+                fontWeight: "bold",
+                marginBottom: 8,
+              }}
+            >
               Ready?
             </Text>
-            <Text className="text-gray-600 mb-8 text-center">
+            <Text
+              style={{
+                color: colors.textSecondary,
+                textAlign: "center",
+                marginBottom: 24,
+              }}
+            >
               {getRecordingDescription()}
             </Text>
 
@@ -662,7 +703,17 @@ const SpeechRecorder = ({
                   ? handleFileUpload
                   : handleStartRecording
               }
-              className="bg-gradient-to-r from-red-500 to-pink-500 w-24 h-24 rounded-full items-center justify-center shadow-lg"
+              style={{
+                backgroundColor: colors.purple,
+                width: 96,
+                height: 96,
+                borderRadius: 48,
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: colors.text,
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+              }}
             >
               {getRecordingIcon()}
             </TouchableOpacity>
@@ -701,18 +752,20 @@ const SpeechRecorder = ({
                   <TouchableOpacity
                     onPress={handlePauseRecording}
                     style={{
-                      backgroundColor: "white",
+                      backgroundColor: colors.surface,
                       width: 60,
                       height: 60,
                       borderRadius: 30,
                       alignItems: "center",
                       justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor: colors.border,
                     }}
                   >
                     {recordingState === "recording" ? (
-                      <Pause size={28} color="#7c3aed" />
+                      <Pause size={28} color={colors.primary} />
                     ) : (
-                      <Mic size={28} color="#7c3aed" />
+                      <Mic size={28} color={colors.primary} />
                     )}
                   </TouchableOpacity>
 
@@ -720,7 +773,7 @@ const SpeechRecorder = ({
                   <TouchableOpacity
                     onPress={handleStopRecording}
                     style={{
-                      backgroundColor: "red",
+                      backgroundColor: colors.error,
                       width: 80,
                       height: 80,
                       borderRadius: 40,
@@ -728,14 +781,14 @@ const SpeechRecorder = ({
                       justifyContent: "center",
                     }}
                   >
-                    <Square size={36} color="white" />
+                    <Square size={36} color={colors.surface} />
                   </TouchableOpacity>
 
                   {/* Flip Camera */}
                   <TouchableOpacity
                     onPress={toggleCamera}
                     style={{
-                      backgroundColor: "rgba(0,0,0,0.6)",
+                      backgroundColor: colors.overlay,
                       width: 60,
                       height: 60,
                       borderRadius: 30,
@@ -743,29 +796,63 @@ const SpeechRecorder = ({
                       justifyContent: "center",
                     }}
                   >
-                    <Text style={{ color: "white", fontWeight: "bold" }}>
+                    <Text
+                      style={{
+                        color: colors.textOnAccent,
+                        fontWeight: "bold",
+                      }}
+                    >
                       Flip
                     </Text>
                   </TouchableOpacity>
                 </View>
               </View>
             ) : recordingMethod === "video" && Platform.OS === "web" ? (
-              <View className="h-32 w-full items-center justify-center bg-yellow-100 rounded-2xl p-4 mb-8">
-                <Text className="text-yellow-800 text-center font-medium">
+              <View
+                style={{
+                  height: 130,
+                  width: "100%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: colors.warningBackground,
+                  borderRadius: 16,
+                  padding: 16,
+                  marginBottom: 16,
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.warningText,
+                    textAlign: "center",
+                    fontWeight: "500",
+                  }}
+                >
                   Video recording is not supported on the web.{"\n"}
                   Please use audio recording or upload a file instead.
                 </Text>
               </View>
             ) : (
               /* Audio visualization */
-              <View className="h-32 w-full flex-row items-end justify-center mb-8 bg-white/30 rounded-2xl p-4">
+              <View
+                style={{
+                  height: 130,
+                  width: "100%",
+                  flexDirection: "row",
+                  alignItems: "flex-end",
+                  justifyContent: "center",
+                  marginBottom: 32,
+                  backgroundColor: colors.card,
+                  borderRadius: 16,
+                  padding: 12,
+                }}
+              >
                 {audioLevels.map((level, index) => (
                   <Animated.View
                     key={index}
                     style={{
                       height: recordingState === "recording" ? level : 5,
                       opacity: recordingState === "paused" ? 0.5 : 1,
-                      backgroundColor: "#a855f7",
+                      backgroundColor: colors.primary,
                       width: 8,
                       marginHorizontal: 1,
                       borderTopLeftRadius: 4,
@@ -781,23 +868,52 @@ const SpeechRecorder = ({
             )}
 
             {/* Recording controls */}
-            <View className="flex-row justify-center items-center space-x-8">
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 32,
+              }}
+            >
               <TouchableOpacity
                 onPress={handlePauseRecording}
-                className="bg-white w-16 h-16 rounded-full items-center justify-center shadow-lg"
+                style={{
+                  backgroundColor: colors.surface,
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  shadowColor: colors.text,
+                  shadowOpacity: 0.2,
+                  shadowRadius: 6,
+                }}
               >
                 {recordingState === "recording" ? (
-                  <Pause size={28} color="#7c3aed" />
+                  <Pause size={28} color={colors.primary} />
                 ) : (
-                  <Mic size={28} color="#7c3aed" />
+                  <Mic size={28} color={colors.primary} />
                 )}
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={handleStopRecording}
-                className="bg-gradient-to-r from-red-500 to-pink-500 w-20 h-20 rounded-full items-center justify-center shadow-lg"
+                style={{
+                  backgroundColor: colors.error,
+                  width: 80,
+                  height: 80,
+                  borderRadius: 40,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  shadowColor: colors.text,
+                  shadowOpacity: 0.25,
+                  shadowRadius: 8,
+                }}
               >
-                <Square size={32} color="white" />
+                <Square size={32} color={colors.surface} />
               </TouchableOpacity>
             </View>
 
@@ -824,11 +940,11 @@ const SpeechRecorder = ({
           <View className="items-center">
             <Animated.View
               style={{
-                backgroundColor: "white",
+                backgroundColor: colors.surface,
                 borderRadius: 50,
                 padding: 24,
                 marginBottom: 16,
-                shadowColor: "#000",
+                shadowColor: colors.text,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.25,
                 shadowRadius: 3.84,
@@ -844,17 +960,31 @@ const SpeechRecorder = ({
               }}
             >
               {recordingState === "uploading" ? (
-                <Upload size={60} color="#7c3aed" />
+                <Upload size={60} color={colors.primary} />
               ) : (
-                <Loader size={60} color="#7c3aed" />
+                <Loader size={60} color={colors.primary} />
               )}
             </Animated.View>
-            <Text className="text-xl font-bold text-gray-800 mb-2">
+
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "bold",
+                color: colors.text,
+                marginBottom: 8,
+              }}
+            >
               {recordingState === "uploading"
                 ? "Compressing & Processing..."
                 : "AI is Analyzing..."}
             </Text>
-            <Text className="text-gray-600 text-center">
+
+            <Text
+              style={{
+                color: colors.textSecondary,
+                textAlign: "center",
+              }}
+            >
               {recordingState === "uploading"
                 ? selectedFile
                   ? `Optimizing ${selectedFile.name} for upload...`
@@ -865,24 +995,75 @@ const SpeechRecorder = ({
         )}
 
         {showConfirmationModal && (
-          <View className="absolute inset-0 bg-black/50 justify-center items-center z-50">
-            <View className="bg-white rounded-2xl p-6 w-11/12 shadow-xl">
-              <Text className="text-lg font-bold text-gray-800 mb-2 text-center">
+          <View
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundColor: colors.overlay,
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 50,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: 20,
+                padding: 24,
+                width: "90%",
+                shadowColor: colors.text,
+                shadowOpacity: 0.25,
+                shadowRadius: 8,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "bold",
+                  color: colors.text,
+                  textAlign: "center",
+                  marginBottom: 8,
+                }}
+              >
                 Use This Recording?
               </Text>
-              <Text className="text-gray-600 mb-6 text-center">
+
+              <Text
+                style={{
+                  color: colors.textSecondary,
+                  textAlign: "center",
+                  marginBottom: 24,
+                }}
+              >
                 Do you want to continue with this recording or upload?
               </Text>
 
-              <View className="flex-row justify-between space-x-4">
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
                 <TouchableOpacity
                   onPress={() => {
                     setShowConfirmationModal(false);
                     resetRecording();
                   }}
-                  className="flex-1 bg-red-100 py-3 rounded-xl"
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.errorBackground,
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                  }}
                 >
-                  <Text className="text-red-600 font-semibold text-center">
+                  <Text
+                    style={{
+                      color: colors.error,
+                      fontWeight: "600",
+                      textAlign: "center",
+                    }}
+                  >
                     Record Again
                   </Text>
                 </TouchableOpacity>
@@ -890,14 +1071,24 @@ const SpeechRecorder = ({
                 <TouchableOpacity
                   onPress={() => {
                     setShowConfirmationModal(false);
-                    if (pendingRecordingData) {
+                    if (pendingRecordingData)
                       onRecordingComplete(pendingRecordingData);
-                    }
                     setPendingRecordingData(null);
                   }}
-                  className="flex-1 bg-green-600 py-3 rounded-xl"
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.success,
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                  }}
                 >
-                  <Text className="text-white font-semibold text-center">
+                  <Text
+                    style={{
+                      color: colors.textOnAccent,
+                      fontWeight: "600",
+                      textAlign: "center",
+                    }}
+                  >
                     Use This
                   </Text>
                 </TouchableOpacity>

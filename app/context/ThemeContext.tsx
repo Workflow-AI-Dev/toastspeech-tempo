@@ -132,7 +132,13 @@ export const themeColors = {
     error: "#ef4444",
     accent: "#8b5cf6",
     purple: "#925bd2",
+    overlay: "rgba(0, 0, 0, 0.35)",
+    textOnAccent: "#ffffff",
+    warningBackground: "#fff7e6",
+    warningText: "#92400e",
+    errorBackground: "#fee2e2",
   },
+
   dark: {
     background: "#0a0a0a",
     surface: "#1a1a1a",
@@ -147,6 +153,11 @@ export const themeColors = {
     error: "#f44336",
     accent: "#9575cd",
     purple: "#925bd2",
+    overlay: "rgba(0, 0, 0, 0.6)",
+    textOnAccent: "#ffffff",
+    warningBackground: "#3a2e00",
+    warningText: "#facc15",
+    errorBackground: "#2a0e0e",
   },
 };
 
