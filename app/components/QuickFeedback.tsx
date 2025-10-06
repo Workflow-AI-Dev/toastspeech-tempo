@@ -697,12 +697,18 @@ const QuickFeedback = ({
                           barChartLabels.length * 100,
                         )}
                         height={200}
+                        withHorizontalLabels={false}
+                        withInnerLines={true}
                         chartConfig={{
                           ...chartConfig,
                           color: (opacity = 1) =>
                             `rgba(16, 185, 129, ${opacity})`,
                           backgroundGradientFrom: colors.card,
                           backgroundGradientTo: colors.card,
+                          propsForBackgroundLines: {
+                            stroke: colors.border,
+                            strokeDasharray: "",
+                          },
                         }}
                         style={{
                           marginVertical: 8,
@@ -710,6 +716,8 @@ const QuickFeedback = ({
                         }}
                         fromZero
                         showValuesOnTopOfBars
+                        yAxisLabel={""}
+                        yAxisSuffix={""}
                       />
                     </ScrollView>
                   </View>
@@ -1848,6 +1856,9 @@ const QuickFeedback = ({
           ],
         };
 
+        const maxValue = Math.max(...barChartData2.datasets[0].data);
+        const chartSegments = Math.max(maxValue, 1);
+
         return (
           <View>
             <View className="flex-row items-center justify-between mb-6">
@@ -1926,41 +1937,55 @@ const QuickFeedback = ({
                   >
                     Frequency by Element Type
                   </Text>
-                  <View style={{ marginLeft: -23 }}>
+                  <View>
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
+                      style={{ marginLeft: -16 }}
                     >
                       <BarChart
-                        data={barChartData2}
+                        data={{
+                          ...barChartData2,
+                          labels: barChartData2.labels.map((label) =>
+                            label.includes(" ")
+                              ? label.replace(" ", "\n")
+                              : label,
+                          ),
+                        }}
                         width={Math.max(
                           screenWidth - 48,
                           environLabels.length * 100,
                         )}
-                        height={200}
-                        fromZero
-                        segments={3} // or 4 if your data is higher
-                        formatYLabel={(value) => {
-                          const num = Number(value);
-                          return Number.isInteger(num) ? `${num}` : ""; // only show whole numbers
-                        }}
+                        height={220}
+                        fromZero={true}
+                        yAxisLabel=""
+                        withInnerLines={true}
+                        segments={Math.max(chartSegments, 1)}
+                        showValuesOnTopOfBars={true}
+                        withHorizontalLabels={false}
                         chartConfig={{
                           backgroundColor: colors.card,
                           backgroundGradientFrom: colors.card,
                           backgroundGradientTo: colors.card,
+                          decimalPlaces: 0,
                           color: (opacity = 1) =>
                             `rgba(245, 158, 11, ${opacity})`,
                           labelColor: (opacity = 1) => colors.textSecondary,
-                          style: { borderRadius: 16 },
+                          propsForLabels: {
+                            fontSize: 10,
+                            textAnchor: "middle",
+                          },
                           propsForBackgroundLines: {
                             stroke: colors.border,
+                            strokeDasharray: "",
                           },
-                          decimalPlaces: 0,
+                          style: { borderRadius: 16 },
                         }}
                         style={{
                           marginVertical: 8,
                           borderRadius: 16,
                         }}
+                        yAxisSuffix={""}
                       />
                     </ScrollView>
                   </View>
@@ -1984,7 +2009,7 @@ const QuickFeedback = ({
                       return (
                         <View
                           key={element}
-                          className="rounded-2xl p-4"
+                          className="rounded-2xl p-4 mb-3"
                           style={{
                             backgroundColor:
                               theme === "dark" ? "#1f2937" : "#f9fafb",

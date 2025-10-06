@@ -219,6 +219,16 @@ export default function HomeScreen() {
         locked: false,
         onPress: () => router.push("/feedback-library"),
       },
+      {
+        id: "test",
+        title: "test",
+        description: "video test",
+        icon: BookOpen,
+        color: colors.primary,
+        bgColor: theme === "light" ? "#f0fdfa" : colors.surface,
+        locked: false,
+        onPress: () => router.push("/test"),
+      },
     ];
   }, [plan, router, theme, colors]);
 
