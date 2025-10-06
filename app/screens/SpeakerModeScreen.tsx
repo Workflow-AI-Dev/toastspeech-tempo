@@ -1359,6 +1359,7 @@ export default function SpeakerModeScreen({
                     }}
                     onPress={() => {
                       setShowConfirmModal(false);
+                      setCurrentStep("recordingMethod");
                     }}
                   >
                     <Mic size={20} color={colors.primary} />

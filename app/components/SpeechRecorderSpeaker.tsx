@@ -9,6 +9,7 @@ import { Audio } from "expo-av";
 import { Video as VideoCompressor } from "react-native-compressor";
 import * as FileSystem from "expo-file-system";
 import RealisticProgressLoader from "./RealisticProgressLoader";
+import { useTheme, getThemeColors } from "../context/ThemeContext";
 
 interface SpeechRecorderSpeakerProps {
   onRecordingComplete?: (recordingData: any) => void;
@@ -43,6 +44,8 @@ const SpeechRecorderSpeaker = ({
   plan,
   limits,
 }: SpeechRecorderSpeakerProps) => {
+  const { theme } = useTheme();
+  const colors = getThemeColors(theme);
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "paused" | "completed" | "uploading"
   >("idle");
@@ -513,13 +516,14 @@ const SpeechRecorderSpeaker = ({
   };
 
   const getRecordingIcon = () => {
+    const iconColor = colors.background;
     switch (recordingMethod) {
       case "video":
-        return <VideoIcon size={40} color="white" />;
+        return <VideoIcon size={40} color={iconColor} />;
       case "upload":
-        return <Upload size={40} color="white" />;
+        return <Upload size={40} color={iconColor} />;
       default:
-        return <Mic size={40} color="white" />;
+        return <Mic size={40} color={iconColor} />;
     }
   };
 
@@ -565,9 +569,25 @@ const SpeechRecorderSpeaker = ({
           file={selectedFile ? { name: selectedFile.name } : undefined}
         />
       ) : (
-        <View className="bg-gradient-to-b from-purple-50 to-indigo-50 w-full h-[500px] rounded-2xl overflow-hidden">
+        <View
+          style={{
+            backgroundColor: colors.background,
+            borderRadius: 16,
+            width: "100%",
+            height: 500,
+            overflow: "hidden",
+          }}
+        >
           {/* Header */}
-          <View className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 items-center">
+          <View
+            style={{
+              backgroundColor: colors.purple,
+              padding: 16,
+              alignItems: "center",
+              flexDirection: "row",
+              justifyContent: "center",
+            }}
+          >
             <View className="flex-row items-center">
               {recordingMethod === "video" ? (
                 <VideoIcon size={24} color="white" />
@@ -583,13 +603,34 @@ const SpeechRecorderSpeaker = ({
           </View>
 
           {/* Main Content */}
-          <View className="flex-1 items-center justify-center p-6">
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: colors.surface,
+              padding: 16,
+            }}
+          >
             {recordingState === "idle" && (
               <View className="items-center">
-                <Text className="text-xl font-bold text-gray-800 mb-2 text-center">
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 18,
+                    fontWeight: "bold",
+                    marginBottom: 8,
+                  }}
+                >
                   Ready?
                 </Text>
-                <Text className="text-gray-600 mb-8 text-center">
+                <Text
+                  style={{
+                    color: colors.textSecondary,
+                    textAlign: "center",
+                    marginBottom: 24,
+                  }}
+                >
                   {getRecordingDescription()}
                 </Text>
 
@@ -599,13 +640,24 @@ const SpeechRecorderSpeaker = ({
                       ? handleFileUpload
                       : handleStartRecording
                   }
-                  className="bg-gradient-to-r from-red-500 to-pink-500 w-24 h-24 rounded-full items-center justify-center shadow-lg"
+                  style={{
+                    backgroundColor: colors.purple,
+                    width: 96,
+                    height: 96,
+                    borderRadius: 48,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: colors.text,
+                    shadowOpacity: 0.2,
+                    shadowRadius: 8,
+                  }}
                 >
                   {getRecordingIcon()}
                 </TouchableOpacity>
               </View>
             )}
 
+            {/* Recording controls + visualization */}
             {(recordingState === "recording" ||
               recordingState === "paused") && (
               <View className="w-full items-center">
@@ -639,18 +691,20 @@ const SpeechRecorderSpeaker = ({
                       <TouchableOpacity
                         onPress={handlePauseRecording}
                         style={{
-                          backgroundColor: "white",
+                          backgroundColor: colors.surface,
                           width: 60,
                           height: 60,
                           borderRadius: 30,
                           alignItems: "center",
                           justifyContent: "center",
+                          borderWidth: 1,
+                          borderColor: colors.border,
                         }}
                       >
                         {recordingState === "recording" ? (
-                          <Pause size={28} color="#7c3aed" />
+                          <Pause size={28} color={colors.primary} />
                         ) : (
-                          <Mic size={28} color="#7c3aed" />
+                          <Mic size={28} color={colors.primary} />
                         )}
                       </TouchableOpacity>
 
@@ -658,7 +712,7 @@ const SpeechRecorderSpeaker = ({
                       <TouchableOpacity
                         onPress={handleStopRecording}
                         style={{
-                          backgroundColor: "red",
+                          backgroundColor: colors.error,
                           width: 80,
                           height: 80,
                           borderRadius: 40,
@@ -666,14 +720,14 @@ const SpeechRecorderSpeaker = ({
                           justifyContent: "center",
                         }}
                       >
-                        <Square size={36} color="white" />
+                        <Square size={36} color={colors.surface} />
                       </TouchableOpacity>
 
                       {/* Flip Camera */}
                       <TouchableOpacity
                         onPress={toggleCamera}
                         style={{
-                          backgroundColor: "rgba(0,0,0,0.6)",
+                          backgroundColor: colors.overlay,
                           width: 60,
                           height: 60,
                           borderRadius: 30,
@@ -681,29 +735,63 @@ const SpeechRecorderSpeaker = ({
                           justifyContent: "center",
                         }}
                       >
-                        <Text style={{ color: "white", fontWeight: "bold" }}>
+                        <Text
+                          style={{
+                            color: colors.textOnAccent,
+                            fontWeight: "bold",
+                          }}
+                        >
                           Flip
                         </Text>
                       </TouchableOpacity>
                     </View>
                   </View>
                 ) : recordingMethod === "video" && Platform.OS === "web" ? (
-                  <View className="h-32 w-full items-center justify-center bg-yellow-100 rounded-2xl p-4 mb-8">
-                    <Text className="text-yellow-800 text-center font-medium">
+                  <View
+                    style={{
+                      height: 130,
+                      width: "100%",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: colors.warningBackground,
+                      borderRadius: 16,
+                      padding: 16,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: colors.warningText,
+                        textAlign: "center",
+                        fontWeight: "500",
+                      }}
+                    >
                       Video recording is not supported on the web.{"\n"}
                       Please use audio recording or upload a file instead.
                     </Text>
                   </View>
                 ) : recordingMethod === "audio" ? (
                   /* Audio visualization */
-                  <View className="h-32 w-full flex-row items-end justify-center mb-8 bg-white/30 rounded-2xl p-4">
+                  <View
+                    style={{
+                      height: 130,
+                      width: "100%",
+                      flexDirection: "row",
+                      alignItems: "flex-end",
+                      justifyContent: "center",
+                      marginBottom: 32,
+                      backgroundColor: colors.card,
+                      borderRadius: 16,
+                      padding: 12,
+                    }}
+                  >
                     {audioLevels.map((level, index) => (
                       <Animated.View
                         key={index}
                         style={{
                           height: recordingState === "recording" ? level : 5,
                           opacity: recordingState === "paused" ? 0.5 : 1,
-                          backgroundColor: "#a855f7",
+                          backgroundColor: colors.primary,
                           width: 8,
                           marginHorizontal: 1,
                           borderTopLeftRadius: 4,
@@ -719,23 +807,52 @@ const SpeechRecorderSpeaker = ({
                 ) : null}
 
                 {/* Recording controls */}
-                <View className="flex-row justify-center items-center space-x-8">
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: 32,
+                  }}
+                >
                   <TouchableOpacity
                     onPress={handlePauseRecording}
-                    className="bg-white w-16 h-16 rounded-full items-center justify-center shadow-lg"
+                    style={{
+                      backgroundColor: colors.surface,
+                      width: 64,
+                      height: 64,
+                      borderRadius: 32,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      shadowColor: colors.text,
+                      shadowOpacity: 0.2,
+                      shadowRadius: 6,
+                    }}
                   >
                     {recordingState === "recording" ? (
-                      <Pause size={28} color="#7c3aed" />
+                      <Pause size={28} color={colors.primary} />
                     ) : (
-                      <Mic size={28} color="#7c3aed" />
+                      <Mic size={28} color={colors.primary} />
                     )}
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     onPress={handleStopRecording}
-                    className="bg-gradient-to-r from-red-500 to-pink-500 w-20 h-20 rounded-full items-center justify-center shadow-lg"
+                    style={{
+                      backgroundColor: colors.error,
+                      width: 80,
+                      height: 80,
+                      borderRadius: 40,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      shadowColor: colors.text,
+                      shadowOpacity: 0.25,
+                      shadowRadius: 8,
+                    }}
                   >
-                    <Square size={32} color="white" />
+                    <Square size={32} color={colors.surface} />
                   </TouchableOpacity>
                 </View>
               </View>

@@ -968,18 +968,26 @@ export default function PracticeModeScreen({
               </View>
               <View className="flex-1">
                 <View className="flex-row items-center">
-                  <Text className="text-xl font-bold" style={{ color: colors.text }}>
+                  <Text
+                    className="text-xl font-bold"
+                    style={{ color: colors.text }}
+                  >
                     Record Video
                   </Text>
 
                   {isVideoLocked && (
                     <View className="bg-gray-100 rounded-full px-2 py-1 ml-2">
-                      <Text className="text-xs font-bold text-gray-600">LOCKED</Text>
+                      <Text className="text-xs font-bold text-gray-600">
+                        LOCKED
+                      </Text>
                     </View>
                   )}
                 </View>
 
-                <Text className="text-base" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="text-base"
+                  style={{ color: colors.textSecondary }}
+                >
                   Record with camera and microphone
                 </Text>
               </View>
@@ -1216,6 +1224,7 @@ export default function PracticeModeScreen({
                     }}
                     onPress={() => {
                       setShowConfirmModal(false);
+                      setCurrentStep("recordingMethod");
                     }}
                   >
                     <Mic size={20} color={colors.primary} />

@@ -131,6 +131,7 @@ export const themeColors = {
     warning: "#f59e0b",
     error: "#ef4444",
     accent: "#8b5cf6",
+    purple: "#925bd2",
   },
   dark: {
     background: "#0a0a0a",
@@ -145,6 +146,7 @@ export const themeColors = {
     warning: "#ffc107",
     error: "#f44336",
     accent: "#9575cd",
+    purple: "#925bd2",
   },
 };
 
