@@ -1,197 +1,136 @@
-// import React, { useRef, useState } from "react";
-// import { View, Text, TouchableOpacity, Button, StyleSheet } from "react-native";
-// import { CameraView, useCameraPermissions } from "expo-camera";
-// import { Video } from "expo-av";
-
-// export default function App() {
-//   const cameraRef = useRef<CameraView>(null);
-//   const [permission, requestPermission] = useCameraPermissions();
-
-//   const [isRecording, setIsRecording] = useState(false);
-//   const [videoUri, setVideoUri] = useState<string | null>(null);
-//   const [facing, setFacing] = useState<"front" | "back">("back");
-
-//   if (!permission) return <View />;
-//   if (!permission.granted)
-//     return (
-//       <View style={styles.container}>
-//         <Text style={styles.text}>
-//           We need your permission to show the camera
-//         </Text>
-//         <Button title="Grant Permission" onPress={requestPermission} />
-//       </View>
-//     );
-
-//   const toggleCameraFacing = () => {
-//     setFacing((current) => (current === "back" ? "front" : "back"));
-//   };
-
-//   const startRecording = async () => {
-//     if (!cameraRef.current) return;
-//     setIsRecording(true);
-//     const video = await cameraRef.current.recordAsync({
-//       maxDuration: 300, // 5 minutes
-//       quality: "480p",
-//     });
-//     setVideoUri(video.uri);
-//     setIsRecording(false);
-//   };
-
-//   const stopRecording = async () => {
-//     if (!cameraRef.current) return;
-//     cameraRef.current.stopRecording();
-//     setIsRecording(false);
-//   };
-
-//   return (
-//     <View style={styles.container}>
-//       {!videoUri ? (
-//         <CameraView
-//           ref={cameraRef}
-//           style={styles.camera}
-//           facing={facing}
-//           mode="video"
-//         >
-//           <View style={styles.controls}>
-//             <TouchableOpacity
-//               onPress={toggleCameraFacing}
-//               style={styles.controlButton}
-//             >
-//               <Text style={styles.text}>Flip</Text>
-//             </TouchableOpacity>
-
-//             <TouchableOpacity
-//               onPress={isRecording ? stopRecording : startRecording}
-//               style={[
-//                 styles.recordButton,
-//                 { backgroundColor: isRecording ? "red" : "white" },
-//               ]}
-//             />
-
-//             <View style={{ width: 50 }} />
-//           </View>
-//         </CameraView>
-//       ) : (
-//         <View style={styles.preview}>
-//           <Video
-//             source={{ uri: videoUri }}
-//             useNativeControls
-//             resizeMode="contain"
-//             style={styles.video}
-//           />
-//           <Button title="Record Again" onPress={() => setVideoUri(null)} />
-//         </View>
-//       )}
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: { flex: 1, backgroundColor: "black" },
-//   camera: { flex: 1 },
-//   controls: {
-//     position: "absolute",
-//     bottom: 40,
-//     width: "100%",
-//     flexDirection: "row",
-//     justifyContent: "space-evenly",
-//     alignItems: "center",
-//   },
-//   controlButton: {
-//     padding: 10,
-//     backgroundColor: "rgba(255,255,255,0.3)",
-//     borderRadius: 8,
-//   },
-//   recordButton: {
-//     width: 70,
-//     height: 70,
-//     borderRadius: 35,
-//   },
-//   preview: {
-//     flex: 1,
-//     alignItems: "center",
-//     justifyContent: "center",
-//   },
-//   video: {
-//     width: 320,
-//     height: 480,
-//     borderRadius: 10,
-//     marginBottom: 20,
-//   },
-//   text: { color: "white", textAlign: "center" },
-// });
-
-// The following packages need to be installed using the following commands:
-// expo install expo-camera
-// expo install expo-media-library
-// expo install expo-sharing
-// expo install expo-av
-
-import { StyleSheet, Text, View, Button, SafeAreaView } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Button,
+  SafeAreaView,
+  ActivityIndicator,
+} from "react-native";
 import { useEffect, useState, useRef } from "react";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { Camera, CameraView, useCameraPermissions } from "expo-camera";
 import { Video } from "expo-av";
 import { shareAsync } from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 
 export default function App() {
-  const [permission, requestPermission] = useCameraPermissions();
-  const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState();
-  const [isRecording, setIsRecording] = useState(false);
-  const [video, setVideo] = useState();
-  const [facing, setFacing] = useState("back");
-  const cameraRef = useRef();
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [microphonePermission, requestMicrophonePermission] =
+    Camera.useMicrophonePermissions();
+  const [hasMediaLibraryPermission, setHasMediaLibraryPermission] =
+    useState(false);
 
+  const [isRecording, setIsRecording] = useState(false);
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [video, setVideo] = useState(null);
+  const [facing, setFacing] = useState("back");
+  const [isSwitching, setIsSwitching] = useState(false);
+
+  const cameraRef = useRef(null);
+
+  // Request permissions on mount
   useEffect(() => {
     (async () => {
       const mediaLibraryPermission =
         await MediaLibrary.requestPermissionsAsync();
       setHasMediaLibraryPermission(mediaLibraryPermission.status === "granted");
+      if (!microphonePermission?.granted) await requestMicrophonePermission();
     })();
   }, []);
 
-  if (!permission) {
+  if (!cameraPermission) {
     return <Text>Requesting permissions...</Text>;
   }
 
-  if (!permission.granted) {
+  if (!cameraPermission.granted) {
     return (
       <View style={styles.container}>
-        <Text>Permission for camera not granted.</Text>
-        <Button title="Grant Permission" onPress={requestPermission} />
+        <Text>Camera permission not granted.</Text>
+        <Button
+          title="Grant Camera Permission"
+          onPress={requestCameraPermission}
+        />
       </View>
     );
   }
 
+  if (!microphonePermission?.granted) {
+    return (
+      <View style={styles.container}>
+        <Text>Microphone permission not granted.</Text>
+        <Button
+          title="Grant Microphone Permission"
+          onPress={requestMicrophonePermission}
+        />
+      </View>
+    );
+  }
+
+  // --- RECORD VIDEO ---
   const recordVideo = async () => {
+    if (!cameraRef.current || !isCameraReady || isSwitching) return;
+
     setIsRecording(true);
     try {
-      const options = { quality: "1080p", maxDuration: 60, mute: false };
+      // Small delay ensures camera pipeline is ready (especially after flip)
+      await new Promise((res) => setTimeout(res, 250));
+
+      const options = {
+        quality: "1080p",
+        maxDuration: 60,
+        mute: false,
+      };
+
       const recordedVideo = await cameraRef.current.recordAsync(options);
-      setVideo(recordedVideo);
+
+      if (recordedVideo?.uri) {
+        setVideo(recordedVideo);
+      } else {
+        console.warn("No valid video recorded (empty URI).");
+      }
+    } catch (error) {
+      console.error("Recording failed:", error);
     } finally {
       setIsRecording(false);
     }
   };
 
-  const stopRecording = () => {
-    setIsRecording(false);
-    cameraRef.current?.stopRecording();
+  const stopRecording = async () => {
+    if (isRecording && cameraRef.current) {
+      setIsRecording(false);
+      await cameraRef.current.stopRecording();
+    }
   };
 
-  const toggleCameraFacing = () => {
+  const toggleCameraFacing = async () => {
+    if (isRecording) await stopRecording(); // stop recording before switching
+    setIsSwitching(true);
+    setIsCameraReady(false);
     setFacing((prev) => (prev === "back" ? "front" : "back"));
+
+    // Give the camera time to reinitialize
+    setTimeout(() => setIsSwitching(false), 800);
   };
 
+  // --- WHEN VIDEO IS READY ---
   if (video) {
     const shareVideo = async () => {
-      await shareAsync(video.uri);
-      setVideo(undefined);
+      try {
+        await shareAsync(video.uri);
+      } catch (err) {
+        console.error("Error sharing video:", err);
+      } finally {
+        setVideo(null);
+      }
     };
 
     const saveVideo = async () => {
-      await MediaLibrary.saveToLibraryAsync(video.uri);
-      setVideo(undefined);
+      try {
+        await MediaLibrary.saveToLibraryAsync(video.uri);
+      } catch (err) {
+        console.error("Error saving video:", err);
+      } finally {
+        setVideo(null);
+      }
     };
 
     return (
@@ -207,34 +146,55 @@ export default function App() {
         {hasMediaLibraryPermission && (
           <Button title="Save" onPress={saveVideo} />
         )}
-        <Button title="Discard" onPress={() => setVideo(undefined)} />
+        <Button title="Discard" onPress={() => setVideo(null)} />
       </SafeAreaView>
     );
   }
 
   return (
-    <CameraView style={styles.container} ref={cameraRef} facing={facing}>
-      <View style={styles.controls}>
-        <View style={styles.buttonRow}>
-          <Button
-            title={isRecording ? "Stop Recording" : "Record Video"}
-            onPress={isRecording ? stopRecording : recordVideo}
-          />
-          <Button
-            title={`Flip to ${facing === "back" ? "Front" : "Back"}`}
-            onPress={toggleCameraFacing}
-          />
+    <View style={styles.container}>
+      <CameraView
+        style={styles.camera}
+        ref={cameraRef}
+        facing={facing}
+        mode="video"
+        onCameraReady={() => setIsCameraReady(true)}
+      >
+        {!isCameraReady && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#fff" />
+            <Text style={{ color: "#fff" }}>Initializing Camera...</Text>
+          </View>
+        )}
+        <View style={styles.controls}>
+          <View style={styles.buttonRow}>
+            <Button
+              title={isRecording ? "Stop Recording" : "Record Video"}
+              onPress={isRecording ? stopRecording : recordVideo}
+              disabled={!isCameraReady || isSwitching}
+            />
+            <Button
+              title={`Flip to ${facing === "back" ? "Front" : "Back"}`}
+              onPress={toggleCameraFacing}
+              disabled={isRecording || isSwitching}
+            />
+          </View>
         </View>
-      </View>
-    </CameraView>
+      </CameraView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#000",
     alignItems: "center",
     justifyContent: "center",
+  },
+  camera: {
+    flex: 1,
+    width: "100%",
   },
   controls: {
     position: "absolute",
@@ -250,5 +210,11 @@ const styles = StyleSheet.create({
   video: {
     flex: 1,
     alignSelf: "stretch",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
