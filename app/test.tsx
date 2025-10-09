@@ -5,9 +5,10 @@ import {
   Button,
   SafeAreaView,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { useEffect, useState, useRef } from "react";
-import { Camera, CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView, Camera, useCameraPermissions } from "expo-camera";
 import { Video } from "expo-av";
 import { shareAsync } from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
@@ -16,9 +17,9 @@ export default function App() {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [microphonePermission, requestMicrophonePermission] =
     Camera.useMicrophonePermissions();
+
   const [hasMediaLibraryPermission, setHasMediaLibraryPermission] =
     useState(false);
-
   const [isRecording, setIsRecording] = useState(false);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [video, setVideo] = useState(null);
@@ -27,52 +28,48 @@ export default function App() {
 
   const cameraRef = useRef(null);
 
-  // Request permissions on mount
+  // ─── Permissions ────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
-      const mediaLibraryPermission =
-        await MediaLibrary.requestPermissionsAsync();
-      setHasMediaLibraryPermission(mediaLibraryPermission.status === "granted");
-      if (!microphonePermission?.granted) await requestMicrophonePermission();
+      const mediaLibPerm = await MediaLibrary.requestPermissionsAsync();
+      setHasMediaLibraryPermission(mediaLibPerm.status === "granted");
+      if (!microphonePermission?.granted) {
+        await requestMicrophonePermission();
+      }
     })();
   }, []);
 
-  if (!cameraPermission) {
-    return <Text>Requesting permissions...</Text>;
-  }
+  if (!cameraPermission) return <Text>Requesting permissions...</Text>;
 
   if (!cameraPermission.granted) {
     return (
-      <View style={styles.container}>
+      <View style={styles.center}>
         <Text>Camera permission not granted.</Text>
-        <Button
-          title="Grant Camera Permission"
-          onPress={requestCameraPermission}
-        />
+        <Button title="Grant Camera" onPress={requestCameraPermission} />
       </View>
     );
   }
 
   if (!microphonePermission?.granted) {
     return (
-      <View style={styles.container}>
+      <View style={styles.center}>
         <Text>Microphone permission not granted.</Text>
         <Button
-          title="Grant Microphone Permission"
+          title="Grant Microphone"
           onPress={requestMicrophonePermission}
         />
       </View>
     );
   }
 
-  // --- RECORD VIDEO ---
+  // ─── Record Video ────────────────────────────────────────────────
   const recordVideo = async () => {
     if (!cameraRef.current || !isCameraReady || isSwitching) return;
 
     setIsRecording(true);
     try {
-      // Small delay ensures camera pipeline is ready (especially after flip)
-      await new Promise((res) => setTimeout(res, 250));
+      // Delay to stabilize camera session (avoids ERROR_NO_VALID_DATA)
+      await new Promise((res) => setTimeout(res, 300));
 
       const options = {
         quality: "1080p",
@@ -80,44 +77,48 @@ export default function App() {
         mute: false,
       };
 
-      const recordedVideo = await cameraRef.current.recordAsync(options);
+      const recorded = await cameraRef.current.recordAsync(options);
 
-      if (recordedVideo?.uri) {
-        setVideo(recordedVideo);
-      } else {
-        console.warn("No valid video recorded (empty URI).");
-      }
-    } catch (error) {
-      console.error("Recording failed:", error);
+      if (recorded?.uri) setVideo(recorded);
+      else console.warn("No valid video recorded.");
+    } catch (err) {
+      console.error("Recording error:", err);
     } finally {
       setIsRecording(false);
     }
   };
 
   const stopRecording = async () => {
-    if (isRecording && cameraRef.current) {
-      setIsRecording(false);
-      await cameraRef.current.stopRecording();
+    if (cameraRef.current && isRecording) {
+      try {
+        await cameraRef.current.stopRecording();
+      } catch (e) {
+        console.warn("Stop recording error:", e);
+      } finally {
+        setIsRecording(false);
+      }
     }
   };
 
+  // ─── Flip Camera ────────────────────────────────────────────────
   const toggleCameraFacing = async () => {
-    if (isRecording) await stopRecording(); // stop recording before switching
+    if (isRecording) await stopRecording();
+
     setIsSwitching(true);
     setIsCameraReady(false);
     setFacing((prev) => (prev === "back" ? "front" : "back"));
 
-    // Give the camera time to reinitialize
-    setTimeout(() => setIsSwitching(false), 800);
+    // Let camera settle before re-enabling
+    setTimeout(() => setIsSwitching(false), 700);
   };
 
-  // --- WHEN VIDEO IS READY ---
+  // ─── After Video Recorded ───────────────────────────────────────
   if (video) {
     const shareVideo = async () => {
       try {
         await shareAsync(video.uri);
-      } catch (err) {
-        console.error("Error sharing video:", err);
+      } catch (e) {
+        console.error("Share error:", e);
       } finally {
         setVideo(null);
       }
@@ -126,8 +127,8 @@ export default function App() {
     const saveVideo = async () => {
       try {
         await MediaLibrary.saveToLibraryAsync(video.uri);
-      } catch (err) {
-        console.error("Error saving video:", err);
+      } catch (e) {
+        console.error("Save error:", e);
       } finally {
         setVideo(null);
       }
@@ -151,11 +152,12 @@ export default function App() {
     );
   }
 
+  // ─── Camera View ────────────────────────────────────────────────
   return (
     <View style={styles.container}>
       <CameraView
-        style={styles.camera}
         ref={cameraRef}
+        style={styles.camera}
         facing={facing}
         mode="video"
         onCameraReady={() => setIsCameraReady(true)}
@@ -163,9 +165,10 @@ export default function App() {
         {!isCameraReady && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#fff" />
-            <Text style={{ color: "#fff" }}>Initializing Camera...</Text>
+            <Text style={{ color: "#fff" }}>Initializing Camera…</Text>
           </View>
         )}
+
         <View style={styles.controls}>
           <View style={styles.buttonRow}>
             <Button
@@ -192,10 +195,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  camera: {
+  center: {
     flex: 1,
-    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#000",
   },
+  camera: { flex: 1, width: "100%" },
   controls: {
     position: "absolute",
     bottom: 50,
@@ -203,14 +209,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: "100%",
   },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  video: {
-    flex: 1,
-    alignSelf: "stretch",
-  },
+  buttonRow: { flexDirection: "row", gap: 12 },
+  video: { flex: 1, alignSelf: "stretch" },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.5)",
