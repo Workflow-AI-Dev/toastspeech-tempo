@@ -229,6 +229,26 @@ export default function HomeScreen() {
         locked: false,
         onPress: () => router.push("/test"),
       },
+      {
+        id: "test2",
+        title: "test2",
+        description: "video test",
+        icon: BookOpen,
+        color: colors.primary,
+        bgColor: theme === "light" ? "#f0fdfa" : colors.surface,
+        locked: false,
+        onPress: () => router.push("/test2"),
+      },
+      {
+        id: "test3",
+        title: "test3",
+        description: "video test",
+        icon: BookOpen,
+        color: colors.primary,
+        bgColor: theme === "light" ? "#f0fdfa" : colors.surface,
+        locked: false,
+        onPress: () => router.push("/test3"),
+      },
     ];
   }, [plan, router, theme, colors]);
 

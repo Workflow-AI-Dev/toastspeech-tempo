@@ -11,7 +11,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { Video } from "expo-av";
 import { shareAsync } from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
-import * as Audio from "expo-av"; // ✅ For microphone permissions
+import * as Audio from "expo-av";
 
 export default function App() {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
