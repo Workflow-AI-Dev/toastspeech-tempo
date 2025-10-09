@@ -5,21 +5,20 @@ import {
   Button,
   SafeAreaView,
   ActivityIndicator,
-  Platform,
 } from "react-native";
 import { useEffect, useState, useRef } from "react";
-import { CameraView, Camera, useCameraPermissions } from "expo-camera";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { Video } from "expo-av";
 import { shareAsync } from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
+import * as Audio from "expo-av"; // ✅ For microphone permissions
 
 export default function App() {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [microphonePermission, requestMicrophonePermission] =
-    Camera.useMicrophonePermissions();
-
+  const [microphonePermission, setMicrophonePermission] = useState(null);
   const [hasMediaLibraryPermission, setHasMediaLibraryPermission] =
     useState(false);
+
   const [isRecording, setIsRecording] = useState(false);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [video, setVideo] = useState(null);
@@ -28,35 +27,44 @@ export default function App() {
 
   const cameraRef = useRef(null);
 
-  // ─── Permissions ────────────────────────────────────────────────
+  // ─── Request Permissions ───────────────────────────────────────────────
   useEffect(() => {
     (async () => {
+      // Request media library permission
       const mediaLibPerm = await MediaLibrary.requestPermissionsAsync();
       setHasMediaLibraryPermission(mediaLibPerm.status === "granted");
-      if (!microphonePermission?.granted) {
-        await requestMicrophonePermission();
-      }
+
+      // Request microphone permission via expo-av
+      const micPerm = await Audio.Audio.requestPermissionsAsync();
+      setMicrophonePermission(micPerm);
     })();
   }, []);
 
-  if (!cameraPermission) return <Text>Requesting permissions...</Text>;
+  // ─── Handle Permissions ────────────────────────────────────────────────
+  if (!cameraPermission) return <Text>Requesting camera permissions…</Text>;
 
   if (!cameraPermission.granted) {
     return (
       <View style={styles.center}>
         <Text>Camera permission not granted.</Text>
-        <Button title="Grant Camera" onPress={requestCameraPermission} />
+        <Button
+          title="Grant Camera Permission"
+          onPress={requestCameraPermission}
+        />
       </View>
     );
   }
 
-  if (!microphonePermission?.granted) {
+  if (!microphonePermission || microphonePermission.status !== "granted") {
     return (
       <View style={styles.center}>
         <Text>Microphone permission not granted.</Text>
         <Button
-          title="Grant Microphone"
-          onPress={requestMicrophonePermission}
+          title="Grant Microphone Permission"
+          onPress={async () => {
+            const micPerm = await Audio.Audio.requestPermissionsAsync();
+            setMicrophonePermission(micPerm);
+          }}
         />
       </View>
     );
@@ -68,7 +76,7 @@ export default function App() {
 
     setIsRecording(true);
     try {
-      // Delay to stabilize camera session (avoids ERROR_NO_VALID_DATA)
+      // Delay helps avoid race conditions after flipping camera
       await new Promise((res) => setTimeout(res, 300));
 
       const options = {
@@ -108,7 +116,7 @@ export default function App() {
     setIsCameraReady(false);
     setFacing((prev) => (prev === "back" ? "front" : "back"));
 
-    // Let camera settle before re-enabling
+    // Let the camera settle before re-enabling
     setTimeout(() => setIsSwitching(false), 700);
   };
 
@@ -188,6 +196,7 @@ export default function App() {
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
