@@ -103,7 +103,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         GoogleSignin.configure({
           webClientId:
             "278297929608-v6ifsorbpol0t4jq19t7ch2a7s14a72g.apps.googleusercontent.com",
-          iosClientId: "278297929608-o5097o6qt3ljfsggff8hsd7b996vt0gc.apps.googleusercontent.com",
           offlineAccess: false,
           scopes: ["profile", "email"],
         });
