@@ -1426,7 +1426,7 @@ export default function SpeakerModeScreen({
             : "Analysis Complete"}
         </Text>
         <Text
-          className="text-center mb-8 text-base"
+          className="text-center mb-2 text-base"
           style={{ color: colors.textSecondary }}
         >
           {isProcessing && partialReceived

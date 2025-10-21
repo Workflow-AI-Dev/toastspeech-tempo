@@ -10,6 +10,7 @@ import { Video as VideoCompressor } from "react-native-compressor";
 import * as FileSystem from "expo-file-system";
 import RealisticProgressLoader from "./RealisticProgressLoader";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
+import CircularProgress from "./CircularProgress";
 
 interface SpeechRecorderSpeakerProps {
   onRecordingComplete?: (recordingData: any) => void;
@@ -47,8 +48,9 @@ const SpeechRecorderSpeaker = ({
   const { theme } = useTheme();
   const colors = getThemeColors(theme);
   const [recordingState, setRecordingState] = useState<
-    "idle" | "recording" | "paused" | "completed" | "uploading"
+    "idle" | "recording" | "paused" | "completed" | "uploading" | "compressing"
   >("idle");
+  const [compressionProgress, setCompressionProgress] = useState(0);
   const [timer, setTimer] = useState(0);
   const [audioLevels, setAudioLevels] = useState<number[]>(Array(30).fill(5));
   const [selectedFile, setSelectedFile] =
@@ -420,6 +422,7 @@ const SpeechRecorderSpeaker = ({
 
   const compressVideo = async (videoUri: string): Promise<string> => {
     console.log("🚀 Starting one-pass video compression...");
+    setRecordingState("compressing");
 
     const safeUri = await ensureFilePath(videoUri);
     const fileInfo = await FileSystem.getInfoAsync(safeUri);
@@ -427,6 +430,7 @@ const SpeechRecorderSpeaker = ({
 
     if (sizeMB <= 5) {
       console.log("✅ Video already under 5 MB. Skipping compression.");
+      setRecordingState("uploading");
       return safeUri;
     }
 
@@ -435,15 +439,19 @@ const SpeechRecorderSpeaker = ({
         safeUri,
         {
           compressionMethod: "manual",
-          bitrate: 800, // kbps
-          maxSize: 360, // resolution
+          bitrate: 800,
+          maxSize: 360,
         },
         (progress) => {
-          console.log(`Compression progress: ${Math.round(progress * 100)}%`);
+          const percent = Math.round(progress * 100);
+          setCompressionProgress(percent);
+          console.log(`Compression progress: ${percent}%`);
         },
       );
 
       const compressedUri = await ensureFilePath(result);
+      setRecordingState("uploading");
+
       const compressedInfo = await FileSystem.getInfoAsync(compressedUri);
       const finalMB = compressedInfo.size / (1024 * 1024);
 
@@ -460,6 +468,7 @@ const SpeechRecorderSpeaker = ({
       return compressedUri;
     } catch (err) {
       console.error("❌ Compression error:", err);
+      setRecordingState("uploading");
       return safeUri;
     }
   };
@@ -568,6 +577,38 @@ const SpeechRecorderSpeaker = ({
           isProcessing={true}
           file={selectedFile ? { name: selectedFile.name } : undefined}
         />
+      ) : recordingState === "compressing" ? (
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.surface,
+            padding: 24,
+          }}
+        >
+          {/* Circular progress */}
+          <CircularProgress
+            size={150}
+            strokeWidth={12}
+            progress={compressionProgress}
+            color={colors.primary}
+            backgroundColor={colors.border}
+          />
+
+          {/* Main message */}
+          <Text
+            style={{
+              fontSize: 22,
+              fontWeight: "bold",
+              color: colors.text,
+              marginTop: 24,
+              textAlign: "center",
+            }}
+          >
+            Compressing your video...
+          </Text>
+        </View>
       ) : (
         <View
           style={{
