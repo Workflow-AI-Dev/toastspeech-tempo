@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, Animated, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Animated,
+  Alert,
+  StyleSheet,
+  Dimensions,
+} from "react-native";
 import { Mic, Pause, Square, Loader, Zap, Upload } from "lucide-react-native";
 import { Video as VideoIcon } from "lucide-react-native";
 import { Platform } from "react-native";
@@ -25,6 +33,8 @@ interface SpeechRecorderSpeakerProps {
   plan: string;
   limits: {};
 }
+
+const { width, height } = Dimensions.get("window");
 
 let CameraComponent: any;
 let useCameraDevices: any;
@@ -579,35 +589,37 @@ const SpeechRecorderSpeaker = ({
         />
       ) : recordingState === "compressing" ? (
         <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: colors.surface,
-            padding: 24,
-          }}
+          style={[styles.container, { backgroundColor: colors.background }]}
         >
-          {/* Circular progress */}
-          <CircularProgress
-            size={150}
-            strokeWidth={12}
-            progress={compressionProgress}
-            color={colors.primary}
-            backgroundColor={colors.border}
-          />
+          <View style={styles.centerWrapper}>
+            {/* Circular progress */}
+            <Animated.View
+              style={[
+                styles.circleWrapper,
+                {
+                  backgroundColor: colors.card,
+                },
+              ]}
+            >
+              <CircularProgress
+                size={130}
+                strokeWidth={10}
+                progress={compressionProgress}
+                color={colors.primary}
+                backgroundColor={colors.border}
+              />
+            </Animated.View>
 
-          {/* Main message */}
-          <Text
-            style={{
-              fontSize: 22,
-              fontWeight: "bold",
-              color: colors.text,
-              marginTop: 24,
-              textAlign: "center",
-            }}
-          >
-            Compressing your video...
-          </Text>
+            {/* Main title */}
+            <Text style={[styles.title, { color: colors.text }]}>
+              Compressing your video...
+            </Text>
+
+            {/* Secondary text */}
+            <Text style={[styles.detail, { color: colors.textSecondary }]}>
+              Optimizing file size and preparing for upload.
+            </Text>
+          </View>
         </View>
       ) : (
         <View
@@ -906,3 +918,42 @@ const SpeechRecorderSpeaker = ({
 };
 
 export default SpeechRecorderSpeaker;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  centerWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: height * 0.6,
+  },
+  circleWrapper: {
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  detail: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+});
