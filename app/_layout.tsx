@@ -216,7 +216,6 @@ export default function RootLayout() {
                   name="feedback"
                   options={{ headerShown: false }}
                 />
-                <Stack.Screen name="test" options={{ headerShown: false }} />
               </Stack>
               <Toast />
               <StatusBar style="auto" />

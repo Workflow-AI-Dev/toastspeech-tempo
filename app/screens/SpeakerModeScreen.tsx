@@ -1067,7 +1067,7 @@ export default function SpeakerModeScreen({
           </TouchableOpacity>
 
           {/* Video + Audio Option */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             disabled={isVideoLocked}
             className="rounded-3xl p-6 mb-6 shadow-lg"
             style={{
@@ -1154,7 +1154,7 @@ export default function SpeakerModeScreen({
                 • Comprehensive evaluation
               </Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Upload Recording Option */}
           <TouchableOpacity

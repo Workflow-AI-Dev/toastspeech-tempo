@@ -933,7 +933,7 @@ export default function PracticeModeScreen({
           </TouchableOpacity>
 
           {/* Video + Audio Option */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             disabled={isVideoLocked}
             className="rounded-3xl p-6 mb-6 shadow-lg"
             style={{
@@ -1019,7 +1019,7 @@ export default function PracticeModeScreen({
                 • Comprehensive evaluation
               </Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Upload Recording Option */}
           <TouchableOpacity
