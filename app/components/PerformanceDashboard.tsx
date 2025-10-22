@@ -189,6 +189,7 @@ const PerformanceDashboard = ({
   }, []);
 
   useEffect(() => {
+    if (!allData) return;
     const fetchSessions = async () => {
       setIsFilteringTime(true);
       try {
@@ -541,7 +542,7 @@ const PerformanceDashboard = ({
     };
 
     fetchSessions();
-  }, [selectedTimeFrame]);
+  }, [allData, selectedTimeFrame]);
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -586,19 +587,29 @@ const PerformanceDashboard = ({
   }, []);
 
   const [showContent, setShowContent] = useState(false);
+  // Combine all loading states
+  const isDashboardLoading =
+    isLoading ||
+    isLoadingAll ||
+    isLoadingRecent ||
+    isFilteringTime ||
+    !allData ||
+    !recentData;
+
+  // Delay the content reveal slightly for smoother transition
   useEffect(() => {
-    if (!isLoading) {
-      const timeout = setTimeout(() => setShowContent(true), 300);
+    if (!isDashboardLoading) {
+      const timeout = setTimeout(() => setShowContent(true), 400);
       return () => clearTimeout(timeout);
     } else {
       setShowContent(false);
     }
-  }, [isLoading]);
+  }, [isDashboardLoading]);
 
-  if (!showContent)
+  if (!showContent) {
     return (
       <SafeAreaView
-        className="flex-1 justify-center items-center mt-9"
+        className="flex-1 justify-center items-center"
         style={{ backgroundColor: colors.background }}
       >
         <ActivityIndicator size="large" color={colors.primary} />
@@ -614,6 +625,7 @@ const PerformanceDashboard = ({
         </Text>
       </SafeAreaView>
     );
+  }
 
   const getChartData = () => {
     let chartData: number[] = [];

@@ -547,7 +547,7 @@ const QuickFeedback = ({
                   className="text-xl font-bold"
                   style={{ color: colors.text }}
                 >
-                  Pauses Analysis
+                  Pause Analysis
                 </Text>
               </View>
 
@@ -601,80 +601,59 @@ const QuickFeedback = ({
             ) : (
               <>
                 {/* Statistics Cards */}
-                <View className="flex-row justify-between mb-6">
-                  <View
-                    className="flex-1 rounded-2xl p-4 mr-2"
-                    style={{
-                      backgroundColor: theme === "dark" ? "#1e40af" : "#eff6ff",
-                    }}
-                  >
-                    <Text
-                      className="text-lg font-bold mb-1"
+                <View className="flex-row justify-between mb-6 px-2">
+                  {[
+                    {
+                      bg: theme === "dark" ? "#1e40af" : "#eff6ff",
+                      titleColor: theme === "dark" ? "#60a5fa" : "#1d4ed8",
+                      subtitleColor: theme === "dark" ? "#93c5fd" : "#3b82f6",
+                      value: totalPauses,
+                      label: "Total Pauses",
+                    },
+                    {
+                      bg: theme === "dark" ? "#047857" : "#ecfdf5",
+                      titleColor: theme === "dark" ? "#6ee7b7" : "#047857",
+                      subtitleColor: theme === "dark" ? "#a7f3d0" : "#065f46",
+                      value: `${avgPauseDuration}s`,
+                      label: "Avg Duration",
+                    },
+                    {
+                      bg: theme === "dark" ? "#dc2626" : "#fef2f2",
+                      titleColor: theme === "dark" ? "#f87171" : "#dc2626",
+                      subtitleColor: theme === "dark" ? "#fca5a5" : "#991b1b",
+                      value: analysisResults.avgPause,
+                      label: "Per Minute",
+                    },
+                  ].map((card, index) => (
+                    <View
+                      key={index}
+                      className="rounded-2xl p-4 items-center justify-center"
                       style={{
-                        color: theme === "dark" ? "#60a5fa" : "#1d4ed8",
+                        backgroundColor: card.bg,
+                        width: "32%",
+                        minHeight: 90, // keeps card consistent if label wraps
                       }}
                     >
-                      {totalPauses}
-                    </Text>
-                    <Text
-                      className="text-sm font-medium"
-                      style={{
-                        color: theme === "dark" ? "#93c5fd" : "#3b82f6",
-                      }}
-                    >
-                      Total Pauses
-                    </Text>
-                  </View>
-
-                  {/* Avg Duration Card */}
-                  <View
-                    className="flex-1 rounded-2xl p-4 mx-1"
-                    style={{
-                      backgroundColor: theme === "dark" ? "#047857" : "#ecfdf5",
-                    }}
-                  >
-                    <Text
-                      className="text-lg font-bold mb-1"
-                      style={{
-                        color: theme === "dark" ? "#6ee7b7" : "#047857",
-                      }}
-                    >
-                      {avgPauseDuration}s
-                    </Text>
-                    <Text
-                      className="text-sm font-medium"
-                      style={{
-                        color: theme === "dark" ? "#a7f3d0" : "#065f46",
-                      }}
-                    >
-                      Avg Duration
-                    </Text>
-                  </View>
-
-                  {/* Per Minute Card */}
-                  <View
-                    className="flex-1 rounded-2xl p-4 ml-2"
-                    style={{
-                      backgroundColor: theme === "dark" ? "#dc2626" : "#fef2f2",
-                    }}
-                  >
-                    <Text
-                      className="text-lg font-bold mb-1"
-                      style={{
-                        color: theme === "dark" ? "#f87171" : "#dc2626",
-                      }}
-                    >
-                      {analysisResults.avgPause}
-                    </Text>
-                    <Text
-                      className="text-sm font-medium"
-                      style={{
-                        color: theme === "dark" ? "#fca5a5" : "#991b1b",
-                      }}
-                    >
-                      Per Minute
-                    </Text>
-                  </View>
+                      <Text
+                        className="text-lg font-bold mb-1 text-center"
+                        style={{ color: card.titleColor }}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
+                        {card.value}
+                      </Text>
+                      <Text
+                        className="text-sm font-medium text-center"
+                        style={{
+                          color: card.subtitleColor,
+                          flexWrap: "wrap", // ✅ allow word wrapping
+                          textAlign: "center",
+                        }}
+                      >
+                        {card.label}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
 
                 {/* Bar Chart: Pause Types Distribution */}
@@ -756,15 +735,15 @@ const QuickFeedback = ({
           backgroundGradientFrom: colors.card,
           backgroundGradientTo: colors.card,
           decimalPlaces: 1,
-          color: (opacity = 1) => colors.primary, // Default color for lines/bars
+          color: (opacity = 1) => colors.primary,
           labelColor: (opacity = 1) => colors.textSecondary,
           style: {
             borderRadius: 16,
           },
           propsForDots: {
-            r: "6", // Radius of dots
-            strokeWidth: "2", // Stroke width of dots
-            stroke: colors.primary, // Stroke color of dots
+            r: "6",
+            strokeWidth: "2",
+            stroke: colors.primary,
           },
           // Custom axis styles
           axisLabelColor: colors.textSecondary,
@@ -881,66 +860,68 @@ const QuickFeedback = ({
             ) : (
               <>
                 {/* Statistics Cards */}
-                <View className="flex-row justify-between mb-6">
-                  {/* Pitch Range Card */}
-                  <View
-                    className="flex-1 rounded-2xl p-4 mr-2"
-                    style={{
-                      backgroundColor: theme === "dark" ? "#1d4ed8" : "#eff6ff",
-                    }}
-                  >
-                    <Text
-                      className="text-lg font-bold mb-1"
+                <View className="flex-row justify-between mb-6 px-2">
+                  {[
+                    {
+                      bg: theme === "dark" ? "#1d4ed8" : "#eff6ff",
+                      titleColor: theme === "dark" ? "#93c5fd" : "#1d4ed8",
+                      subtitleColor: theme === "dark" ? "#60a5fa" : "#3b82f6",
+                      value: pitchRangeText,
+                      label: "Pitch Range (Hz)",
+                    },
+                    {
+                      bg: theme === "dark" ? "#047857" : "#ecfdf5",
+                      titleColor: theme === "dark" ? "#6ee7b7" : "#047857",
+                      subtitleColor: theme === "dark" ? "#a7f3d0" : "#065f46",
+                      value: stdPitchText,
+                      label: "Pitch Deviation",
+                      extra: vocalLabel,
+                    },
+                  ].map((card, index) => (
+                    <View
+                      key={index}
+                      className="rounded-2xl p-4 items-center justify-center"
                       style={{
-                        color: theme === "dark" ? "#93c5fd" : "#1d4ed8",
+                        backgroundColor: card.bg,
+                        width: "48%",
+                        minHeight: 110,
                       }}
                     >
-                      {pitchRangeText}
-                    </Text>
-                    <Text
-                      className="text-sm font-medium"
-                      style={{
-                        color: theme === "dark" ? "#60a5fa" : "#3b82f6",
-                      }}
-                    >
-                      Pitch Range(Hz)
-                    </Text>
-                  </View>
+                      {/* Main value */}
+                      <Text
+                        className="text-lg font-bold mb-1 text-center"
+                        style={{ color: card.titleColor }}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
+                        {card.value}
+                      </Text>
 
-                  {/* Pitch Deviation Card */}
-                  <View
-                    className="flex-1 rounded-2xl p-4 mx-1"
-                    style={{
-                      backgroundColor: theme === "dark" ? "#047857" : "#ecfdf5",
-                    }}
-                  >
-                    <Text
-                      className="text-lg font-bold mb-1"
-                      style={{
-                        color: theme === "dark" ? "#6ee7b7" : "#047857",
-                      }}
-                    >
-                      {stdPitchText}
-                    </Text>
-                    <Text
-                      className="text-sm font-medium"
-                      style={{
-                        color: theme === "dark" ? "#a7f3d0" : "#065f46",
-                      }}
-                    >
-                      Pitch Deviation
-                    </Text>
+                      {/* Label */}
+                      <Text
+                        className="text-sm font-medium text-center"
+                        style={{
+                          color: card.subtitleColor,
+                          flexWrap: "wrap",
+                          textAlign: "center",
+                        }}
+                      >
+                        {card.label}
+                      </Text>
 
-                    <Text
-                      className="text-sm font-semibold mt-2"
-                      style={{
-                        // The label color should also adapt to the theme for readability.
-                        color: theme === "dark" ? "#a7f3d0" : "#065f46",
-                      }}
-                    >
-                      {vocalLabel}
-                    </Text>
-                  </View>
+                      {/* Optional third line (e.g., vocalLabel) */}
+                      {card.extra && (
+                        <Text
+                          className="text-sm font-semibold mt-2 text-center"
+                          style={{
+                            color: card.subtitleColor,
+                          }}
+                        >
+                          {card.extra}
+                        </Text>
+                      )}
+                    </View>
+                  ))}
                 </View>
 
                 {/* Line Chart: Pause Duration Over Time */}
@@ -1607,54 +1588,53 @@ const QuickFeedback = ({
             ) : (
               <>
                 {/* Summary Stats */}
-                <View className="flex-row justify-between mb-6">
-                  <View
-                    className="flex-1 rounded-2xl p-4 mr-2"
-                    style={{
-                      backgroundColor: theme === "dark" ? "#7f1d1d" : "#fef2f2",
-                    }}
-                  >
-                    <Text
-                      className="text-2xl font-bold mb-1"
+                <View className="flex-row justify-between mb-6 px-2">
+                  {[
+                    {
+                      bg: theme === "dark" ? "#7f1d1d" : "#fef2f2",
+                      titleColor: theme === "dark" ? "#f87171" : "#dc2626",
+                      subtitleColor: theme === "dark" ? "#fca5a5" : "#991b1b",
+                      value: totalMistakes,
+                      label: "Total Issues",
+                    },
+                    {
+                      bg: theme === "dark" ? "#92400e" : "#fef3c7",
+                      titleColor: theme === "dark" ? "#fbbf24" : "#d97706",
+                      subtitleColor: theme === "dark" ? "#fcd34d" : "#92400e",
+                      value: mistakeTypes,
+                      label: "Categories",
+                    },
+                  ].map((card, index) => (
+                    <View
+                      key={index}
+                      className="rounded-2xl p-4 items-center justify-center"
                       style={{
-                        color: theme === "dark" ? "#f87171" : "#dc2626",
+                        backgroundColor: card.bg,
+                        width: "48%",
+                        minHeight: 110,
                       }}
                     >
-                      {totalMistakes}
-                    </Text>
-                    <Text
-                      className="text-sm font-medium"
-                      style={{
-                        color: theme === "dark" ? "#fca5a5" : "#991b1b",
-                      }}
-                    >
-                      Total Issues
-                    </Text>
-                  </View>
+                      <Text
+                        className="text-2xl font-bold mb-1 text-center"
+                        style={{ color: card.titleColor }}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
+                        {card.value}
+                      </Text>
 
-                  <View
-                    className="flex-1 rounded-2xl p-4 ml-2"
-                    style={{
-                      backgroundColor: theme === "dark" ? "#92400e" : "#fef3c7",
-                    }}
-                  >
-                    <Text
-                      className="text-2xl font-bold mb-1"
-                      style={{
-                        color: theme === "dark" ? "#fbbf24" : "#d97706",
-                      }}
-                    >
-                      {mistakeTypes}
-                    </Text>
-                    <Text
-                      className="text-sm font-medium"
-                      style={{
-                        color: theme === "dark" ? "#fcd34d" : "#92400e",
-                      }}
-                    >
-                      Categories
-                    </Text>
-                  </View>
+                      <Text
+                        className="text-sm font-medium text-center"
+                        style={{
+                          color: card.subtitleColor,
+                          flexWrap: "wrap",
+                          textAlign: "center",
+                        }}
+                      >
+                        {card.label}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
 
                 {/* Grammar Issues as Cards */}
