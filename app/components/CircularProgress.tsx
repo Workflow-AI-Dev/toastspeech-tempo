@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated, Easing } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 
 interface CircularProgressProps {
@@ -11,6 +11,8 @@ interface CircularProgressProps {
   backgroundColor?: string;
   animate?: boolean;
 }
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const CircularProgress: React.FC<CircularProgressProps> = ({
   progress,
@@ -37,7 +39,7 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
   useEffect(() => {
     Animated.timing(progressAnim, {
       toValue: progress,
-      duration: animate ? 1000 : 0,
+      duration: animate ? 900 : 0,
       easing: Easing.out(Easing.quad),
       useNativeDriver: false,
     }).start();
@@ -49,13 +51,13 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.05,
-          duration: 800,
+          duration: 900,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 800,
+          duration: 900,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
@@ -80,7 +82,21 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
       ]}
     >
       <Svg width={size} height={size}>
-        {/* Background Circle */}
+        {/* Gradient for a modern look */}
+        <Defs>
+          <LinearGradient
+            id="progressGradient"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="0%"
+          >
+            <Stop offset="0%" stopColor={primaryColor} stopOpacity="1" />
+            <Stop offset="100%" stopColor={colors.accent} stopOpacity="1" />
+          </LinearGradient>
+        </Defs>
+
+        {/* Background circle */}
         <Circle
           stroke={bgColor}
           cx={size / 2}
@@ -88,9 +104,10 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
           r={radius}
           strokeWidth={strokeWidth}
         />
-        {/* Foreground Progress */}
-        <Animated.Circle
-          stroke={primaryColor}
+
+        {/* Foreground (animated) progress circle */}
+        <AnimatedCircle
+          stroke="url(#progressGradient)"
           cx={size / 2}
           cy={size / 2}
           r={radius}
@@ -103,7 +120,7 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
         />
       </Svg>
 
-      {/* Centered Text */}
+      {/* Centered text */}
       <View style={styles.textWrapper}>
         <Text
           style={[
@@ -133,7 +150,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   text: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
+    textAlign: "center",
   },
 });
