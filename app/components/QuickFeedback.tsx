@@ -2143,38 +2143,38 @@ const QuickFeedback = ({
     },
   ];
 
-  useEffect(() => {
-    let timers: NodeJS.Timeout[] = [];
+  // useEffect(() => {
+  //   let timers: NodeJS.Timeout[] = [];
 
-    if (isProcessing) {
-      processingToasts.forEach((toast, index) => {
-        // first toast after 10s, then each subsequent after 20s more
-        const delay = index === 0 ? 10000 : 10000 + index * 20000;
-        const timer = setTimeout(() => {
-          if (!isProcessing) return; // stop if no longer processing
+  //   if (isProcessing) {
+  //     processingToasts.forEach((toast, index) => {
+  //       // first toast after 10s, then each subsequent after 20s more
+  //       const delay = index === 0 ? 10000 : 10000 + index * 20000;
+  //       const timer = setTimeout(() => {
+  //         if (!isProcessing) return; // stop if no longer processing
 
-          Toast.show({
-            type: "info",
-            text1: toast.text1,
-            text2: toast.text2,
-            position: "top",
-            visibilityTime: 6000,
-            topOffset: 50,
-            props: {
-              style: { paddingHorizontal: 10 },
-              text1Style: { fontSize: 16, fontWeight: "bold" },
-              text2Style: { fontSize: 12, flexWrap: "wrap" },
-            },
-          });
-        }, delay);
-        timers.push(timer);
-      });
-    }
+  //         Toast.show({
+  //           type: "info",
+  //           text1: toast.text1,
+  //           text2: toast.text2,
+  //           position: "top",
+  //           visibilityTime: 6000,
+  //           topOffset: 50,
+  //           props: {
+  //             style: { paddingHorizontal: 10 },
+  //             text1Style: { fontSize: 16, fontWeight: "bold" },
+  //             text2Style: { fontSize: 12, flexWrap: "wrap" },
+  //           },
+  //         });
+  //       }, delay);
+  //       timers.push(timer);
+  //     });
+  //   }
 
-    return () => {
-      timers.forEach((t) => clearTimeout(t));
-    };
-  }, [isProcessing]);
+  //   return () => {
+  //     timers.forEach((t) => clearTimeout(t));
+  //   };
+  // }, [isProcessing]);
 
   // Image cycling
   useEffect(() => {

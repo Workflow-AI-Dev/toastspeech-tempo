@@ -1418,36 +1418,41 @@ export default function SpeakerModeScreen({
 
       <ScrollView className="flex-1">
         <Text
-          className="text-2xl font-bold mb-2 text-center mt-2"
+          className="text-2xl font-bold mb-1 text-center tracking-tight mt-3"
           style={{ color: colors.text }}
         >
           {isProcessing && partialReceived
-            ? "Finishing Up..."
-            : "Analysis Complete"}
+            ? "Wrapping Things Up..."
+            : "Analysis Complete!"}
         </Text>
+
         <Text
-          className="text-center mb-2 text-base"
+          className="text-center text-base mb-4 leading-5 mx-6"
           style={{ color: colors.textSecondary }}
         >
           {isProcessing && partialReceived
             ? ""
-            : "Here's your comprehensive speech analysis"}
+            : "Here's your in-depth performance breakdown, ready to explore."}
         </Text>
 
         {isProcessing && partialReceived && (
           <View
-            className="mx-6 mb-4 p-3 rounded-2xl items-center"
-            style={{ backgroundColor: colors.surface }}
+            className="mx-4 mb-2 p-3 rounded-2xl flex-row items-start"
+            style={{
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
           >
-            <View className="flex-row items-center">
-              <Loader size={16} color={colors.primary} />
-              <Text
-                className="ml-2 text-sm"
-                style={{ color: colors.textSecondary }}
-              >
-                Almost done, just preparing the final results...
-              </Text>
-            </View>
+            <Loader size={18} color={colors.primary} />
+            <Text
+              className="ml-3 text-sm leading-5 flex-1"
+              style={{ color: colors.textSecondary }}
+            >
+              This may take another minute. You can review the partial results
+              now, or come back later — your full report will be saved in your
+              library.
+            </Text>
           </View>
         )}
 
