@@ -1,0 +1,90 @@
+import { StyleSheet } from "react-native";
+
+export const styles = StyleSheet.create({
+  tooltipContainer: {
+    position: "absolute",
+    borderRadius: 8,
+    maxWidth: 200,
+    zIndex: 1000,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  loaderWrapper: {
+    width: 128,
+    height: 128,
+    borderRadius: 64,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+    backgroundColor: "#f3f4f6",
+  },
+  image: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+    borderRadius: 9999,
+  },
+
+  ring: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 9999,
+    borderWidth: 6,
+    borderColor: "#3b82f6",
+    borderTopColor: "transparent",
+  },
+  score: { fontSize: 32, fontWeight: "bold", color: "black" },
+  button: {
+    backgroundColor: "#3b82f6",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  buttonText: { color: "white", fontWeight: "bold" },
+
+  // Speech bubble
+  bubble: {
+    backgroundColor: "#925ad1",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 16,
+    position: "relative",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
+    maxWidth: 180,
+  },
+  bubbleText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  bubbleArrow: {
+    position: "absolute",
+    bottom: -8,
+    left: "50%",
+    marginLeft: -8,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 8,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: "#925ad1",
+  },
+});

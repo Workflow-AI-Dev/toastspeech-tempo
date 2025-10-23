@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, Animated, Dimensions, StyleSheet } from "react-native";
+import { View, Text, Animated } from "react-native";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import Toast from "react-native-toast-message";
-
-const { width, height } = Dimensions.get("window");
+import { styles } from "../styles/realistic-progress-loader-styles";
 
 interface RealisticProgressLoaderProps {
   isProcessing: boolean;
@@ -223,52 +222,3 @@ const RealisticProgressLoader: React.FC<RealisticProgressLoaderProps> = ({
 };
 
 export default RealisticProgressLoader;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    width: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  centerWrapper: {
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: height * 0.6, // keeps content vertically centered
-  },
-  imageContainer: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  image: {
-    ...StyleSheet.absoluteFillObject,
-    width: "100%",
-    height: "100%",
-    borderRadius: 9999,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 6,
-  },
-  detail: {
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  progressBackground: {
-    width: width * 0.8,
-    height: 8,
-    borderRadius: 4,
-  },
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-  },
-});

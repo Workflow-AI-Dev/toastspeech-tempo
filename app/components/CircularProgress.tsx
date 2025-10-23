@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Animated, Easing } from "react-native";
+import { View, Text, Animated, Easing } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
+import { styles } from "../styles/circular-progress-styles";
 
 interface CircularProgressProps {
   progress: number; // 0–100
@@ -138,20 +139,3 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
 };
 
 export default CircularProgress;
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  textWrapper: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  text: {
-    fontSize: 22,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-});

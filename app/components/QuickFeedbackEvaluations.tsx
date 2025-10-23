@@ -6,7 +6,6 @@ import {
   ScrollView,
   Dimensions,
   Modal,
-  StyleSheet,
   Animated,
 } from "react-native";
 import {
@@ -164,11 +163,6 @@ const QuickFeedbackEvaluations = ({
   const [infoContent, setInfoContent] = useState<
     (typeof infoModalContent)[keyof typeof infoModalContent] | null
   >(null);
-  // State for managing tooltip visibility and content
-  const [tooltipVisible, setTooltipVisible] = useState(false);
-  const [tooltipContent, setTooltipContent] = useState("");
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 }); // To position the tooltip
-
   const [showAllGrammarTypes, setShowAllGrammarTypes] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
   const [animationValue] = useState(new Animated.Value(0));
@@ -194,20 +188,6 @@ const QuickFeedbackEvaluations = ({
       ...prev,
       [word]: !prev[word],
     }));
-  };
-
-  const showTooltip = (content: string, event: any) => {
-    setTooltipContent(content);
-    setTooltipPosition({
-      x: event.nativeEvent.pageX,
-      y: event.nativeEvent.pageY,
-    });
-    setTooltipVisible(true);
-  };
-
-  const hideTooltip = () => {
-    setTooltipVisible(false);
-    setTooltipContent("");
   };
 
   const infoModalContent = {
@@ -1646,46 +1626,6 @@ const QuickFeedbackEvaluations = ({
                 </ScrollView>
               </>
             )}
-
-            {/* Tooltip Modal - Ensure this is outside the conditional rendering and at the end */}
-            {tooltipVisible && ( // Only render modal if visible to avoid unnecessary overhead
-              <Modal
-                transparent={true}
-                visible={tooltipVisible}
-                onRequestClose={hideTooltip}
-              >
-                <TouchableOpacity
-                  style={StyleSheet.absoluteFillObject} // Occupy entire screen for dismissing
-                  onPress={hideTooltip}
-                  activeOpacity={1} // Prevents opacity change on press
-                >
-                  <View
-                    style={[
-                      styles.tooltipContainer,
-                      {
-                        // Adjust these values based on actual visual testing for optimal placement
-                        top: tooltipPosition.y + 10,
-                        // Dynamically adjust left to attempt to center the tooltip over the touch point
-                        // This assumes styles.tooltipContainer.maxWidth is 200 (200 / 2 = 100)
-                        left:
-                          tooltipPosition.x -
-                          (styles.tooltipContainer.maxWidth / 2 || 100),
-                        backgroundColor:
-                          theme === "dark" ? "#334155" : "#fefefe",
-                        borderColor: theme === "dark" ? "#475569" : "#cbd5e1",
-                        borderWidth: 1,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={{ color: colors.text, fontSize: 13, padding: 8 }}
-                    >
-                      {tooltipContent}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </Modal>
-            )}
           </View>
         );
 
@@ -2438,17 +2378,3 @@ const QuickFeedbackEvaluations = ({
 };
 
 export default QuickFeedbackEvaluations;
-
-const styles = StyleSheet.create({
-  tooltipContainer: {
-    position: "absolute",
-    borderRadius: 8,
-    maxWidth: 200, // Important for the 'left' calculation
-    zIndex: 1000,
-    elevation: 5, // Android shadow
-    shadowColor: "#000", // iOS shadow
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-});

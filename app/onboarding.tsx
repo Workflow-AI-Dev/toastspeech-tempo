@@ -1,8 +1,15 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native';
+import React from "react";
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  SafeAreaView,
+} from "react-native";
 import { useRouter } from "expo-router";
+import { styles } from "./styles/onboarding-styles";
 
-const BG_COLOR = '#925bd2';
+const BG_COLOR = "#925bd2";
 const router = useRouter();
 const handleGetStarted = () => router.push("/sign-up");
 const handleSignIn = () => router.push("/sign-in");
@@ -44,53 +51,5 @@ const InitialScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    width: '100%',
-  },
-  innerContainer: {
-    flex: 1,
-  },
-  imageContainer: {
-    flex: 1, 
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  buttonsContainer: {
-    padding: 20,
-    width: '100%',
-  },
-  getStartedBtn: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 50,
-    marginBottom: 12,
-  },
-  getStartedText: {
-    textAlign: 'center',
-    fontWeight: 'bold',
-    fontSize: 18,
-    color: 'black',
-  },
-  signInBtn: {
-    borderWidth: 2,
-    borderColor: 'white',
-    padding: 16,
-    borderRadius: 50,
-  },
-  signInText: {
-    textAlign: 'center',
-    fontWeight: 'bold',
-    fontSize: 18,
-    color: 'white',
-  },
-});
 
 export default InitialScreen;

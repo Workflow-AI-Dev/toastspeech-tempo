@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Animated,
-  Alert,
-  StyleSheet,
-  Dimensions,
-} from "react-native";
+import { View, Text, TouchableOpacity, Animated, Alert } from "react-native";
 import { Mic, Pause, Square, Loader, Zap, Upload } from "lucide-react-native";
 import { Video as VideoIcon } from "lucide-react-native";
 import { Platform } from "react-native";
@@ -19,6 +11,7 @@ import * as FileSystem from "expo-file-system";
 import RealisticProgressLoader from "./RealisticProgressLoader";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import CircularProgress from "./CircularProgress";
+import { styles } from "../styles/speech-recorder-styles";
 
 interface SpeechRecorderSpeakerProps {
   onRecordingComplete?: (recordingData: any) => void;
@@ -33,8 +26,6 @@ interface SpeechRecorderSpeakerProps {
   plan: string;
   limits: {};
 }
-
-const { width, height } = Dimensions.get("window");
 
 let CameraComponent: any;
 let useCameraDevices: any;
@@ -918,42 +909,3 @@ const SpeechRecorderSpeaker = ({
 };
 
 export default SpeechRecorderSpeaker;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    width: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  centerWrapper: {
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: height * 0.6,
-  },
-  circleWrapper: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 6,
-  },
-  detail: {
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 20,
-  },
-});

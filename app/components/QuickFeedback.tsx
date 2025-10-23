@@ -6,7 +6,6 @@ import {
   ScrollView,
   Dimensions,
   Modal,
-  StyleSheet,
   Animated,
   Easing,
   ActivityIndicator,
@@ -42,6 +41,7 @@ import {
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import { BarChart, LineChart, PieChart } from "react-native-chart-kit";
 import Toast from "react-native-toast-message";
+import { styles } from "../styles/quick-feedback-styles";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -195,11 +195,6 @@ const QuickFeedback = ({
   const [infoContent, setInfoContent] = useState<
     (typeof infoModalContent)[keyof typeof infoModalContent] | null
   >(null);
-  // State for managing tooltip visibility and content
-  const [tooltipVisible, setTooltipVisible] = useState(false);
-  const [tooltipContent, setTooltipContent] = useState("");
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 }); // To position the tooltip
-
   const [showAllGrammarTypes, setShowAllGrammarTypes] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
   const [animationValue] = useState(new Animated.Value(0));
@@ -225,20 +220,6 @@ const QuickFeedback = ({
       ...prev,
       [word]: !prev[word],
     }));
-  };
-
-  const showTooltip = (content: string, event: any) => {
-    setTooltipContent(content);
-    setTooltipPosition({
-      x: event.nativeEvent.pageX,
-      y: event.nativeEvent.pageY,
-    });
-    setTooltipVisible(true);
-  };
-
-  const hideTooltip = () => {
-    setTooltipVisible(false);
-    setTooltipContent("");
   };
 
   const infoModalContent = {
@@ -1703,42 +1684,6 @@ const QuickFeedback = ({
                 </ScrollView>
               </>
             )}
-
-            {tooltipVisible && (
-              <Modal
-                transparent={true}
-                visible={tooltipVisible}
-                onRequestClose={hideTooltip}
-              >
-                <TouchableOpacity
-                  style={StyleSheet.absoluteFillObject} // Occupy entire screen for dismissing
-                  onPress={hideTooltip}
-                  activeOpacity={1} // Prevents opacity change on press
-                >
-                  <View
-                    style={[
-                      styles.tooltipContainer,
-                      {
-                        top: tooltipPosition.y + 10,
-                        left:
-                          tooltipPosition.x -
-                          (styles.tooltipContainer.maxWidth / 2 || 100),
-                        backgroundColor:
-                          theme === "dark" ? "#334155" : "#fefefe",
-                        borderColor: theme === "dark" ? "#475569" : "#cbd5e1",
-                        borderWidth: 1,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={{ color: colors.text, fontSize: 13, padding: 8 }}
-                    >
-                      {tooltipContent}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </Modal>
-            )}
           </View>
         );
 
@@ -2778,92 +2723,3 @@ const QuickFeedback = ({
 };
 
 export default QuickFeedback;
-
-const styles = StyleSheet.create({
-  tooltipContainer: {
-    position: "absolute",
-    borderRadius: 8,
-    maxWidth: 200,
-    zIndex: 1000,
-    elevation: 5, // Android shadow
-    shadowColor: "#000", // iOS shadow
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  loaderWrapper: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 24,
-    backgroundColor: "#f3f4f6",
-  },
-  image: {
-    ...StyleSheet.absoluteFillObject,
-    width: "100%",
-    height: "100%",
-    borderRadius: 9999,
-  },
-
-  ring: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 9999,
-    borderWidth: 6,
-    borderColor: "#3b82f6",
-    borderTopColor: "transparent",
-  },
-  score: { fontSize: 32, fontWeight: "bold", color: "black" },
-  button: {
-    backgroundColor: "#3b82f6",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  buttonText: { color: "white", fontWeight: "bold" },
-
-  // Speech bubble
-  bubble: {
-    backgroundColor: "#925ad1",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: 16,
-    position: "relative",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 3,
-    maxWidth: 180,
-  },
-  bubbleText: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 14,
-    textAlign: "center",
-  },
-  bubbleArrow: {
-    position: "absolute",
-    bottom: -8,
-    left: "50%",
-    marginLeft: -8,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderTopWidth: 8,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderTopColor: "#925ad1",
-  },
-});
