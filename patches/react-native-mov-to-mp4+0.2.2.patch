@@ -1,0 +1,8 @@
+diff --git a/node_modules/react-native-mov-to-mp4/movToMp4.ios.js b/node_modules/react-native-mov-to-mp4/movToMp4.ios.js
+new file mode 100644
+index 0000000..3c53ecb
+--- /dev/null
++++ b/node_modules/react-native-mov-to-mp4/movToMp4.ios.js
+@@ -0,0 +1,2 @@
++import { NativeModules } from "react-native";
++export default NativeModules.MovToMp4;
