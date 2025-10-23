@@ -12,6 +12,7 @@ import RealisticProgressLoader from "./RealisticProgressLoader";
 import { useTheme, getThemeColors } from "../context/ThemeContext";
 import CircularProgress from "./CircularProgress";
 import { styles } from "../styles/speech-recorder-styles";
+import MovToMp4 from "react-native-mov-to-mp4";
 
 interface SpeechRecorderSpeakerProps {
   onRecordingComplete?: (recordingData: any) => void;
@@ -499,27 +500,41 @@ const SpeechRecorderSpeaker = ({
 
       let safeUri = await ensureFilePath(fileUri);
 
+      // Detect and convert MOV files to MP4
+      if (fileName?.toLowerCase().endsWith(".mov")) {
+        try {
+          console.log("🎬 Converting MOV to MP4...");
+          const filename = Date.now().toString();
+          const convertedUri = await MovToMp4.convertMovToMp4(
+            safeUri.replace("file://", ""),
+            `${filename}.mp4`,
+          );
+          console.log("✅ MOV successfully converted:", convertedUri);
+
+          safeUri = convertedUri.startsWith("file://")
+            ? convertedUri
+            : `file://${convertedUri}`;
+        } catch (convErr) {
+          console.error("❌ MOV to MP4 conversion failed:", convErr);
+        }
+      }
+
       if (!isVideo) {
         const info = await FileSystem.getInfoAsync(safeUri);
         console.log("Audio file info:", info);
         return { uri: safeUri, size: info.size || 0 };
       }
 
+      // Compress video (after MOV conversion)
       const compressedUri = await compressVideo(safeUri);
-      console.log("Compressed URI:", compressedUri);
-
       const fileInfo = await FileSystem.getInfoAsync(compressedUri);
-      console.log("Compressed file info:", fileInfo);
 
-      if (!fileInfo.exists) {
-        throw new Error("Compressed file not found");
-      }
+      if (!fileInfo.exists) throw new Error("Compressed file not found");
 
       return { uri: compressedUri, size: fileInfo.size || 0 };
     } catch (error) {
       console.error("Error processing video file:", error);
-
-      let safeUri = await ensureFilePath(fileUri);
+      const safeUri = await ensureFilePath(fileUri);
       const info = await FileSystem.getInfoAsync(safeUri);
       return { uri: safeUri, size: info.size || 0 };
     }
