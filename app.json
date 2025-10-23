@@ -38,10 +38,7 @@
               "path": "/oauthredirect"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ],
       "usesCleartextTraffic": true,
@@ -61,6 +58,12 @@
           "imageWidth": 400,
           "resizeMode": "contain",
           "backgroundColor": "#925bd2"
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.278297929608-o5097o6qt3ljfsggff8hsd7b996vt0gc"
         }
       ],
       "react-native-vision-camera",
