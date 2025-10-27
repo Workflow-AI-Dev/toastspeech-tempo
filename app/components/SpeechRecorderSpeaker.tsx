@@ -352,8 +352,15 @@ const SpeechRecorderSpeaker = ({
         return;
       }
 
+      const pickerTypes =
+        Platform.OS === "ios"
+          ? ["public.movie", "public.video", "public.audio"]
+          : allowedTypes.length > 0
+            ? allowedTypes
+            : ["video/*", "audio/*"];
+
       const result = await DocumentPicker.getDocumentAsync({
-        type: allowedTypes,
+        type: pickerTypes,
         copyToCacheDirectory: true,
       });
 
