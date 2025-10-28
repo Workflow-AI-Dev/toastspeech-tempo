@@ -1073,7 +1073,7 @@ export default function PracticeModeScreen({
                   className="text-base"
                   style={{ color: colors.textSecondary }}
                 >
-                  Select a pre-recorded file from device
+                  Select a pre-recorded audio or video file from device
                 </Text>
               </View>
               <ChevronRight size={24} color={colors.textSecondary} />

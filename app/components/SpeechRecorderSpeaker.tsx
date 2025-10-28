@@ -320,7 +320,7 @@ const SpeechRecorderSpeaker = ({
       const audioTypes = ["audio/mpeg", "audio/wav", "audio/m4a", "audio/mp4"];
       const audioExts = ["mp3", "wav", "m4a"];
 
-      const videoTypes = ["video/mp4", "video/mov", "video/avi"];
+      const videoTypes = ["video/mp4", "video/quicktime", "video/x-msvideo"];
       const videoExts = ["mp4", "mov", "avi"];
 
       // Decide allowed types/extensions based on remaining limits
@@ -354,7 +354,12 @@ const SpeechRecorderSpeaker = ({
 
       const pickerTypes =
         Platform.OS === "ios"
-          ? ["public.movie", "public.video", "public.audio"]
+          ? [
+              "public.movie",
+              "public.video",
+              "com.apple.quicktime-movie",
+              "public.audio",
+            ]
           : allowedTypes.length > 0
             ? allowedTypes
             : ["video/*", "audio/*"];
