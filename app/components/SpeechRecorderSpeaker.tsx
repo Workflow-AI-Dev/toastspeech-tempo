@@ -13,6 +13,7 @@ import { useTheme, getThemeColors } from "../context/ThemeContext";
 import CircularProgress from "./CircularProgress";
 import { styles } from "../styles/speech-recorder-styles";
 import MovToMp4 from "react-native-mov-to-mp4";
+import * as ImagePicker from "expo-image-picker";
 
 interface SpeechRecorderSpeakerProps {
   onRecordingComplete?: (recordingData: any) => void;
@@ -314,16 +315,13 @@ const SpeechRecorderSpeaker = ({
 
   const handleFileUpload = async () => {
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      // Base sets for file types/extensions
       const audioTypes = ["audio/mpeg", "audio/wav", "audio/m4a", "audio/mp4"];
       const audioExts = ["mp3", "wav", "m4a"];
-
       const videoTypes = ["video/mp4", "video/quicktime", "video/x-msvideo"];
       const videoExts = ["mp4", "mov", "avi"];
 
-      // Decide allowed types/extensions based on remaining limits
       let allowedTypes: string[] = [];
       let allowedExtensions: string[] = [];
 
@@ -331,16 +329,16 @@ const SpeechRecorderSpeaker = ({
         limits.remaining_audio_speeches > 0 ||
         limits.remaining_audio_practice > 0
       ) {
-        allowedTypes = [...allowedTypes, ...audioTypes];
-        allowedExtensions = [...allowedExtensions, ...audioExts];
+        allowedTypes.push(...audioTypes);
+        allowedExtensions.push(...audioExts);
       }
 
       if (
         limits.remaining_video_speeches > 0 ||
         limits.remaining_video_practice > 0
       ) {
-        allowedTypes = [...allowedTypes, ...videoTypes];
-        allowedExtensions = [...allowedExtensions, ...videoExts];
+        allowedTypes.push(...videoTypes);
+        allowedExtensions.push(...videoExts);
       }
 
       if (allowedTypes.length === 0) {
@@ -352,26 +350,57 @@ const SpeechRecorderSpeaker = ({
         return;
       }
 
-      const pickerTypes =
-        Platform.OS === "ios"
-          ? [
-              "public.movie",
-              "public.audio",
-              "public.audiovisual-content",
-              "public.mp3",
-              "public.mpeg-4-audio",
-              "com.microsoft.waveform-audio",
-            ]
-          : allowedTypes.length > 0
-            ? allowedTypes
-            : ["video/*", "audio/*"];
+      let result: any;
 
-      const result = await DocumentPicker.getDocumentAsync({
-        type: pickerTypes,
-        copyToCacheDirectory: true,
-      });
+      // Platform-specific picker logic
+      if (Platform.OS === "ios") {
+        // Use ImagePicker for video/audio on iOS
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["videos", "images"], // "images" optional, if you want mixed media
+          allowsEditing: false,
+          quality: 1,
+        });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+        if (result.canceled) return;
+
+        const asset = result.assets[0];
+        const fileUri = asset.uri;
+        const mimeType = asset.mimeType || "video/mp4";
+        const fileName =
+          asset.fileName || `upload-${Date.now()}.${mimeType.split("/")[1]}`;
+        const fileSize = asset.fileSize;
+
+        const file = { uri: fileUri, name: fileName, size: fileSize, mimeType };
+
+        setSelectedFile(file);
+        setRecordingState("uploading");
+
+        const { uri: processedUri, size: processedSize } =
+          await processVideoFile(file.uri, file.name, file.mimeType);
+
+        setRecordingState("completed");
+
+        onRecordingComplete({
+          duration: timer,
+          timestamp: new Date(),
+          method: recordingMethod,
+          recordingUri: processedUri,
+          fileName: file.name,
+          fileSize: processedSize,
+          mimeType: file.mimeType,
+        });
+      } else {
+        // Android or others – still use DocumentPicker
+        const pickerTypes =
+          allowedTypes.length > 0 ? allowedTypes : ["video/*", "audio/*"];
+
+        result = await DocumentPicker.getDocumentAsync({
+          type: pickerTypes,
+          copyToCacheDirectory: true,
+        });
+
+        if (result.canceled || !result.assets?.length) return;
+
         const file = result.assets[0];
         const fileExtension = file.name.split(".").pop()?.toLowerCase() || "";
 
@@ -384,47 +413,26 @@ const SpeechRecorderSpeaker = ({
             `This file type is not supported.\nPlease upload a valid audio/video file.`,
             [{ text: "OK" }],
           );
-          console.log("unsupported file");
           return;
         }
 
         setSelectedFile(file);
         setRecordingState("uploading");
 
-        try {
-          // Always process and compress the uploaded file
-          const { uri: processedUri, size: processedSize } =
-            await processVideoFile(file.uri, file.name, file.mimeType);
+        const { uri: processedUri, size: processedSize } =
+          await processVideoFile(file.uri, file.name, file.mimeType);
 
-          console.log("✅ Processed file ready:", processedUri, processedSize);
+        setRecordingState("completed");
 
-          setRecordingState("completed");
-
-          // Fire immediately instead of relying on timeout
-          onRecordingComplete({
-            duration: timer,
-            timestamp: new Date(),
-            method: recordingMethod,
-            recordingUri: processedUri,
-            fileName: file.name,
-            fileSize: processedSize,
-            mimeType: file.mimeType,
-          });
-        } catch (error) {
-          console.error("❌ Processing failed, falling back:", error);
-
-          setRecordingState("completed");
-
-          onRecordingComplete({
-            duration: 180,
-            timestamp: new Date(),
-            method: "upload",
-            fileName: file.name,
-            fileUri: file.uri,
-            fileSize: file.size,
-            mimeType: file.mimeType,
-          });
-        }
+        onRecordingComplete({
+          duration: timer,
+          timestamp: new Date(),
+          method: recordingMethod,
+          recordingUri: processedUri,
+          fileName: file.name,
+          fileSize: processedSize,
+          mimeType: file.mimeType,
+        });
       }
     } catch (error) {
       console.error("Error picking file:", error);
@@ -435,7 +443,6 @@ const SpeechRecorderSpeaker = ({
       );
     }
   };
-
   const compressVideo = async (videoUri: string): Promise<string> => {
     console.log("🚀 Starting one-pass video compression...");
     setRecordingState("compressing");
