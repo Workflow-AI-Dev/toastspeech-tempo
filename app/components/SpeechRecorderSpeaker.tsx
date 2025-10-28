@@ -356,9 +356,11 @@ const SpeechRecorderSpeaker = ({
         Platform.OS === "ios"
           ? [
               "public.movie",
-              "public.video",
-              "com.apple.quicktime-movie",
               "public.audio",
+              "public.audiovisual-content",
+              "public.mp3",
+              "public.mpeg-4-audio",
+              "com.microsoft.waveform-audio",
             ]
           : allowedTypes.length > 0
             ? allowedTypes
