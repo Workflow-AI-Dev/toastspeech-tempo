@@ -356,7 +356,7 @@ const SpeechRecorderSpeaker = ({
       if (Platform.OS === "ios") {
         // Use ImagePicker for video/audio on iOS
         result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ["videos", "images"], // "images" optional, if you want mixed media
+          mediaTypes: ["videos"],
           allowsEditing: false,
           quality: 1,
         });
