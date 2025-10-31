@@ -13,6 +13,7 @@ const BG_COLOR = "#925bd2";
 const router = useRouter();
 const handleGetStarted = () => router.push("/sign-up");
 const handleSignIn = () => router.push("/sign-in");
+const handleTest = () => router.push("/test");
 
 const InitialScreen: React.FC = () => {
   return (
@@ -45,6 +46,14 @@ const InitialScreen: React.FC = () => {
             activeOpacity={0.7}
           >
             <Text style={styles.signInText}>Sign In</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.getStartedBtn}
+            onPress={handleTest}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.getStartedText}>Google Auth Test</Text>
           </TouchableOpacity>
         </View>
       </View>
